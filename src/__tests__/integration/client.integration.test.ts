@@ -9,6 +9,7 @@
 import { describe, test, expect, beforeAll, beforeEach } from "vitest";
 import { CaddyClient } from "../../caddy/client.js";
 import * as http from "http";
+import { DELAY_SHORT, DELAY_MEDIUM, DELAY_LONG, DELAY_SERVER_START } from "./constants.js";
 
 const CADDY_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:2019";
 const INTEGRATION_TEST = process.env.INTEGRATION_TEST === "true";
@@ -46,7 +47,7 @@ function httpRequest(options: {
 // Skip integration tests unless explicitly enabled
 const describeIntegration = INTEGRATION_TEST ? describe : describe.skip;
 
-// Helper to add tiny delay between operations to avoid overwhelming Caddy
+// Helper to add delay between operations
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describeIntegration("CaddyClient Integration Tests", () => {
@@ -91,7 +92,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
 
       if (modified) {
         await client.patchServer(servers);
-        await delay(200);
+        await delay(DELAY_MEDIUM);
       }
     } catch {
       // Ignore cleanup errors
@@ -310,7 +311,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             ],
           },
         });
-        await delay(100);
+        await delay(DELAY_SHORT);
       } catch {
         // Ignore errors
       }
@@ -623,7 +624,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             routes: [],
           },
         });
-        await delay(300); // Increased delay to ensure server is ready
+        await delay(DELAY_LONG); // Increased delay to ensure server is ready
 
         // Insert health check
         await client.insertRoute(
@@ -636,7 +637,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           },
           "beginning"
         );
-        await delay(100);
+        await delay(DELAY_SHORT);
 
         // Insert domain route
         await client.insertRoute(
@@ -649,7 +650,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           },
           "after-health-checks"
         );
-        await delay(100);
+        await delay(DELAY_SHORT);
 
         // Insert another domain route
         await client.insertRoute(
@@ -662,7 +663,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           },
           "after-health-checks"
         );
-        await delay(100);
+        await delay(DELAY_SHORT);
 
         // Replace domain1
         await client.replaceRouteById(testServerName, "domain1", {
@@ -670,7 +671,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "echo-test:9999" }] }],
           terminal: true,
         });
-        await delay(100);
+        await delay(DELAY_SHORT);
 
         // Verify final state
         const routes = await client.getRoutes(testServerName);
@@ -748,7 +749,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           await client.request(`/config/apps/http/servers/${escapedServer}`, {
             method: "DELETE",
           });
-          await delay(200); // Wait for server deletion to take effect
+          await delay(DELAY_MEDIUM); // Wait for server deletion to take effect
         } catch {
           // Server might not exist, ignore
         }
@@ -766,7 +767,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             },
           },
         });
-        await delay(300); // Increased delay for server to be ready
+        await delay(DELAY_LONG); // Increased delay for server to be ready
 
         // Scenario: Test that route order determines which backend handles the request
         // We'll create overlapping routes and verify the FIRST matching route wins
@@ -787,7 +788,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           },
           "beginning"
         );
-        await delay(100);
+        await delay(DELAY_SHORT);
 
         // Route 2: Specific host "backend2.localhost" -> echo-test-2 (backend 2)
         await client.insertRoute(
@@ -805,7 +806,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           },
           "end"
         );
-        await delay(100);
+        await delay(DELAY_SHORT);
 
         // Route 3: Catch-all route for all other hosts -> echo-test-3 (backend 3)
         // Note: In Caddy, omitting the match field (or having empty match) creates a catch-all
@@ -824,7 +825,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           },
           "end"
         );
-        await delay(500); // Extra time for Caddy to start HTTP server
+        await delay(DELAY_SERVER_START); // Extra time for Caddy to start HTTP server
 
         // Verify route order in config
         const routes = await client.getRoutes(functionalTestServer);
@@ -878,7 +879,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             },
           },
         });
-        await delay(300); // Increased delay for server to be ready
+        await delay(DELAY_LONG); // Increased delay for server to be ready
 
         // Scenario 1: Specific route BEFORE wildcard
         // Route 1: /api/* -> backend 2
@@ -897,7 +898,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           },
           "beginning"
         );
-        await delay(100);
+        await delay(DELAY_SHORT);
 
         // Route 2: /* (wildcard) -> backend 3
         await client.insertRoute(
@@ -915,7 +916,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           },
           "end"
         );
-        await delay(500);
+        await delay(DELAY_SERVER_START);
 
         // Test: /api/test should hit backend 2 (specific route matches first)
         const body1 = await httpRequest({
@@ -967,7 +968,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             ],
           },
         });
-        await delay(500);
+        await delay(DELAY_SERVER_START);
 
         // Test: /api/test should NOW hit backend 3 (wildcard matches first!)
         const body3 = await httpRequest({
@@ -1001,7 +1002,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
               routes: [],
             },
           });
-          await delay(100);
+          await delay(DELAY_SHORT);
         } catch {
           // Ignore errors
         }
@@ -1022,7 +1023,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             ],
           },
         });
-        await delay(300); // Wait for server to be ready
+        await delay(DELAY_LONG); // Wait for server to be ready
 
         // Insert at beginning
         await client.insertRoute(
@@ -1072,7 +1073,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             ],
           },
         });
-        await delay(300); // Wait for server to be ready
+        await delay(DELAY_LONG); // Wait for server to be ready
 
         // Insert with after-health-checks (default)
         await client.insertRoute(positionTestServer, {
@@ -1109,7 +1110,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             ],
           },
         });
-        await delay(300); // Wait for server to be ready
+        await delay(DELAY_LONG); // Wait for server to be ready
 
         // Insert three routes in sequence using after-health-checks
         // Each insertion should insert immediately after health check
@@ -1166,7 +1167,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             ],
           },
         });
-        await delay(300); // Wait for server to be ready
+        await delay(DELAY_LONG); // Wait for server to be ready
 
         // Insert at end
         await client.insertRoute(

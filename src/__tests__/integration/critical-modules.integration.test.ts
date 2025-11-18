@@ -22,6 +22,7 @@ import * as http from "http";
 import * as https from "https";
 import * as fs from "fs";
 import * as path from "path";
+import { DELAY_SHORT, DELAY_MEDIUM, DELAY_LONG } from "./constants.js";
 
 const CADDY_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:2019";
 const INTEGRATION_TEST = process.env.INTEGRATION_TEST === "true";
@@ -109,7 +110,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
       };
 
       await client.patchServer(servers);
-      await delay(100);
+      await delay(DELAY_SHORT);
     } catch {
       // Server might not exist, that's ok
     }
@@ -141,7 +142,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
       // Only patch if we modified something or need to reset testServer
       if (modified || servers[testServer]) {
         await client.patchServer(servers);
-        await delay(200);
+        await delay(DELAY_MEDIUM);
       }
     } catch {
       // Ignore cleanup errors
@@ -173,7 +174,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
             method: "POST",
             body: JSON.stringify(filteredCerts),
           });
-          await delay(200);
+          await delay(DELAY_MEDIUM);
         }
       }
     } catch {
@@ -198,7 +199,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
 
       // Add route to Caddy
       await client.insertRoute(testServer, route, "beginning");
-      await delay(200);
+      await delay(DELAY_MEDIUM);
 
       // Make HTTP request through the proxy
       const response = await httpRequest({
@@ -222,7 +223,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
       });
 
       await client.insertRoute(testServer, route, "beginning");
-      await delay(200);
+      await delay(DELAY_MEDIUM);
 
       // Make request to www subdomain
       const response = await httpRequest({
@@ -246,7 +247,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
       });
 
       await client.insertRoute(testServer, route, "beginning");
-      await delay(200);
+      await delay(DELAY_MEDIUM);
 
       const response = await httpRequest({
         host: "localhost",
@@ -276,7 +277,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
       };
 
       await client.insertRoute(testServer, route, "beginning");
-      await delay(200);
+      await delay(DELAY_MEDIUM);
 
       // Request with Accept-Encoding: gzip
       const response = await httpRequest({
@@ -311,7 +312,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
         adminUrl: CADDY_URL,
       });
 
-      await delay(200);
+      await delay(DELAY_MEDIUM);
 
       // Verify TLS config was added
       const config = (await client.getConfig()) as {
@@ -343,7 +344,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
         adminUrl: CADDY_URL,
       });
 
-      await delay(200);
+      await delay(DELAY_MEDIUM);
 
       // Remove domain
       await deleteDomain({
@@ -351,7 +352,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
         adminUrl: CADDY_URL,
       });
 
-      await delay(200);
+      await delay(DELAY_MEDIUM);
 
       // Verify domain was removed - check config no longer has domain's certificates
       const config = (await client.getConfig()) as {
@@ -386,7 +387,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
         adminUrl: CADDY_URL,
       });
 
-      await delay(300);
+      await delay(DELAY_LONG);
 
       // Make HTTPS request (accept self-signed cert)
       const response = await new Promise<{ body: string; statusCode: number }>(
@@ -484,7 +485,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
         adminUrl: CADDY_URL,
       });
 
-      await delay(200);
+      await delay(DELAY_MEDIUM);
 
       // Build modern TLS connection policy (not automation policy)
       const policy = buildModernTlsPolicy({
@@ -517,7 +518,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
         body: JSON.stringify(currentConfig.apps.tls),
       });
 
-      await delay(200);
+      await delay(DELAY_MEDIUM);
 
       // Verify policy was accepted by Caddy
       const updatedConfig = (await client.getConfig()) as {
@@ -553,7 +554,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
         adminUrl: CADDY_URL,
       });
 
-      await delay(200);
+      await delay(DELAY_MEDIUM);
 
       // Build compatible TLS policy
       const policy = buildCompatibleTlsPolicy({
@@ -586,7 +587,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
         body: JSON.stringify(currentConfig.apps.tls),
       });
 
-      await delay(200);
+      await delay(DELAY_MEDIUM);
 
       // Verify policy was accepted
       const config = (await client.getConfig()) as {
@@ -622,7 +623,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
         adminUrl: CADDY_URL,
       });
 
-      await delay(300);
+      await delay(DELAY_LONG);
 
       // Test 1: Main domain works (HTTPS on port 8443)
       const mainResponse = await new Promise<{ body: string; statusCode: number }>(
