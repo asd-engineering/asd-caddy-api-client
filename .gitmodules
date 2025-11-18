@@ -1,0 +1,3 @@
+[submodule ".asd"]
+	path = .asd
+	url = git@github.com:asd-engineering/.asd.git
