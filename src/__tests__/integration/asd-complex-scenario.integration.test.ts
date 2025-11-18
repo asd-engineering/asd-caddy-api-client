@@ -2,12 +2,14 @@
  * Complex .asd production scenario integration test
  *
  * This test simulates a realistic .asd deployment with:
- * - Multiple services (5+) with different configurations
+ * - Multiple services (8+) with different configurations
+ * - HTTP Basic Authentication (domain-level and path-level)
  * - Shared global health endpoint
  * - Custom X-ASD-Service-ID headers per service
  * - TLS configuration (local certificates)
- * - Complex route ordering (health > specific paths > domains)
+ * - Complex route ordering (health > auth > specific paths > domains)
  * - Shared security headers
+ * - Mixed authentication patterns (some protected, some public)
  *
  * Run these tests with:
  * 1. docker compose -f docker-compose.test.yml up -d
@@ -15,7 +17,7 @@
  * 3. docker compose -f docker-compose.test.yml down
  */
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
-import { CaddyClient } from "../../caddy/client.js";
+import { CaddyClient, buildBasicAuthHandler } from "../../caddy/index.js";
 import type { CaddyRoute } from "../../types.js";
 import * as http from "http";
 import { DELAY_MEDIUM, DELAY_LONG } from "./constants.js";
@@ -30,22 +32,33 @@ const describeIntegration = INTEGRATION_TEST ? describe : describe.skip;
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Helper function to make HTTP requests with custom Host header
+ * Helper function to make HTTP requests with custom Host header and Basic Auth
  */
 function httpRequest(options: {
   host: string;
   port: number;
   path: string;
   headers?: Record<string, string>;
+  auth?: { username: string; password: string };
 }): Promise<{ body: string; headers: http.IncomingHttpHeaders; statusCode: number }> {
   return new Promise((resolve, reject) => {
+    const headers = { ...options.headers };
+
+    // Add Basic Auth header if provided
+    if (options.auth) {
+      const credentials = Buffer.from(`${options.auth.username}:${options.auth.password}`).toString(
+        "base64"
+      );
+      headers.Authorization = `Basic ${credentials}`;
+    }
+
     const req = http.request(
       {
         hostname: options.host,
         port: options.port,
         path: options.path,
         method: "GET",
-        headers: options.headers ?? {},
+        headers,
       },
       (res) => {
         let data = "";
@@ -67,6 +80,16 @@ function httpRequest(options: {
 describeIntegration("ASD Complex Production Scenario", () => {
   let client: CaddyClient;
   const complexServer = "asd-complex-production";
+
+  // Authentication credentials - bcrypt hashes generated with Caddy CLI
+  // Generated using: docker exec caddy-test caddy hash-password --plaintext <password>
+  const ADMIN_USER = "admin";
+  const ADMIN_PASS = "admin123";
+  const ADMIN_HASH = "$2a$14$lVk5aohGe.EmndSm6H1uJeOI/lOcaTHoJYSk/8dn1DDsW5NbNqVLW";
+
+  const API_USER = "apiuser";
+  const API_PASS = "apipass";
+  const API_HASH = "$2a$14$6bYQvFSJUbyRLQ3vjnjBWu1ea6Sj3GiJAcp4vaVXF0NtuNhhs7.x.";
 
   beforeAll(async () => {
     client = new CaddyClient({ adminUrl: CADDY_URL });
@@ -93,27 +116,38 @@ describeIntegration("ASD Complex Production Scenario", () => {
     }
   });
 
-  test("simulates full .asd production scenario with 5+ services", async () => {
+  test("simulates full .asd production scenario with 8 services and mixed authentication", async () => {
     /**
-     * Scenario: .asd instance with 5 services
+     * Scenario: .asd instance with 8 services (5 public + 3 with authentication)
      *
-     * Services:
+     * Public Services (no auth):
      * 1. Code Server:  studio.localhost/          → echo-test:5678
      * 2. API Backend:  studio.localhost/api/*     → echo-test-2:5679
      * 3. Admin Panel:  studio.localhost/admin/*   → echo-test-3:5680
      * 4. Database UI:  db.localhost/              → echo-test-2:5679
      * 5. Monitoring:   metrics.localhost/         → echo-test-3:5680
      *
+     * Authenticated Services:
+     * 6. Admin Dashboard:  admin.localhost/*        → echo-test:5678 (DOMAIN-LEVEL AUTH)
+     *    - Entire domain requires authentication
+     *    - Multiple users supported (admin, superadmin)
+     * 7. API Admin:        api.localhost/admin/*   → echo-test-2:5679 (PATH-LEVEL AUTH)
+     *    - Only /admin/* paths require authentication
+     *    - Other paths public
+     * 8. Public Service:   public.localhost/*      → echo-test-3:5680 (NO AUTH)
+     *    - Completely public (demonstrates mixed patterns)
+     *
      * Shared Configuration:
-     * - Global /health endpoint (highest priority)
+     * - Global /health endpoint (highest priority, always public)
      * - X-ASD-Service-ID header (unique per service)
-     * - X-ASD-Request-ID header (unique per request)
      * - Security headers (X-Frame-Options, X-Content-Type-Options)
+     * - Mixed authentication: domain-level, path-level, and no auth
      *
      * Route Ordering (CRITICAL):
      * 1. Global /health endpoint (first)
      * 2. Path-specific routes (/api/*, /admin/*)
      * 3. Domain-specific routes
+     * 4. Authenticated routes (with basic auth handlers)
      */
 
     const routes: CaddyRoute[] = [];
@@ -138,7 +172,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
           status_code: 200,
           body: JSON.stringify({
             status: "healthy",
-            services: 5,
+            services: 8,
             version: "1.0.0",
           }),
           headers: {
@@ -265,6 +299,131 @@ describeIntegration("ASD Complex Production Scenario", () => {
               "X-ASD-Service-Type": ["observability"],
               "X-Frame-Options": ["DENY"],
               "X-Content-Type-Options": ["nosniff"],
+            },
+          },
+        },
+        {
+          handler: "reverse_proxy",
+          upstreams: [{ dial: "echo-test-3:5680" }],
+        },
+      ],
+      terminal: true,
+    });
+
+    // ========================================
+    // AUTHENTICATED SERVICES
+    // ========================================
+
+    // Route 7: Admin Dashboard (admin.localhost/*) - DOMAIN-LEVEL AUTH
+    // Entire domain requires authentication
+    // X-ASD-Service-ID: admin-dashboard-protected
+    routes.push({
+      "@id": "service-admin-dashboard",
+      match: [{ host: ["admin.localhost"], path: ["/*"] }],
+      handle: [
+        buildBasicAuthHandler({
+          enabled: true,
+          accounts: [
+            { username: ADMIN_USER, password: ADMIN_HASH },
+            { username: "superadmin", password: ADMIN_HASH }, // Multiple users
+          ],
+          realm: "Admin Dashboard",
+        }),
+        {
+          handler: "headers",
+          response: {
+            set: {
+              "X-ASD-Service-ID": ["admin-dashboard-protected"],
+              "X-ASD-Service-Type": ["admin-protected"],
+              "X-Frame-Options": ["DENY"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-ASD-Auth-Type": ["domain-level"],
+            },
+          },
+        },
+        {
+          handler: "reverse_proxy",
+          upstreams: [{ dial: "echo-test:5678" }],
+        },
+      ],
+      terminal: true,
+    });
+
+    // Route 8a: API Admin (api.localhost/admin/*) - PATH-LEVEL AUTH
+    // Only /admin/* paths require authentication
+    // X-ASD-Service-ID: api-admin-protected
+    routes.push({
+      "@id": "service-api-admin",
+      match: [{ host: ["api.localhost"], path: ["/admin/*"] }],
+      handle: [
+        buildBasicAuthHandler({
+          enabled: true,
+          accounts: [{ username: API_USER, password: API_HASH }],
+          realm: "API Admin",
+        }),
+        {
+          handler: "headers",
+          response: {
+            set: {
+              "X-ASD-Service-ID": ["api-admin-protected"],
+              "X-ASD-Service-Type": ["api-admin-protected"],
+              "X-Frame-Options": ["DENY"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-ASD-Auth-Type": ["path-level"],
+            },
+          },
+        },
+        {
+          handler: "reverse_proxy",
+          upstreams: [{ dial: "echo-test-2:5679" }],
+        },
+      ],
+      terminal: true,
+    });
+
+    // Route 8b: API Public (api.localhost/*) - NO AUTH
+    // Other paths on api.localhost are public
+    // X-ASD-Service-ID: api-public
+    routes.push({
+      "@id": "service-api-public",
+      match: [{ host: ["api.localhost"], path: ["/*"] }],
+      handle: [
+        {
+          handler: "headers",
+          response: {
+            set: {
+              "X-ASD-Service-ID": ["api-public"],
+              "X-ASD-Service-Type": ["api-public"],
+              "X-Frame-Options": ["SAMEORIGIN"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-ASD-Auth-Type": ["none"],
+            },
+          },
+        },
+        {
+          handler: "reverse_proxy",
+          upstreams: [{ dial: "echo-test-2:5679" }],
+        },
+      ],
+      terminal: true,
+    });
+
+    // Route 9: Public Service (public.localhost/*) - NO AUTH
+    // Demonstrates service with no authentication
+    // X-ASD-Service-ID: public-service
+    routes.push({
+      "@id": "service-public",
+      match: [{ host: ["public.localhost"], path: ["/*"] }],
+      handle: [
+        {
+          handler: "headers",
+          response: {
+            set: {
+              "X-ASD-Service-ID": ["public-service"],
+              "X-ASD-Service-Type": ["public"],
+              "X-Frame-Options": ["SAMEORIGIN"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-ASD-Auth-Type": ["none"],
             },
           },
         },
@@ -404,6 +563,118 @@ describeIntegration("ASD Complex Production Scenario", () => {
     expect(codeServerResponse.headers["x-content-type-options"]).toBe("nosniff");
     expect(dbResponse.headers["x-content-type-options"]).toBe("nosniff");
     expect(metricsResponse.headers["x-content-type-options"]).toBe("nosniff");
+
+    // ===== AUTHENTICATION TESTS =====
+
+    // Test 10: Domain-level auth - admin.localhost requires authentication
+    const adminDashboardNoAuth = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/dashboard",
+      headers: { Host: "admin.localhost" },
+    });
+    expect(adminDashboardNoAuth.statusCode).toBe(401);
+    expect(adminDashboardNoAuth.headers["www-authenticate"]).toContain("Basic");
+    expect(adminDashboardNoAuth.headers["www-authenticate"]).toContain("Admin Dashboard");
+
+    // Test 11: Domain-level auth - correct credentials work
+    const adminDashboardWithAuth = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/dashboard",
+      headers: { Host: "admin.localhost" },
+      auth: { username: ADMIN_USER, password: ADMIN_PASS },
+    });
+    expect(adminDashboardWithAuth.statusCode).toBe(200);
+    expect(adminDashboardWithAuth.body).toContain("Hello from backend 1");
+    expect(adminDashboardWithAuth.headers["x-asd-service-id"]).toBe("admin-dashboard-protected");
+    expect(adminDashboardWithAuth.headers["x-asd-auth-type"]).toBe("domain-level");
+
+    // Test 12: Domain-level auth - multiple users work
+    const adminDashboardSuperuser = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/settings",
+      headers: { Host: "admin.localhost" },
+      auth: { username: "superadmin", password: ADMIN_PASS },
+    });
+    expect(adminDashboardSuperuser.statusCode).toBe(200);
+
+    // Test 13: Path-level auth - api.localhost/admin/* requires auth
+    const apiAdminNoAuth = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/admin/users",
+      headers: { Host: "api.localhost" },
+    });
+    expect(apiAdminNoAuth.statusCode).toBe(401);
+    expect(apiAdminNoAuth.headers["www-authenticate"]).toContain("API Admin");
+
+    // Test 14: Path-level auth - api.localhost/admin/* works with credentials
+    const apiAdminWithAuth = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/admin/users",
+      headers: { Host: "api.localhost" },
+      auth: { username: API_USER, password: API_PASS },
+    });
+    expect(apiAdminWithAuth.statusCode).toBe(200);
+    expect(apiAdminWithAuth.body).toContain("Hello from backend 2");
+    expect(apiAdminWithAuth.headers["x-asd-service-id"]).toBe("api-admin-protected");
+    expect(apiAdminWithAuth.headers["x-asd-auth-type"]).toBe("path-level");
+
+    // Test 15: Path-level auth - api.localhost/* (non-admin) is public
+    const apiPublicPath = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/public/data",
+      headers: { Host: "api.localhost" },
+    });
+    expect(apiPublicPath.statusCode).toBe(200);
+    expect(apiPublicPath.headers["x-asd-service-id"]).toBe("api-public");
+    expect(apiPublicPath.headers["x-asd-auth-type"]).toBe("none");
+
+    // Test 16: Public service - public.localhost is accessible without auth
+    const publicService = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/data",
+      headers: { Host: "public.localhost" },
+    });
+    expect(publicService.statusCode).toBe(200);
+    expect(publicService.body).toContain("Hello from backend 3");
+    expect(publicService.headers["x-asd-service-id"]).toBe("public-service");
+    expect(publicService.headers["x-asd-auth-type"]).toBe("none");
+
+    // Test 17: Service isolation - admin creds don't work on API service
+    const adminCredsOnApi = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/admin/test",
+      headers: { Host: "api.localhost" },
+      auth: { username: ADMIN_USER, password: ADMIN_PASS },
+    });
+    expect(adminCredsOnApi.statusCode).toBe(401);
+
+    // Test 18: Service isolation - API creds don't work on admin service
+    const apiCredsOnAdmin = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/dashboard",
+      headers: { Host: "admin.localhost" },
+      auth: { username: API_USER, password: API_PASS },
+    });
+    expect(apiCredsOnAdmin.statusCode).toBe(401);
+
+    // Test 19: Wrong credentials are rejected
+    const wrongPassword = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/dashboard",
+      headers: { Host: "admin.localhost" },
+      auth: { username: ADMIN_USER, password: "wrongpass" },
+    });
+    expect(wrongPassword.statusCode).toBe(401);
   });
 
   test("verifies configuration is idempotent (same config = same result)", async () => {
