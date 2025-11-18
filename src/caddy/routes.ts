@@ -397,11 +397,7 @@ export function buildRedirectRoute(options: {
         handler: "static_response",
         status_code: statusCode,
         headers: {
-          response: {
-            set: {
-              Location: [`https://${options.toHost}{http.request.uri}`],
-            },
-          },
+          Location: [`https://${options.toHost}{http.request.uri}`],
         },
       },
     ],

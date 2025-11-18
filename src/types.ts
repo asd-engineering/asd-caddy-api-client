@@ -62,21 +62,24 @@ export interface CaddyRouteHandler {
   routes?: CaddyRoute[];
   body?: string;
   status_code?: number;
-  headers?: {
-    request?: {
-      set?: Record<string, string[]>;
-      add?: Record<string, string[]>;
-      delete?: string[];
-    };
-    response?: {
-      set?: Record<string, string[]>;
-      add?: Record<string, string[]>;
-      delete?: string[];
-      require?: {
-        status_code?: number[];
-      };
-    };
-  };
+  headers?:
+    | {
+        // For handlers like 'headers'
+        request?: {
+          set?: Record<string, string[]>;
+          add?: Record<string, string[]>;
+          delete?: string[];
+        };
+        response?: {
+          set?: Record<string, string[]>;
+          add?: Record<string, string[]>;
+          delete?: string[];
+          require?: {
+            status_code?: number[];
+          };
+        };
+      }
+    | Record<string, string[]>; // For static_response (direct header mapping)
   upstreams?: { dial: string }[];
   transport?: {
     protocol?: string;

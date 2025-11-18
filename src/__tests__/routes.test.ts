@@ -285,9 +285,7 @@ describe("buildRedirectRoute", () => {
     expect(route.match![0].host).toEqual(["www.example.com"]);
     expect(route.handle[0].handler).toBe("static_response");
     expect(route.handle[0].status_code).toBe(301);
-    expect(route.handle[0].headers?.response?.set?.Location).toEqual([
-      "https://example.com{http.request.uri}",
-    ]);
+    expect(route.handle[0].headers?.Location).toEqual(["https://example.com{http.request.uri}"]);
     expect(route.terminal).toBe(true);
   });
 
@@ -300,7 +298,7 @@ describe("buildRedirectRoute", () => {
     });
 
     expect(route.handle[0].status_code).toBe(302);
-    expect(route.handle[0].headers?.response?.set?.Location).toEqual([
+    expect(route.handle[0].headers?.Location).toEqual([
       "https://www.example.com{http.request.uri}",
     ]);
   });
@@ -321,7 +319,7 @@ describe("buildRedirectRoute", () => {
     });
 
     // Check that {http.request.uri} is included to preserve path and query
-    expect(route.handle[0].headers?.response?.set?.Location[0]).toContain("{http.request.uri}");
+    expect(route.handle[0].headers?.Location?.[0]).toContain("{http.request.uri}");
   });
 });
 
