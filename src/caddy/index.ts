@@ -16,6 +16,15 @@ export {
 } from "./domains.js";
 export * from "./tls.js";
 
+// Export auth utilities
+export {
+  hashPassword,
+  verifyPassword,
+  hashPasswordWithCaddy,
+  createBasicAuthAccount,
+  createBasicAuthAccounts,
+} from "../utils/auth.js";
+
 // Re-export types and schemas for convenience
 export type {
   CaddyClientOptions,

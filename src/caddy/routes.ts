@@ -362,24 +362,67 @@ export function buildSecurityHeadersHandler(headers: SecurityHeaders): CaddyRout
 
 /**
  * Build a basic auth handler
+ * Supports both single account (legacy) and multiple accounts
+ *
  * @param auth - Basic auth configuration
  * @returns Basic auth handler
+ *
+ * @example
+ * // Single account (legacy)
+ * buildBasicAuthHandler({
+ *   enabled: true,
+ *   username: "admin",
+ *   passwordHash: "$2a$10$...",
+ *   realm: "Admin Area"
+ * })
+ *
+ * @example
+ * // Multiple accounts (recommended)
+ * buildBasicAuthHandler({
+ *   enabled: true,
+ *   accounts: [
+ *     { username: "admin", password: "$2a$10$..." },
+ *     { username: "user", password: "$2a$10$..." }
+ *   ],
+ *   realm: "Protected Area",
+ *   hash: { algorithm: "bcrypt", cost: 10 }
+ * })
  */
 export function buildBasicAuthHandler(auth: BasicAuthOptions): CaddyRouteHandler {
-  return {
+  // Build accounts array - support both legacy and new format
+  const accounts =
+    auth.accounts ??
+    (auth.username && auth.passwordHash
+      ? [{ username: auth.username, password: auth.passwordHash }]
+      : []);
+
+  if (accounts.length === 0) {
+    throw new Error(
+      "Basic auth requires at least one account (username + passwordHash or accounts array)"
+    );
+  }
+
+  const handler: CaddyRouteHandler = {
     handler: "authentication",
     providers: {
       http_basic: {
-        accounts: [
-          {
-            username: auth.username,
-            password: auth.passwordHash,
-          },
-        ],
+        accounts,
         realm: auth.realm ?? "Restricted Area",
       },
     },
   };
+
+  // Add hash configuration if specified
+  // Note: Caddy automatically detects bcrypt from the hash format ($2a$10$...)
+  // The hash.algorithm field is only needed if you want to override the default
+  if (auth.hash?.algorithm && auth.hash.algorithm !== "bcrypt") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    (handler.providers as any).http_basic.hash = {
+      algorithm: auth.hash.algorithm,
+    };
+  }
+
+  return handler;
 }
 
 /**

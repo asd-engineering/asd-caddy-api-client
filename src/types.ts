@@ -424,13 +424,32 @@ export interface ServiceRouteOptions {
 }
 
 /**
+ * Basic authentication account
+ */
+export interface BasicAuthAccount {
+  username: string;
+  password: string; // Bcrypt hash
+}
+
+/**
  * Basic authentication options
+ * Supports single account (legacy) or multiple accounts
  */
 export interface BasicAuthOptions {
   enabled: boolean;
+  /** Single username (legacy - use accounts instead) */
   username?: string;
+  /** Single password hash (legacy - use accounts instead) */
   passwordHash?: string;
+  /** Multiple accounts (recommended) */
+  accounts?: BasicAuthAccount[];
+  /** Authentication realm */
   realm?: string;
+  /** Hash algorithm (default: bcrypt) */
+  hash?: {
+    algorithm?: "bcrypt";
+    cost?: number;
+  };
 }
 
 /**
