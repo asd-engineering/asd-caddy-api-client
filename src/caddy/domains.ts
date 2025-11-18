@@ -17,6 +17,12 @@ import {
 } from "../schemas.js";
 import { CaddyClient } from "./client.js";
 import { DomainNotFoundError, DomainAlreadyExistsError } from "../errors.js";
+import {
+  extractSerialNumber,
+  generateCertTag,
+  splitCertificateBundle,
+  parseCertificate,
+} from "../utils/certificate.js";
 
 /**
  * Add a domain with automatic TLS (Let's Encrypt)
@@ -204,10 +210,18 @@ export async function addDomainWithTls(options: AddDomainWithTlsOptions): Promis
   config.apps.tls.certificates ??= { load_files: [] };
   config.apps.tls.certificates.load_files ??= [];
 
+  // Read certificate to extract serial number for tagging
+  const fs = await import("fs/promises");
+  const certPem = await fs.readFile(validated.certFile, "utf-8");
+  const certBlocks = splitCertificateBundle(certPem);
+  const mainCert = certBlocks[0]; // Use first cert in chain
+  const serialNumber = extractSerialNumber(mainCert);
+  const certTag = generateCertTag(validated.domain, serialNumber);
+
   config.apps.tls.certificates.load_files.push({
     certificate: validated.certFile,
     key: validated.keyFile,
-    tags: ["manual"],
+    tags: [certTag, "manual"],
   });
 
   // Apply configuration
@@ -484,4 +498,135 @@ export async function getDomainConfig(
   } catch {
     return null;
   }
+}
+
+/**
+ * Rotate TLS certificate for a domain
+ * Adds new certificate while keeping the old one temporarily for zero-downtime rotation
+ * @param domain - Domain name
+ * @param newCertFile - Path to new certificate file
+ * @param newKeyFile - Path to new private key file
+ * @param adminUrl - Caddy Admin API URL
+ * @returns Certificate tag of the newly added certificate
+ */
+export async function rotateCertificate(
+  domain: Domain,
+  newCertFile: string,
+  newKeyFile: string,
+  adminUrl?: string
+): Promise<string> {
+  const client = new CaddyClient({ adminUrl });
+
+  // Check if domain exists
+  const existing = await getDomainConfig(domain, adminUrl);
+  if (!existing) {
+    throw new DomainNotFoundError(domain);
+  }
+
+  // Get current TLS configuration
+  const tlsConfig = (await client.getConfig()) as {
+    apps?: {
+      tls?: {
+        certificates?: {
+          load_files?: {
+            certificate: string;
+            key: string;
+            tags?: string[];
+          }[];
+        };
+      };
+    };
+  };
+
+  // Read new certificate to extract serial number
+  const fs = await import("fs/promises");
+  const certPem = await fs.readFile(newCertFile, "utf-8");
+  const certBlocks = splitCertificateBundle(certPem);
+  const mainCert = certBlocks[0];
+  const serialNumber = extractSerialNumber(mainCert);
+  const newCertTag = generateCertTag(domain, serialNumber);
+
+  // Parse certificate info for validation
+  parseCertificate(mainCert); // Validates certificate is parseable
+
+  // Ensure TLS certificates structure exists
+  tlsConfig.apps ??= {};
+  tlsConfig.apps.tls ??= {};
+  tlsConfig.apps.tls.certificates ??= { load_files: [] };
+  tlsConfig.apps.tls.certificates.load_files ??= [];
+
+  // Add new certificate
+  tlsConfig.apps.tls.certificates.load_files.push({
+    certificate: newCertFile,
+    key: newKeyFile,
+    tags: [newCertTag, "manual"],
+  });
+
+  // Apply updated TLS configuration
+  await client.request("/config/apps/tls/certificates", {
+    method: "PATCH",
+    body: JSON.stringify(tlsConfig.apps.tls.certificates),
+  });
+
+  return newCertTag;
+}
+
+/**
+ * Remove old certificates for a domain after rotation
+ * Call this after verifying the new certificate is working
+ * @param domain - Domain name
+ * @param keepCertTag - Certificate tag to keep (usually the newest)
+ * @param adminUrl - Caddy Admin API URL
+ * @returns Number of certificates removed
+ */
+export async function removeOldCertificates(
+  domain: Domain,
+  keepCertTag: string,
+  adminUrl?: string
+): Promise<number> {
+  const client = new CaddyClient({ adminUrl });
+
+  // Get current TLS configuration
+  const config = (await client.getConfig()) as {
+    apps?: {
+      tls?: {
+        certificates?: {
+          load_files?: {
+            certificate?: string;
+            key?: string;
+            tags?: string[];
+          }[];
+        };
+      };
+    };
+  };
+
+  if (!config.apps?.tls?.certificates?.load_files) {
+    return 0;
+  }
+
+  const originalCount = config.apps.tls.certificates.load_files.length;
+
+  // Keep only the specified certificate tag for this domain
+  config.apps.tls.certificates.load_files = config.apps.tls.certificates.load_files.filter(
+    (cert) => {
+      const hasDomainTag = cert.tags?.some((tag) => tag.includes(domain));
+      const isKeepCert = cert.tags?.includes(keepCertTag);
+
+      // Keep if: not a domain cert OR is the cert to keep
+      return !hasDomainTag || isKeepCert;
+    }
+  );
+
+  const removedCount = originalCount - config.apps.tls.certificates.load_files.length;
+
+  if (removedCount > 0) {
+    // Apply updated configuration
+    await client.request("/config/apps/tls/certificates", {
+      method: "PATCH",
+      body: JSON.stringify(config.apps.tls.certificates),
+    });
+  }
+
+  return removedCount;
 }

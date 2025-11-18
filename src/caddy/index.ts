@@ -4,6 +4,15 @@
 
 export { CaddyClient } from "./client.js";
 export * from "./routes.js";
+export {
+  addDomainWithAutoTls,
+  addDomainWithTls,
+  updateDomain,
+  deleteDomain,
+  getDomainConfig,
+  rotateCertificate,
+  removeOldCertificates,
+} from "./domains.js";
 
 // Re-export types and schemas for convenience
 export type {

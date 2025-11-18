@@ -8,12 +8,22 @@ import {
   updateDomain,
   deleteDomain,
   getDomainConfig,
+  rotateCertificate,
+  removeOldCertificates,
 } from "../caddy/domains.js";
 import { DomainNotFoundError, DomainAlreadyExistsError } from "../errors.js";
 
 // Mock fetch globally
 const mockFetch = vi.fn();
 global.fetch = mockFetch as typeof fetch;
+
+// Mock filesystem for certificate reading
+vi.mock("fs/promises", () => ({
+  default: {
+    readFile: vi.fn(),
+  },
+  readFile: vi.fn(),
+}));
 
 describe("Domain Management", () => {
   beforeEach(() => {
@@ -124,6 +134,31 @@ describe("Domain Management", () => {
 
   describe("addDomainWithTls", () => {
     test("adds domain with custom TLS certificate", async () => {
+      // Mock certificate file reading
+      const {  readFile } = await import("fs/promises");
+      const mockReadFile = readFile as ReturnType<typeof vi.fn>;
+      mockReadFile.mockResolvedValueOnce(`-----BEGIN CERTIFICATE-----
+MIIDXTCCAkWgAwIBAgIJAKL0UG+mRkSvMA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
+BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
+aWRnaXRzIFB0eSBMdGQwHhcNMTcwMTA1MTYxNDE3WhcNMjcwMTAzMTYxNDE3WjBF
+MQswCQYDVQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50
+ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+CgKCAQEAw8VGbvqFXSqMQTAKPZk0GUXCQY4iCHF9Lj/bLW3qHBWIZJ3F3EcpGK8Y
+xT8vTMGPj+Ut1tYvqGUPPYvF6Lx8RYMmgMmAeAwCLLcVAqjlGCjy7aqHJHJBWkHf
+FRNCvt3PYOmLFqmLqQrXdFaSDDR+7aSHWqXNLJELqJjLNNvQpNmQEPGmKk6tN3vf
+HLW9HU0yONvLY6EqJrOkGQkxYf3ysPp8gTYaJj4zyJqPBAKdJnrB0qNJUJHADuKK
+bI7lV0J8xlCCGQDXL0IJWdGFbJGcNLPJQO0sxALdQcVkLwKGWqRHKTv3bHSJdJGR
+BgaOBGwpCfr8q5z8V4O4VT1mYbZT1QIDAQABo1AwTjAdBgNVHQ4EFgQU3WGRfxkf
+qL6F7pPNBKGJ2TGDvREwHwYDVR0jBBgwFoAU3WGRfxkfqL6F7pPNBKGJ2TGDvREw
+DAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAVGKwwLGCvuJlOCPnGcqr
+c7LNbGOPSs9WFcLJJj0gLODFCJCFGNPqQZXJB0r8z0GQKnLNYJNKcCLPVRqFPNPf
+rQKDWQQKsB4xPjKJZmPcRNLLoF+vr5HNVDPqLSLqBmKYXJGPkYLcUOGmj7MWEnBQ
+kSR7xjVQXcKY1ue4wOPJ9gCCY8MYJlpNLa3RzH0TbvHNn4p5MNB1cM2EjNLzZfHl
+xAQmqJqYYJCwvPPvMfZhAbdD4yd3RFMM2qPGPqWgbPWRMSKiDZLN2wIkDDLqWzLZ
+2Bvx5PVh5gL8eUmNJ0Yvjz7xJlK3F/kKqFLNXbFxDHGN9dLxPGJONKxJKvVGC6T8
+lQ==
+-----END CERTIFICATE-----`);
+
       // Mock getDomainConfig (domain doesn't exist)
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -677,6 +712,306 @@ describe("Domain Management", () => {
       } as Response);
 
       await expect(deleteDomain({ domain: "example.com" })).resolves.not.toThrow();
+    });
+  });
+
+  describe("rotateCertificate", () => {
+    const VALID_CERT = `-----BEGIN CERTIFICATE-----
+MIIDXTCCAkWgAwIBAgIJAKL0UG+mRkSvMA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
+BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
+aWRnaXRzIFB0eSBMdGQwHhcNMTcwMTA1MTYxNDE3WhcNMjcwMTAzMTYxNDE3WjBF
+MQswCQYDVQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50
+ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+CgKCAQEAw8VGbvqFXSqMQTAKPZk0GUXCQY4iCHF9Lj/bLW3qHBWIZJ3F3EcpGK8Y
+xT8vTMGPj+Ut1tYvqGUPPYvF6Lx8RYMmgMmAeAwCLLcVAqjlGCjy7aqHJHJBWkHf
+FRNCvt3PYOmLFqmLqQrXdFaSDDR+7aSHWqXNLJELqJjLNNvQpNmQEPGmKk6tN3vf
+HLW9HU0yONvLY6EqJrOkGQkxYf3ysPp8gTYaJj4zyJqPBAKdJnrB0qNJUJHADuKK
+bI7lV0J8xlCCGQDXL0IJWdGFbJGcNLPJQO0sxALdQcVkLwKGWqRHKTv3bHSJdJGR
+BgaOBGwpCfr8q5z8V4O4VT1mYbZT1QIDAQABo1AwTjAdBgNVHQ4EFgQU3WGRfxkf
+qL6F7pPNBKGJ2TGDvREwHwYDVR0jBBgwFoAU3WGRfxkfqL6F7pPNBKGJ2TGDvREw
+DAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAVGKwwLGCvuJlOCPnGcqr
+c7LNbGOPSs9WFcLJJj0gLODFCJCFGNPqQZXJB0r8z0GQKnLNYJNKcCLPVRqFPNPf
+rQKDWQQKsB4xPjKJZmPcRNLLoF+vr5HNVDPqLSLqBmKYXJGPkYLcUOGmj7MWEnBQ
+kSR7xjVQXcKY1ue4wOPJ9gCCY8MYJlpNLa3RzH0TbvHNn4p5MNB1cM2EjNLzZfHl
+xAQmqJqYYJCwvPPvMfZhAbdD4yd3RFMM2qPGPqWgbPWRMSKiDZLN2wIkDDLqWzLZ
+2Bvx5PVh5gL8eUmNJ0Yvjz7xJlK3F/kKqFLNXbFxDHGN9dLxPGJONKxJKvVGC6T8
+lQ==
+-----END CERTIFICATE-----`;
+
+    test("rotates certificate for existing domain", async () => {
+      // Mock certificate file reading
+      const { readFile } = await import("fs/promises");
+      const mockReadFile = readFile as ReturnType<typeof vi.fn>;
+      mockReadFile.mockResolvedValueOnce(VALID_CERT);
+
+      // Mock getDomainConfig (domain exists)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          "example.com": {
+            routes: [{ handle: [{ handler: "reverse_proxy" }] }],
+          },
+        }),
+      } as Response);
+
+      // Mock getConfig (for TLS certificates)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          apps: {
+            tls: {
+              certificates: {
+                load_files: [
+                  {
+                    certificate: "/old/cert.crt",
+                    key: "/old/cert.key",
+                    tags: ["example.com-oldserial-20251118000000", "manual"],
+                  },
+                ],
+              },
+            },
+          },
+        }),
+      } as Response);
+
+      // Mock PATCH request
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const certTag = await rotateCertificate(
+        "example.com",
+        "/new/cert.crt",
+        "/new/cert.key",
+        "http://127.0.0.1:2019"
+      );
+
+      expect(certTag).toMatch(/^example\.com-a2f4506fa64644af-\d{14}$/);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    test("throws DomainNotFoundError if domain does not exist", async () => {
+      // Mock getDomainConfig (domain doesn't exist)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+
+      await expect(
+        rotateCertificate(
+          "nonexistent.com",
+          "/new/cert.crt",
+          "/new/cert.key"
+        )
+      ).rejects.toThrow(DomainNotFoundError);
+    });
+
+    test("handles missing TLS configuration", async () => {
+      // Mock certificate file reading
+      const { readFile } = await import("fs/promises");
+      const mockReadFile = readFile as ReturnType<typeof vi.fn>;
+      mockReadFile.mockResolvedValueOnce(VALID_CERT);
+
+      // Mock getDomainConfig (domain exists)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          "example.com": {
+            routes: [{ handle: [{ handler: "reverse_proxy" }] }],
+          },
+        }),
+      } as Response);
+
+      // Mock getConfig (no TLS config)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+
+      // Mock PATCH request
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const certTag = await rotateCertificate(
+        "example.com",
+        "/new/cert.crt",
+        "/new/cert.key"
+      );
+
+      expect(certTag).toMatch(/^example\.com-a2f4506fa64644af-\d{14}$/);
+    });
+
+    test("throws error for invalid certificate", async () => {
+      // Mock certificate file reading with invalid cert
+      const { readFile } = await import("fs/promises");
+      const mockReadFile = readFile as ReturnType<typeof vi.fn>;
+      mockReadFile.mockResolvedValueOnce("invalid certificate");
+
+      // Mock getDomainConfig (domain exists)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          "example.com": {
+            routes: [{ handle: [{ handler: "reverse_proxy" }] }],
+          },
+        }),
+      } as Response);
+
+      await expect(
+        rotateCertificate(
+          "example.com",
+          "/invalid/cert.crt",
+          "/invalid/cert.key"
+        )
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("removeOldCertificates", () => {
+    test("removes old certificates and keeps specified one", async () => {
+      // Mock getConfig with multiple certificates
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          apps: {
+            tls: {
+              certificates: {
+                load_files: [
+                  {
+                    certificate: "/old/cert1.crt",
+                    key: "/old/cert1.key",
+                    tags: ["example.com-serial1-20251118000000", "manual"],
+                  },
+                  {
+                    certificate: "/old/cert2.crt",
+                    key: "/old/cert2.key",
+                    tags: ["example.com-serial2-20251118000001", "manual"],
+                  },
+                  {
+                    certificate: "/new/cert.crt",
+                    key: "/new/cert.key",
+                    tags: ["example.com-serial3-20251118000002", "manual"],
+                  },
+                  {
+                    certificate: "/other/cert.crt",
+                    key: "/other/cert.key",
+                    tags: ["other.com-serial4-20251118000003", "manual"],
+                  },
+                ],
+              },
+            },
+          },
+        }),
+      } as Response);
+
+      // Mock PATCH request
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const removedCount = await removeOldCertificates(
+        "example.com",
+        "example.com-serial3-20251118000002"
+      );
+
+      expect(removedCount).toBe(2);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    test("returns 0 if no certificates to remove", async () => {
+      // Mock getConfig with only the certificate to keep
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          apps: {
+            tls: {
+              certificates: {
+                load_files: [
+                  {
+                    certificate: "/new/cert.crt",
+                    key: "/new/cert.key",
+                    tags: ["example.com-serial3-20251118000002", "manual"],
+                  },
+                ],
+              },
+            },
+          },
+        }),
+      } as Response);
+
+      const removedCount = await removeOldCertificates(
+        "example.com",
+        "example.com-serial3-20251118000002"
+      );
+
+      expect(removedCount).toBe(0);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    test("returns 0 if no TLS configuration exists", async () => {
+      // Mock getConfig with no TLS config
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+
+      const removedCount = await removeOldCertificates(
+        "example.com",
+        "example.com-serial3-20251118000002"
+      );
+
+      expect(removedCount).toBe(0);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    test("only removes certificates for specified domain", async () => {
+      // Mock getConfig with certificates for multiple domains
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          apps: {
+            tls: {
+              certificates: {
+                load_files: [
+                  {
+                    certificate: "/example/old.crt",
+                    key: "/example/old.key",
+                    tags: ["example.com-serial1-20251118000000", "manual"],
+                  },
+                  {
+                    certificate: "/example/new.crt",
+                    key: "/example/new.key",
+                    tags: ["example.com-serial2-20251118000001", "manual"],
+                  },
+                  {
+                    certificate: "/other/cert.crt",
+                    key: "/other/cert.key",
+                    tags: ["other.com-serial3-20251118000002", "manual"],
+                  },
+                ],
+              },
+            },
+          },
+        }),
+      } as Response);
+
+      // Mock PATCH request
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const removedCount = await removeOldCertificates(
+        "example.com",
+        "example.com-serial2-20251118000001"
+      );
+
+      // Should only remove 1 certificate (the old example.com one)
+      expect(removedCount).toBe(1);
     });
   });
 });

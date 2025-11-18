@@ -14,5 +14,8 @@ export * from "./caddy/index.js";
 // MITM module
 export * from "./mitm/index.js";
 
+// Certificate utilities
+export * from "./utils/certificate.js";
+
 // Version
 export const VERSION = "0.1.0";
