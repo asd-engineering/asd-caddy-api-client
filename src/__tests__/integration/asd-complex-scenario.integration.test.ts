@@ -301,7 +301,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     expect(healthResponse.headers["x-asd-health"]).toBe("ok");
     expect(healthResponse.headers["x-asd-instance"]).toBe("prod-cluster-1");
 
-    // Test 2: Health endpoint works for ANY host
+    // Test 2: Health endpoint works for db.localhost
     const healthResponse2 = await httpRequest({
       host: "localhost",
       port: 8080,
@@ -310,6 +310,20 @@ describeIntegration("ASD Complex Production Scenario", () => {
     });
     expect(healthResponse2.statusCode).toBe(200);
     expect(healthResponse2.body).toContain("healthy");
+    expect(healthResponse2.headers["x-asd-health"]).toBe("ok");
+    expect(healthResponse2.headers["x-asd-instance"]).toBe("prod-cluster-1");
+
+    // Test 2b: Health endpoint works for metrics.localhost
+    const healthResponse3 = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/health",
+      headers: { Host: "metrics.localhost" },
+    });
+    expect(healthResponse3.statusCode).toBe(200);
+    expect(healthResponse3.body).toContain("healthy");
+    expect(healthResponse3.headers["x-asd-health"]).toBe("ok");
+    expect(healthResponse3.headers["x-asd-instance"]).toBe("prod-cluster-1");
 
     // Test 3: API service has correct X-ASD-Service-ID header
     const apiResponse = await httpRequest({
@@ -601,7 +615,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     expect(healthResponse.headers["x-asd-health"]).toBe("ok");
     expect(healthResponse.headers["x-asd-instance"]).toBe("prod-cluster-1");
 
-    // Test 2: Health endpoint works for ANY host
+    // Test 2: Health endpoint works for db.localhost
     const healthResponse2 = await httpRequest({
       host: "localhost",
       port: 8080,
@@ -610,6 +624,20 @@ describeIntegration("ASD Complex Production Scenario", () => {
     });
     expect(healthResponse2.statusCode).toBe(200);
     expect(healthResponse2.body).toContain("healthy");
+    expect(healthResponse2.headers["x-asd-health"]).toBe("ok");
+    expect(healthResponse2.headers["x-asd-instance"]).toBe("prod-cluster-1");
+
+    // Test 2b: Health endpoint works for metrics.localhost
+    const healthResponse3 = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/health",
+      headers: { Host: "metrics.localhost" },
+    });
+    expect(healthResponse3.statusCode).toBe(200);
+    expect(healthResponse3.body).toContain("healthy");
+    expect(healthResponse3.headers["x-asd-health"]).toBe("ok");
+    expect(healthResponse3.headers["x-asd-instance"]).toBe("prod-cluster-1");
 
     // Test 3: API service has correct X-ASD-Service-ID header
     const apiResponse = await httpRequest({
