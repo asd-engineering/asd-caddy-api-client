@@ -262,17 +262,74 @@ export function buildLoadBalancerRoute(options: LoadBalancerRouteOptions): Caddy
 
 /**
  * Build a reverse proxy handler
- * @param dial - Dial address (host:port)
+ * @param dial - Dial address (host:port or https://host:port)
+ * @param options - Optional transport configuration
  * @returns Reverse proxy handler
+ *
+ * @example
+ * // HTTP backend (default)
+ * buildReverseProxyHandler("nginx:80")
+ *
+ * @example
+ * // HTTPS backend with TLS
+ * buildReverseProxyHandler("https://internal-service:443")
+ *
+ * @example
+ * // HTTPS backend with custom TLS settings
+ * buildReverseProxyHandler("internal-service:443", {
+ *   tls: true,
+ *   tlsServerName: "internal.example.com",
+ *   tlsInsecureSkipVerify: false
+ * })
  */
-export function buildReverseProxyHandler(dial: DialAddress): CaddyRouteHandler {
-  return {
+export function buildReverseProxyHandler(
+  dial: DialAddress,
+  options?: {
+    tls?: boolean;
+    tlsServerName?: string;
+    tlsInsecureSkipVerify?: boolean;
+    tlsTrustedCACerts?: string;
+  }
+): CaddyRouteHandler {
+  // Auto-detect HTTPS from dial address
+  const isHttps = typeof dial === "string" && dial.startsWith("https://");
+  const cleanDial = isHttps ? dial.replace("https://", "") : dial;
+  const useTls = options?.tls ?? isHttps;
+
+  const handler: CaddyRouteHandler = {
     handler: "reverse_proxy",
-    upstreams: [{ dial }],
-    transport: {
-      protocol: "http",
-    },
+    upstreams: [{ dial: cleanDial }],
   };
+
+  // Build transport configuration
+  if (useTls) {
+    const tlsConfig: Record<string, unknown> = {};
+
+    if (options?.tlsServerName) {
+      tlsConfig.server_name = options.tlsServerName;
+    }
+
+    if (options?.tlsInsecureSkipVerify === true) {
+      tlsConfig.insecure_skip_verify = true;
+    }
+
+    if (options?.tlsTrustedCACerts) {
+      tlsConfig.ca = options.tlsTrustedCACerts;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    handler.transport = {
+      protocol: "http",
+      tls: tlsConfig,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any; // Caddy transport config is extensible beyond our types
+  } else {
+    handler.transport = {
+      protocol: "http",
+    };
+  }
+
+  return handler;
 }
 
 /**

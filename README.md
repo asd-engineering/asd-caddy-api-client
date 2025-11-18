@@ -29,7 +29,7 @@ const client = new CaddyClient({
   adminUrl: "http://127.0.0.1:2019",
 });
 
-// Build routes
+// Build routes with type-safe builders
 const routes = buildServiceRoutes({
   host: "api.localhost",
   dial: "127.0.0.1:3000",
@@ -39,11 +39,18 @@ const routes = buildServiceRoutes({
   },
 });
 
-// Add routes to Caddy
-for (const route of routes) {
-  await client.addRoute("https_server", route);
-}
+// Add routes to Caddy (simplified - no loop needed!)
+await client.addRoutes("https_server", routes);
 ```
+
+> **⚠️ Important:** Always use our type-safe builder functions instead of constructing raw Caddy JSON objects. Our builders provide:
+>
+> - ✅ Full TypeScript type checking and IDE autocomplete
+> - ✅ Runtime Zod schema validation
+> - ✅ Protection against common configuration errors
+> - ✅ Clear documentation and examples
+>
+> **Raw Caddy JSON is error-prone and breaks easily.** Our builders are tested, validated, and prevent mistakes.
 
 ## Usage
 
