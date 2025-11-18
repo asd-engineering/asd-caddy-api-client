@@ -810,6 +810,29 @@ describeIntegration("ASD Complex Production Scenario", () => {
     expect(healthCheck.statusCode).toBe(200);
     const healthData = JSON.parse(healthCheck.body);
     expect(healthData.services).toBe(10);
+
+    // Save complete configuration as snapshot for documentation
+    if (process.env.UPDATE_SNAPSHOTS === "true") {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const fixtureDir = path.join(
+        process.cwd(),
+        "src",
+        "__tests__",
+        "integration",
+        "__fixtures__"
+      );
+      await fs.mkdir(fixtureDir, { recursive: true });
+
+      const finalConfig = (await client.getServers()) as Record<string, unknown>;
+      const snapshotPath = path.join(fixtureDir, "asd-complex-scenario-config.json");
+      await fs.writeFile(
+        snapshotPath,
+        JSON.stringify(finalConfig[complexServer], null, 2),
+        "utf-8"
+      );
+      console.log(`\n✅ Complete configuration (10 services) exported to: ${snapshotPath}`);
+    }
   });
 
   test("verifies configuration is idempotent (same config = same result)", async () => {
@@ -1131,27 +1154,6 @@ describeIntegration("ASD Complex Production Scenario", () => {
     });
     expect(adminPrecedenceResponse.headers["x-asd-service-id"]).toBe("admin-panel-v2");
     // Should NOT be code-server-main
-
-    // Save final configuration as snapshot for comparison
-    if (process.env.UPDATE_SNAPSHOTS === "true") {
-      const fs = await import("fs/promises");
-      const path = await import("path");
-      const fixtureDir = path.join(
-        process.cwd(),
-        "src",
-        "__tests__",
-        "integration",
-        "__fixtures__"
-      );
-      await fs.mkdir(fixtureDir, { recursive: true });
-
-      const snapshotPath = path.join(fixtureDir, "asd-complex-scenario-config.json");
-      await fs.writeFile(
-        snapshotPath,
-        JSON.stringify(serverStateAfterSecondApply[complexServer], null, 2),
-        "utf-8"
-      );
-    }
   });
 
   test("verifies route ordering is critical for complex configurations", async () => {
