@@ -8,12 +8,46 @@
  */
 import { describe, test, expect, beforeAll } from "vitest";
 import { CaddyClient } from "../../caddy/client.js";
+import * as http from "http";
 
 const CADDY_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:2019";
 const INTEGRATION_TEST = process.env.INTEGRATION_TEST === "true";
 
+/**
+ * Helper function to make HTTP requests with custom Host header
+ * Node's fetch() doesn't allow overriding the Host header, so we use http.request
+ */
+function httpRequest(options: {
+  host: string;
+  port: number;
+  path: string;
+  headers?: Record<string, string>;
+}): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        hostname: options.host,
+        port: options.port,
+        path: options.path,
+        method: "GET",
+        headers: options.headers ?? {},
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => resolve(data));
+      }
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
 // Skip integration tests unless explicitly enabled
 const describeIntegration = INTEGRATION_TEST ? describe : describe.skip;
+
+// Helper to add tiny delay between operations to avoid overwhelming Caddy
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describeIntegration("CaddyClient Integration Tests", () => {
   let client: CaddyClient;
@@ -308,6 +342,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
         };
 
         await expect(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           client.insertRoute(testServerName, invalidRoute as any)
         ).rejects.toThrow();
       });
@@ -404,11 +439,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           terminal: true,
         };
 
-        const replaced = await client.replaceRouteById(
-          testServerName,
-          "non-existent-id",
-          newRoute
-        );
+        const replaced = await client.replaceRouteById(testServerName, "non-existent-id", newRoute);
         expect(replaced).toBe(false);
       });
 
@@ -418,6 +449,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
         };
 
         await expect(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           client.replaceRouteById(testServerName, "any-id", invalidRoute as any)
         ).rejects.toThrow();
       });
@@ -527,6 +559,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             routes: [],
           },
         });
+        await delay(100);
 
         // Insert health check
         await client.insertRoute(
@@ -539,6 +572,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           },
           "beginning"
         );
+        await delay(100);
 
         // Insert domain route
         await client.insertRoute(
@@ -551,6 +585,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           },
           "after-health-checks"
         );
+        await delay(100);
 
         // Insert another domain route
         await client.insertRoute(
@@ -563,6 +598,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           },
           "after-health-checks"
         );
+        await delay(100);
 
         // Replace domain1
         await client.replaceRouteById(testServerName, "domain1", {
@@ -570,6 +606,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
           handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "echo-test:9999" }] }],
           terminal: true,
         });
+        await delay(100);
 
         // Verify final state
         const routes = await client.getRoutes(testServerName);
@@ -633,6 +670,433 @@ describeIntegration("CaddyClient Integration Tests", () => {
         const routes = await client.getRoutes(testServerName);
         expect(routes[0]["@id"]).toBe("first");
         expect(routes[routes.length - 1]["@id"]).toBe("actually-last");
+      });
+    });
+
+    describe("Functional route ordering tests (HTTP requests)", () => {
+      const functionalTestServer = "functional-test.localhost";
+
+      beforeEach(async () => {
+        // Clean up: Delete the server completely before each test
+        try {
+          await client.request(`/config/apps/http/servers/${functionalTestServer}`, {
+            method: "DELETE",
+          });
+          await delay(200); // Wait for server deletion to take effect
+        } catch {
+          // Server might not exist, ignore
+        }
+      });
+
+      test("verifies route order affects which backend handles requests (FUNCTIONAL)", async () => {
+        // Create a server on port 80 (HTTP) for actual testing
+        // IMPORTANT: Explicitly disable auto-HTTPS to prevent TLS cert acquisition
+        await client.patchServer({
+          [functionalTestServer]: {
+            listen: [":80"],
+            routes: [],
+            automatic_https: {
+              disable: true,
+            },
+          },
+        });
+        await delay(100);
+
+        // Scenario: Test that route order determines which backend handles the request
+        // We'll create overlapping routes and verify the FIRST matching route wins
+
+        // Route 1: Specific host "backend1.localhost" -> echo-test (backend 1)
+        await client.insertRoute(
+          functionalTestServer,
+          {
+            "@id": "backend1-route",
+            match: [{ host: ["backend1.localhost"] }],
+            handle: [
+              {
+                handler: "reverse_proxy",
+                upstreams: [{ dial: "echo-test:5678" }],
+              },
+            ],
+            terminal: true,
+          },
+          "beginning"
+        );
+        await delay(100);
+
+        // Route 2: Specific host "backend2.localhost" -> echo-test-2 (backend 2)
+        await client.insertRoute(
+          functionalTestServer,
+          {
+            "@id": "backend2-route",
+            match: [{ host: ["backend2.localhost"] }],
+            handle: [
+              {
+                handler: "reverse_proxy",
+                upstreams: [{ dial: "echo-test-2:5679" }],
+              },
+            ],
+            terminal: true,
+          },
+          "end"
+        );
+        await delay(100);
+
+        // Route 3: Catch-all route for all other hosts -> echo-test-3 (backend 3)
+        // Note: In Caddy, omitting the match field (or having empty match) creates a catch-all
+        await client.insertRoute(
+          functionalTestServer,
+          {
+            "@id": "wildcard-route",
+            // No match field = matches all requests
+            handle: [
+              {
+                handler: "reverse_proxy",
+                upstreams: [{ dial: "echo-test-3:5680" }],
+              },
+            ],
+            terminal: true,
+          },
+          "end"
+        );
+        await delay(500); // Extra time for Caddy to start HTTP server
+
+        // Verify route order in config
+        const routes = await client.getRoutes(functionalTestServer);
+        expect(routes[0]["@id"]).toBe("backend1-route");
+        expect(routes[1]["@id"]).toBe("backend2-route");
+        expect(routes[2]["@id"]).toBe("wildcard-route");
+
+        // NOW TEST THE ACTUAL ROUTING BEHAVIOR WITH HTTP REQUESTS
+        // Make HTTP requests and verify which backend responds
+
+        // Request 1: backend1.localhost should hit backend 1
+        const body1 = await httpRequest({
+          host: "localhost",
+          port: 8080,
+          path: "/",
+          headers: { Host: "backend1.localhost" },
+        });
+        expect(body1).toContain("Hello from backend 1");
+
+        // Request 2: backend2.localhost should hit backend 2
+        const body2 = await httpRequest({
+          host: "localhost",
+          port: 8080,
+          path: "/",
+          headers: { Host: "backend2.localhost" },
+        });
+        expect(body2).toContain("Hello from backend 2");
+
+        // Request 3: any other host should hit backend 3 (wildcard)
+        const body3 = await httpRequest({
+          host: "localhost",
+          port: 8080,
+          path: "/",
+          headers: { Host: "other.localhost" },
+        });
+        expect(body3).toContain("Hello from backend 3");
+      });
+
+      test("verifies route order precedence - first match wins (FUNCTIONAL)", async () => {
+        // This test proves that route ORDER matters by creating overlapping routes
+        // and showing different backends handle requests based on order
+
+        // Setup: Create a server with two overlapping routes in different orders
+        // IMPORTANT: Explicitly disable auto-HTTPS to prevent TLS cert acquisition
+        await client.patchServer({
+          [functionalTestServer]: {
+            listen: [":80"],
+            routes: [],
+            automatic_https: {
+              disable: true,
+            },
+          },
+        });
+        await delay(100);
+
+        // Scenario 1: Specific route BEFORE wildcard
+        // Route 1: /api/* -> backend 2
+        await client.insertRoute(
+          functionalTestServer,
+          {
+            "@id": "specific-route",
+            match: [{ path: ["/api/*"] }],
+            handle: [
+              {
+                handler: "reverse_proxy",
+                upstreams: [{ dial: "echo-test-2:5679" }],
+              },
+            ],
+            terminal: true,
+          },
+          "beginning"
+        );
+        await delay(100);
+
+        // Route 2: /* (wildcard) -> backend 3
+        await client.insertRoute(
+          functionalTestServer,
+          {
+            "@id": "wildcard",
+            match: [{ path: ["/*"] }],
+            handle: [
+              {
+                handler: "reverse_proxy",
+                upstreams: [{ dial: "echo-test-3:5680" }],
+              },
+            ],
+            terminal: true,
+          },
+          "end"
+        );
+        await delay(500);
+
+        // Test: /api/test should hit backend 2 (specific route matches first)
+        const body1 = await httpRequest({
+          host: "localhost",
+          port: 8080,
+          path: "/api/test",
+        });
+        expect(body1).toContain("Hello from backend 2");
+
+        // Test: /other should hit backend 3 (wildcard route)
+        const body2 = await httpRequest({
+          host: "localhost",
+          port: 8080,
+          path: "/other",
+        });
+        expect(body2).toContain("Hello from backend 3");
+
+        // NOW SWAP THE ORDER using replaceRouteById and verify behavior changes
+        // Put wildcard FIRST by replacing routes with swapped order
+        await client.patchServer({
+          [functionalTestServer]: {
+            listen: [":80"],
+            automatic_https: {
+              disable: true,
+            },
+            routes: [
+              {
+                "@id": "wildcard",
+                match: [{ path: ["/*"] }],
+                handle: [
+                  {
+                    handler: "reverse_proxy",
+                    upstreams: [{ dial: "echo-test-3:5680" }],
+                  },
+                ],
+                terminal: true,
+              },
+              {
+                "@id": "specific-route",
+                match: [{ path: ["/api/*"] }],
+                handle: [
+                  {
+                    handler: "reverse_proxy",
+                    upstreams: [{ dial: "echo-test-2:5679" }],
+                  },
+                ],
+                terminal: true,
+              },
+            ],
+          },
+        });
+        await delay(500);
+
+        // Test: /api/test should NOW hit backend 3 (wildcard matches first!)
+        const body3 = await httpRequest({
+          host: "localhost",
+          port: 8080,
+          path: "/api/test",
+        });
+        expect(body3).toContain("Hello from backend 3");
+
+        // Test: /other should still hit backend 3 (wildcard)
+        const body4 = await httpRequest({
+          host: "localhost",
+          port: 8080,
+          path: "/other",
+        });
+        expect(body4).toContain("Hello from backend 3");
+
+        // This proves route order ACTUALLY matters for routing behavior!
+      });
+    });
+
+    describe("Route ordering and positioning tests", () => {
+      const positionTestServer = "position-test.localhost";
+
+      test("verifies beginning position truly inserts at start", async () => {
+        // Reset server
+        await client.patchServer({
+          [positionTestServer]: {
+            listen: [":8443"],
+            routes: [
+              {
+                "@id": "existing-route",
+                match: [{ path: ["/existing"] }],
+                handle: [{ handler: "static_response", status_code: 200 }],
+                terminal: true,
+              },
+            ],
+          },
+        });
+
+        // Insert at beginning
+        await client.insertRoute(
+          positionTestServer,
+          {
+            "@id": "new-first-route",
+            match: [{ path: ["/new-first"] }],
+            handle: [{ handler: "static_response", status_code: 200 }],
+            terminal: true,
+          },
+          "beginning"
+        );
+
+        const routes = await client.getRoutes(positionTestServer);
+        expect(routes[0]["@id"]).toBe("new-first-route");
+        expect(routes[1]["@id"]).toBe("existing-route");
+      });
+
+      test("verifies after-health-checks inserts after static_response handlers", async () => {
+        // Reset server with health check and existing domain route
+        await client.patchServer({
+          [positionTestServer]: {
+            listen: [":8443"],
+            routes: [
+              {
+                "@id": "health",
+                match: [{ path: ["/health"] }],
+                handle: [
+                  {
+                    handler: "static_response",
+                    status_code: 200,
+                  },
+                ],
+                terminal: true,
+              },
+              {
+                "@id": "existing-domain",
+                match: [{ host: ["existing.com"] }],
+                handle: [
+                  {
+                    handler: "reverse_proxy",
+                    upstreams: [{ dial: "echo-test:5678" }],
+                  },
+                ],
+                terminal: true,
+              },
+            ],
+          },
+        });
+
+        // Insert with after-health-checks (default)
+        await client.insertRoute(positionTestServer, {
+          "@id": "new-domain",
+          match: [{ host: ["new.com"] }],
+          handle: [
+            {
+              handler: "reverse_proxy",
+              upstreams: [{ dial: "echo-test-2:5679" }],
+            },
+          ],
+          terminal: true,
+        });
+
+        const routes = await client.getRoutes(positionTestServer);
+        // Should be: health, new-domain, existing-domain
+        expect(routes[0]["@id"]).toBe("health");
+        expect(routes[1]["@id"]).toBe("new-domain");
+        expect(routes[2]["@id"]).toBe("existing-domain");
+      });
+
+      test("verifies multiple after-health-checks insertions insert immediately after health checks", async () => {
+        // Reset server
+        await client.patchServer({
+          [positionTestServer]: {
+            listen: [":8443"],
+            routes: [
+              {
+                "@id": "health",
+                match: [{ path: ["/health"] }],
+                handle: [{ handler: "static_response", status_code: 200 }],
+                terminal: true,
+              },
+            ],
+          },
+        });
+
+        // Insert three routes in sequence using after-health-checks
+        // Each insertion should insert immediately after health check
+        await client.insertRoute(positionTestServer, {
+          "@id": "domain-1",
+          match: [{ host: ["domain1.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "echo-test:5678" }] }],
+          terminal: true,
+        });
+        // Routes: [health, domain-1]
+
+        await client.insertRoute(positionTestServer, {
+          "@id": "domain-2",
+          match: [{ host: ["domain2.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "echo-test-2:5679" }] }],
+          terminal: true,
+        });
+        // Routes: [health, domain-2, domain-1]
+
+        await client.insertRoute(positionTestServer, {
+          "@id": "domain-3",
+          match: [{ host: ["domain3.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "echo-test-3:5680" }] }],
+          terminal: true,
+        });
+        // Routes: [health, domain-3, domain-2, domain-1]
+
+        const routes = await client.getRoutes(positionTestServer);
+        // after-health-checks inserts immediately after last health check (reverse order)
+        expect(routes[0]["@id"]).toBe("health");
+        expect(routes[1]["@id"]).toBe("domain-3");
+        expect(routes[2]["@id"]).toBe("domain-2");
+        expect(routes[3]["@id"]).toBe("domain-1");
+      });
+
+      test("verifies end position places route at actual end", async () => {
+        // Reset with multiple routes
+        await client.patchServer({
+          [positionTestServer]: {
+            listen: [":8443"],
+            routes: [
+              {
+                "@id": "route-1",
+                match: [{ host: ["r1.com"] }],
+                handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "echo-test:5678" }] }],
+                terminal: true,
+              },
+              {
+                "@id": "route-2",
+                match: [{ host: ["r2.com"] }],
+                handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "echo-test-2:5679" }] }],
+                terminal: true,
+              },
+            ],
+          },
+        });
+
+        // Insert at end
+        await client.insertRoute(
+          positionTestServer,
+          {
+            "@id": "last-route",
+            match: [{ host: ["last.com"] }],
+            handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "echo-test-3:5680" }] }],
+            terminal: true,
+          },
+          "end"
+        );
+
+        const routes = await client.getRoutes(positionTestServer);
+        expect(routes[routes.length - 1]["@id"]).toBe("last-route");
       });
     });
   });

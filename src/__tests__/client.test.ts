@@ -447,10 +447,21 @@ describe("CaddyClient", () => {
         },
       ];
 
+      const serverConfig = {
+        listen: [":443"],
+        routes: existingRoutes,
+      };
+
       // Mock getRoutes
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => existingRoutes,
+      } as Response);
+
+      // Mock getServerConfig
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => serverConfig,
       } as Response);
 
       // Mock patchServer
@@ -462,9 +473,9 @@ describe("CaddyClient", () => {
       const client = new CaddyClient();
       await client.insertRoute("https_server", mockRoute, "beginning");
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
       expect(mockFetch).toHaveBeenNthCalledWith(
-        2,
+        3,
         "http://127.0.0.1:2019/config/apps/http/servers",
         expect.objectContaining({
           method: "PATCH",
@@ -473,7 +484,7 @@ describe("CaddyClient", () => {
       );
 
       // Verify route was inserted at beginning (index 0)
-      const patchCall = mockFetch.mock.calls[1][1];
+      const patchCall = mockFetch.mock.calls[2][1];
       const patchedConfig = JSON.parse(patchCall?.body as string);
       expect(patchedConfig.https_server.routes[0]["@id"]).toBe("test-route");
     });
@@ -488,9 +499,16 @@ describe("CaddyClient", () => {
         },
       ];
 
+      const serverConfig = { listen: [":443"], routes: existingRoutes };
+
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => serverConfig,
       } as Response);
 
       mockFetch.mockResolvedValueOnce({
@@ -501,7 +519,7 @@ describe("CaddyClient", () => {
       const client = new CaddyClient();
       await client.insertRoute("https_server", mockRoute, "end");
 
-      const patchCall = mockFetch.mock.calls[1][1];
+      const patchCall = mockFetch.mock.calls[2][1];
       const patchedConfig = JSON.parse(patchCall?.body as string);
       expect(patchedConfig.https_server.routes[1]["@id"]).toBe("test-route");
     });
@@ -522,9 +540,16 @@ describe("CaddyClient", () => {
         },
       ];
 
+      const serverConfig = { listen: [":443"], routes: existingRoutes };
+
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => serverConfig,
       } as Response);
 
       mockFetch.mockResolvedValueOnce({
@@ -535,7 +560,7 @@ describe("CaddyClient", () => {
       const client = new CaddyClient();
       await client.insertRoute("https_server", mockRoute, "after-health-checks");
 
-      const patchCall = mockFetch.mock.calls[1][1];
+      const patchCall = mockFetch.mock.calls[2][1];
       const patchedConfig = JSON.parse(patchCall?.body as string);
       // Should be inserted after health check (index 1)
       expect(patchedConfig.https_server.routes[1]["@id"]).toBe("test-route");
@@ -544,9 +569,16 @@ describe("CaddyClient", () => {
     test("defaults to after-health-checks position", async () => {
       const existingRoutes: CaddyRoute[] = [];
 
+      const serverConfig = { listen: [":443"], routes: existingRoutes };
+
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => serverConfig,
       } as Response);
 
       mockFetch.mockResolvedValueOnce({
@@ -557,7 +589,7 @@ describe("CaddyClient", () => {
       const client = new CaddyClient();
       await client.insertRoute("https_server", mockRoute);
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
     });
 
     test("validates route before inserting", async () => {
@@ -598,9 +630,16 @@ describe("CaddyClient", () => {
         },
       ];
 
+      const serverConfig = { listen: [":443"], routes: existingRoutes };
+
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => serverConfig,
       } as Response);
 
       mockFetch.mockResolvedValueOnce({
@@ -612,9 +651,9 @@ describe("CaddyClient", () => {
       const result = await client.replaceRouteById("https_server", "route1", newRoute);
 
       expect(result).toBe(true);
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
 
-      const patchCall = mockFetch.mock.calls[1][1];
+      const patchCall = mockFetch.mock.calls[2][1];
       const patchedConfig = JSON.parse(patchCall?.body as string);
       expect(patchedConfig.https_server.routes[0]["@id"]).toBe("route1");
       expect(patchedConfig.https_server.routes[0].match[0].host[0]).toBe("updated.com");
@@ -630,9 +669,16 @@ describe("CaddyClient", () => {
         },
       ];
 
+      const serverConfig = { listen: [":443"], routes: existingRoutes };
+
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => serverConfig,
       } as Response);
 
       mockFetch.mockResolvedValueOnce({
@@ -643,7 +689,7 @@ describe("CaddyClient", () => {
       const client = new CaddyClient();
       await client.replaceRouteById("https_server", "preserve-me", newRoute);
 
-      const patchCall = mockFetch.mock.calls[1][1];
+      const patchCall = mockFetch.mock.calls[2][1];
       const patchedConfig = JSON.parse(patchCall?.body as string);
       expect(patchedConfig.https_server.routes[0]["@id"]).toBe("preserve-me");
     });
@@ -717,9 +763,16 @@ describe("CaddyClient", () => {
         },
       ];
 
+      const serverConfig = { listen: [":443"], routes: existingRoutes };
+
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => serverConfig,
       } as Response);
 
       mockFetch.mockResolvedValueOnce({
@@ -731,12 +784,14 @@ describe("CaddyClient", () => {
       const result = await client.removeRouteById("https_server", "route2");
 
       expect(result).toBe(true);
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
 
-      const patchCall = mockFetch.mock.calls[1][1];
+      const patchCall = mockFetch.mock.calls[2][1];
       const patchedConfig = JSON.parse(patchCall?.body as string);
       expect(patchedConfig.https_server.routes).toHaveLength(2);
-      expect(patchedConfig.https_server.routes.find((r: CaddyRoute) => r["@id"] === "route2")).toBeUndefined();
+      expect(
+        patchedConfig.https_server.routes.find((r: CaddyRoute) => r["@id"] === "route2")
+      ).toBeUndefined();
     });
 
     test("returns false when route id not found", async () => {
@@ -783,9 +838,16 @@ describe("CaddyClient", () => {
         },
       ];
 
+      const serverConfig = { listen: [":443"], routes: existingRoutes };
+
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => serverConfig,
       } as Response);
 
       mockFetch.mockResolvedValueOnce({
@@ -797,7 +859,7 @@ describe("CaddyClient", () => {
       const result = await client.removeRouteById("https_server", "duplicate");
 
       expect(result).toBe(true);
-      const patchCall = mockFetch.mock.calls[1][1];
+      const patchCall = mockFetch.mock.calls[2][1];
       const patchedConfig = JSON.parse(patchCall?.body as string);
       expect(patchedConfig.https_server.routes).toHaveLength(1);
       expect(patchedConfig.https_server.routes[0]["@id"]).toBe("route1");

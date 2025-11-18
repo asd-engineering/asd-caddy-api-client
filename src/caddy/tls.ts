@@ -94,9 +94,7 @@ export interface TlsConnectionPolicyOptions {
  * });
  * ```
  */
-export function buildTlsConnectionPolicy(
-  options: TlsConnectionPolicyOptions
-): TlsConnectionPolicy {
+export function buildTlsConnectionPolicy(options: TlsConnectionPolicyOptions): TlsConnectionPolicy {
   const policy: TlsConnectionPolicy = {};
 
   // SNI matching

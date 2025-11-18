@@ -355,16 +355,16 @@ config.apps.tls.certificates.load_pem = [
 
 **Current Status**: 206 tests (179 unit + 27 integration), >90% coverage
 
-| Module                  | Tests | Coverage |
-| ----------------------- | ----- | -------- |
-| Certificate Utils       | 21    | 100%     |
-| Domain Management       | 25    | >95%     |
-| Routes                  | 28    | >90%     |
-| TLS Policies            | 35    | 100%     |
-| Client (Unit)           | 33    | >95%     |
-| Client (Integration)    | 27    | N/A      |
-| Schemas                 | 17    | 100%     |
-| Errors                  | 20    | 100%     |
+| Module               | Tests | Coverage |
+| -------------------- | ----- | -------- |
+| Certificate Utils    | 21    | 100%     |
+| Domain Management    | 25    | >95%     |
+| Routes               | 28    | >90%     |
+| TLS Policies         | 35    | 100%     |
+| Client (Unit)        | 33    | >95%     |
+| Client (Integration) | 27    | N/A      |
+| Schemas              | 17    | 100%     |
+| Errors               | 20    | 100%     |
 
 ---
 

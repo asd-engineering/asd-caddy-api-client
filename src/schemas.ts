@@ -86,7 +86,7 @@ export const CaddyRouteHandlerSchema: z.ZodType<{
 export const CaddyRouteSchema = z.object({
   "@id": z.string().optional(),
   match: z.array(CaddyRouteMatcherSchema).optional(),
-  handle: z.array(CaddyRouteHandlerSchema),
+  handle: z.array(CaddyRouteHandlerSchema).min(1, "Route must have at least one handler"),
   terminal: z.boolean().optional(),
 });
 

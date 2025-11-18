@@ -220,6 +220,17 @@ export class CaddyClient {
   }
 
   /**
+   * Get configuration for a specific server
+   * @param server - Server name
+   * @returns Server configuration object
+   */
+  async getServerConfig(server: string): Promise<Record<string, unknown>> {
+    const response = await this.request(`/config/apps/http/servers/${server}`);
+    const config = await response.json();
+    return config as Record<string, unknown>;
+  }
+
+  /**
    * Patch server configuration
    * @param serverConfig - Server configuration object
    */
@@ -266,15 +277,17 @@ export class CaddyClient {
     let insertIndex = 0;
 
     if (position === "after-health-checks") {
-      // Find position after health check/static routes
+      // Find position immediately after the last health check/static route
+      // Health checks are identified by static_response handler
+      let lastHealthCheckIndex = -1;
       for (let i = 0; i < routes.length; i++) {
         const handler = routes[i].handle?.[0];
         if (handler?.handler === "static_response") {
-          insertIndex = i + 1;
-        } else if (routes[i]["@id"]) {
-          break; // Stop at first domain route
+          lastHealthCheckIndex = i;
         }
       }
+      // Insert immediately after the last health check
+      insertIndex = lastHealthCheckIndex + 1;
     } else if (position === "end") {
       insertIndex = routes.length;
     }
@@ -283,9 +296,13 @@ export class CaddyClient {
     // Insert route at the calculated position
     routes.splice(insertIndex, 0, validated);
 
-    // Update server routes
+    // Get full server config to preserve all fields
+    const serverConfig = await this.getServerConfig(server);
+
+    // Update server routes while preserving other fields
     await this.patchServer({
       [server]: {
+        ...serverConfig,
         routes,
       },
     });
@@ -299,7 +316,10 @@ export class CaddyClient {
    * @returns true if route was found and replaced, false otherwise
    */
   async replaceRouteById(server: string, id: string, newRoute: CaddyRoute): Promise<boolean> {
+    // Validate route first (will throw if invalid)
     const validated = CaddyRouteSchema.parse(newRoute);
+
+    // Then check if route exists
     const routes = await this.getRoutes(server);
     const index = routes.findIndex((r) => r["@id"] === id);
 
@@ -310,9 +330,13 @@ export class CaddyClient {
     // Replace route while preserving the @id
     routes[index] = { ...validated, "@id": id };
 
-    // Update server routes
+    // Get full server config to preserve all fields
+    const serverConfig = await this.getServerConfig(server);
+
+    // Update server routes while preserving other fields
     await this.patchServer({
       [server]: {
+        ...serverConfig,
         routes,
       },
     });
@@ -335,9 +359,13 @@ export class CaddyClient {
       return false; // Route not found
     }
 
-    // Update server routes
+    // Get full server config to preserve all fields
+    const serverConfig = await this.getServerConfig(server);
+
+    // Update server routes while preserving other fields
     await this.patchServer({
       [server]: {
+        ...serverConfig,
         routes: filtered,
       },
     });
