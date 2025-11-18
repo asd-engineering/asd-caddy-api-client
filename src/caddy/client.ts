@@ -29,7 +29,7 @@ export class CaddyClient {
    * @returns Response object
    * @throws NetworkError, TimeoutError, CaddyApiError
    */
-  private async request(path: string, options: RequestInit = {}): Promise<Response> {
+  async request(path: string, options: RequestInit = {}): Promise<Response> {
     const url = `${this.adminUrl}${path}`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);

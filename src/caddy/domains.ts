@@ -300,21 +300,91 @@ export async function updateDomain(options: UpdateDomainOptions): Promise<Domain
 }
 
 /**
- * Delete a domain
+ * Delete a domain and clean up associated certificates
  * @param options - Delete options
  */
 export async function deleteDomain(options: DeleteDomainOptions): Promise<void> {
   const validated = DeleteDomainOptionsSchema.parse(options);
   const client = new CaddyClient({ adminUrl: validated.adminUrl });
 
-  // Get current servers
-  const servers = (await client.getServers()) as Record<string, unknown>;
+  // Check if domain exists
+  const existing = await getDomainConfig(validated.domain, validated.adminUrl);
+  if (!existing) {
+    throw new DomainNotFoundError(validated.domain);
+  }
+
+  // Get full config to clean up TLS certificates
+  const config = (await client.getConfig()) as {
+    apps?: {
+      http?: {
+        servers?: Record<string, unknown>;
+      };
+      tls?: {
+        certificates?: {
+          load_files?: {
+            certificate?: string;
+            key?: string;
+            tags?: string[];
+          }[];
+          load_pem?: {
+            certificate?: string;
+            key?: string;
+            tags?: string[];
+          }[];
+        };
+        automation?: {
+          policies?: {
+            subjects?: string[];
+            [key: string]: unknown;
+          }[];
+        };
+      };
+    };
+  };
 
   // Remove the domain server
-  if (servers[validated.domain]) {
-    delete servers[validated.domain];
-    await client.patchServer(servers);
+  if (config.apps?.http?.servers?.[validated.domain]) {
+    delete config.apps.http.servers[validated.domain];
   }
+
+  // Clean up TLS certificates for this domain
+  if (config.apps?.tls?.certificates) {
+    // Remove from load_files
+    if (config.apps.tls.certificates.load_files) {
+      config.apps.tls.certificates.load_files = config.apps.tls.certificates.load_files.filter(
+        (cert) => {
+          // Remove certs with domain in tags or certificate path
+          const hasDomainTag = cert.tags?.some((tag) => tag.includes(validated.domain));
+          const hasDomainInPath =
+            cert.certificate?.includes(validated.domain) ?? cert.key?.includes(validated.domain);
+          return !hasDomainTag && !hasDomainInPath;
+        }
+      );
+    }
+
+    // Remove from load_pem
+    if (config.apps.tls.certificates.load_pem) {
+      config.apps.tls.certificates.load_pem = config.apps.tls.certificates.load_pem.filter(
+        (cert) => {
+          const hasDomainTag = cert.tags?.some((tag) => tag.includes(validated.domain));
+          return !hasDomainTag;
+        }
+      );
+    }
+  }
+
+  // Clean up TLS automation policies
+  if (config.apps?.tls?.automation?.policies) {
+    config.apps.tls.automation.policies = config.apps.tls.automation.policies.filter(
+      (policy) => !policy.subjects?.includes(validated.domain)
+    );
+  }
+
+  // Apply updated configuration
+  await client.request("/config/", {
+    method: "POST",
+    body: JSON.stringify(config),
+  });
 }
 
 /**
@@ -330,28 +400,86 @@ export async function getDomainConfig(
   const client = new CaddyClient({ adminUrl });
 
   try {
-    const servers = (await client.getServers()) as Record<string, { routes?: unknown[] }>;
+    const servers = (await client.getServers()) as Record<
+      string,
+      {
+        routes?: {
+          handle?: {
+            handler?: string;
+            upstreams?: { dial?: string }[];
+            headers?: { response?: { set?: Record<string, string[]> } };
+          }[];
+          automatic_https?: { disable?: boolean };
+        }[];
+        automatic_https?: { disable?: boolean };
+      }
+    >;
 
-    if (!servers[domain]) {
+    const serverConfig = servers[domain];
+    if (!serverConfig) {
       return null;
     }
 
-    // Parse server configuration to extract domain config
-    // This is a simplified implementation - production code would need
-    // more robust parsing of the Caddy config structure
+    // Parse target and port from reverse_proxy handler
+    let target = "127.0.0.1";
+    let targetPort = 3000;
+    let enableHsts = false;
+    let frameOptions: "DENY" | "SAMEORIGIN" = "DENY";
+    let hstsMaxAge = 31536000;
+
+    if (serverConfig.routes && serverConfig.routes.length > 0) {
+      for (const route of serverConfig.routes) {
+        if (!route.handle) continue;
+
+        for (const handler of route.handle) {
+          // Parse reverse_proxy to get target
+          if (handler.handler === "reverse_proxy" && handler.upstreams?.[0]?.dial) {
+            const dial = handler.upstreams[0].dial;
+            const match = /^(.+):(\d+)$/.exec(dial);
+            if (match) {
+              target = match[1];
+              targetPort = parseInt(match[2], 10);
+            }
+          }
+
+          // Parse security headers
+          if (handler.handler === "headers" && handler.headers?.response?.set) {
+            const headers = handler.headers.response.set;
+            if (headers["Strict-Transport-Security"]) {
+              enableHsts = true;
+              const hstsHeader = headers["Strict-Transport-Security"][0];
+              const maxAgeMatch = /max-age=(\d+)/.exec(hstsHeader);
+              if (maxAgeMatch) {
+                hstsMaxAge = parseInt(maxAgeMatch[1], 10);
+              }
+            }
+            if (headers["X-Frame-Options"]) {
+              const frameOpt = headers["X-Frame-Options"][0];
+              if (frameOpt === "SAMEORIGIN" || frameOpt === "DENY") {
+                frameOptions = frameOpt;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Determine if auto TLS is enabled
+    const autoTls = serverConfig.automatic_https?.disable !== true;
+
     return {
       domain,
-      target: "127.0.0.1", // Would be parsed from config
-      targetPort: 3000, // Would be parsed from config
-      tlsEnabled: true,
-      autoTls: true,
+      target,
+      targetPort,
+      tlsEnabled: true, // Assume TLS if server exists on :443
+      autoTls,
       securityHeaders: {
-        enableHsts: false,
-        hstsMaxAge: 31536000,
-        frameOptions: "DENY",
-        enableCompression: true,
+        enableHsts,
+        hstsMaxAge,
+        frameOptions,
+        enableCompression: true, // Can't detect from config easily
       },
-      redirectMode: "none",
+      redirectMode: "none", // TODO: Detect redirect routes
     };
   } catch {
     return null;

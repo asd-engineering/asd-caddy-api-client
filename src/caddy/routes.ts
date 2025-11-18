@@ -101,11 +101,7 @@ export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRo
     handle: [
       {
         handler: "static_response",
-        body: JSON.stringify({
-          status: "ok",
-          service: validated.serviceId,
-          timestamp: new Date().toISOString(),
-        }),
+        body: `{"status":"ok","service":"${validated.serviceId}","timestamp":"{http.time.now.unix}"}`,
         status_code: 200,
         headers: {
           response: {
