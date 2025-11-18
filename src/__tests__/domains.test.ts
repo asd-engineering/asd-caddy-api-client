@@ -13,21 +13,21 @@ import {
 } from "../caddy/domains.js";
 import { DomainNotFoundError, DomainAlreadyExistsError } from "../errors.js";
 
+// Mock fs/promises module
+vi.mock("fs/promises", () => ({
+  readFile: vi.fn(),
+}));
+
 // Mock fetch globally
 const mockFetch = vi.fn();
 global.fetch = mockFetch as typeof fetch;
 
-// Mock filesystem for certificate reading
-vi.mock("fs/promises", () => ({
-  default: {
-    readFile: vi.fn(),
-  },
-  readFile: vi.fn(),
-}));
-
 describe("Domain Management", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     mockFetch.mockReset();
+    // Reset readFile mock
+    const { readFile } = await import("fs/promises");
+    vi.mocked(readFile).mockReset();
   });
 
   describe("addDomainWithAutoTls", () => {
@@ -136,8 +136,7 @@ describe("Domain Management", () => {
     test("adds domain with custom TLS certificate", async () => {
       // Mock certificate file reading
       const { readFile } = await import("fs/promises");
-      const mockReadFile = readFile as ReturnType<typeof vi.fn>;
-      mockReadFile.mockResolvedValueOnce(`-----BEGIN CERTIFICATE-----
+      vi.mocked(readFile).mockResolvedValueOnce(`-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIJAKL0UG+mRkSvMA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
 BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
 aWRnaXRzIFB0eSBMdGQwHhcNMTcwMTA1MTYxNDE3WhcNMjcwMTAzMTYxNDE3WjBF
@@ -175,6 +174,12 @@ lQ==
             },
           },
         }),
+      } as Response);
+
+      // Mock POST to /config/apps/tls (for adding certificates)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
       } as Response);
 
       // Mock patchServer
@@ -741,8 +746,7 @@ lQ==
     test("rotates certificate for existing domain", async () => {
       // Mock certificate file reading
       const { readFile } = await import("fs/promises");
-      const mockReadFile = readFile as ReturnType<typeof vi.fn>;
-      mockReadFile.mockResolvedValueOnce(VALID_CERT);
+      vi.mocked(readFile).mockResolvedValueOnce(VALID_CERT);
 
       // Mock getDomainConfig (domain exists)
       mockFetch.mockResolvedValueOnce({
@@ -806,8 +810,7 @@ lQ==
     test("handles missing TLS configuration", async () => {
       // Mock certificate file reading
       const { readFile } = await import("fs/promises");
-      const mockReadFile = readFile as ReturnType<typeof vi.fn>;
-      mockReadFile.mockResolvedValueOnce(VALID_CERT);
+      vi.mocked(readFile).mockResolvedValueOnce(VALID_CERT);
 
       // Mock getDomainConfig (domain exists)
       mockFetch.mockResolvedValueOnce({
@@ -839,8 +842,7 @@ lQ==
     test("throws error for invalid certificate", async () => {
       // Mock certificate file reading with invalid cert
       const { readFile } = await import("fs/promises");
-      const mockReadFile = readFile as ReturnType<typeof vi.fn>;
-      mockReadFile.mockResolvedValueOnce("invalid certificate");
+      vi.mocked(readFile).mockResolvedValueOnce("invalid certificate");
 
       // Mock getDomainConfig (domain exists)
       mockFetch.mockResolvedValueOnce({

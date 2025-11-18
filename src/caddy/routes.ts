@@ -387,7 +387,8 @@ export function buildRedirectRoute(options: {
   permanent?: boolean;
   id?: string;
 }): CaddyRoute {
-  const statusCode = options.permanent !== false ? 301 : 302; // Default to permanent (301)
+  // Use 308/307 instead of 301/302 - these preserve request method (RFC 7538)
+  const statusCode = options.permanent !== false ? 308 : 307; // Default to permanent (308)
 
   return {
     "@id": options.id,

@@ -7,6 +7,8 @@ export default defineConfig({
     include: ["src/__tests__/integration/**/*.test.ts"],
     exclude: ["node_modules/**", "dist/**", ".asd/**"],
     testTimeout: 30000, // 30s for integration tests with real Caddy
+    // Run test files sequentially to avoid Caddy state conflicts
+    fileParallelism: false,
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

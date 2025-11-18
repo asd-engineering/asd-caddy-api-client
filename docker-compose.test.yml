@@ -11,6 +11,7 @@ services:
     command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
     volumes:
       - ./test/Caddyfile:/etc/caddy/Caddyfile
+      - ./test/certs:/home/asde/ASD/asd-caddy-api-client/test/certs:ro
       - caddy_test_data:/data
       - caddy_test_config:/config
 

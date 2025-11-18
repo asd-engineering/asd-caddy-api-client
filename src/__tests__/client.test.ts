@@ -16,7 +16,7 @@ describe("CaddyClient", () => {
   });
 
   afterEach(() => {
-    vi.clearAllTimers();
+    // Cleanup after each test
   });
 
   describe("constructor", () => {

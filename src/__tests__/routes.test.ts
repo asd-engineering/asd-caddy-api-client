@@ -284,7 +284,7 @@ describe("buildRedirectRoute", () => {
     expect(route.match).toBeDefined();
     expect(route.match![0].host).toEqual(["www.example.com"]);
     expect(route.handle[0].handler).toBe("static_response");
-    expect(route.handle[0].status_code).toBe(301);
+    expect(route.handle[0].status_code).toBe(308); // Uses 308 instead of 301
     expect(route.handle[0].headers?.Location).toEqual(["https://example.com{http.request.uri}"]);
     expect(route.terminal).toBe(true);
   });
@@ -297,7 +297,7 @@ describe("buildRedirectRoute", () => {
       id: "example.com-redirect",
     });
 
-    expect(route.handle[0].status_code).toBe(302);
+    expect(route.handle[0].status_code).toBe(307); // Uses 307 instead of 302
     expect(route.handle[0].headers?.Location).toEqual([
       "https://www.example.com{http.request.uri}",
     ]);
@@ -309,7 +309,7 @@ describe("buildRedirectRoute", () => {
       toHost: "example.com",
     });
 
-    expect(route.handle[0].status_code).toBe(301);
+    expect(route.handle[0].status_code).toBe(308); // Uses 308 instead of 301
   });
 
   test("preserves query string and path with redirect", () => {

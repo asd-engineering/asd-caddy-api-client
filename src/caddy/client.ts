@@ -87,12 +87,27 @@ export class CaddyClient {
   }
 
   /**
+   * Escape server name for use in Caddy API path
+   * Server names with dots need special encoding
+   * @param server - Server name
+   * @returns Escaped server name for API path
+   */
+  private escapeServerName(server: string): string {
+    // Caddy's Admin API uses dots as path separators in traversal paths
+    // To access a server name that contains dots, we need to percent-encode them
+    // encodeURIComponent doesn't encode dots since they're unreserved in URIs,
+    // so we manually replace them with %2E
+    return server.replace(/\./g, "%2E");
+  }
+
+  /**
    * Get routes for a specific server
    * @param server - Server name (e.g., "https_server")
    * @returns Array of routes
    */
   async getRoutes(server: string): Promise<CaddyRoute[]> {
-    const response = await this.request(`/config/apps/http/servers/${server}/routes`);
+    const escapedServer = this.escapeServerName(server);
+    const response = await this.request(`/config/apps/http/servers/${escapedServer}/routes`);
     const routes = await response.json();
 
     if (!Array.isArray(routes)) {
@@ -126,7 +141,8 @@ export class CaddyClient {
     }
 
     // Add route
-    await this.request(`/config/apps/http/servers/${server}/routes`, {
+    const escapedServer = this.escapeServerName(server);
+    await this.request(`/config/apps/http/servers/${escapedServer}/routes`, {
       method: "POST",
       body: JSON.stringify(route),
     });
@@ -164,7 +180,8 @@ export class CaddyClient {
     // Validate all routes
     routes.forEach((route) => CaddyRouteSchema.parse(route));
 
-    await this.request(`/config/apps/http/servers/${server}/routes`, {
+    const escapedServer = this.escapeServerName(server);
+    await this.request(`/config/apps/http/servers/${escapedServer}/routes`, {
       method: "PATCH",
       body: JSON.stringify(routes),
     });
@@ -225,7 +242,8 @@ export class CaddyClient {
    * @returns Server configuration object
    */
   async getServerConfig(server: string): Promise<Record<string, unknown>> {
-    const response = await this.request(`/config/apps/http/servers/${server}`);
+    const escapedServer = this.escapeServerName(server);
+    const response = await this.request(`/config/apps/http/servers/${escapedServer}`);
     const config = await response.json();
     return config as Record<string, unknown>;
   }

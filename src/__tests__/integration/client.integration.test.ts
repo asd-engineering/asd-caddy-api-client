@@ -6,7 +6,7 @@
  * 2. bun test:integration
  * 3. docker compose -f docker-compose.test.yml down
  */
-import { describe, test, expect, beforeAll } from "vitest";
+import { describe, test, expect, beforeAll, beforeEach } from "vitest";
 import { CaddyClient } from "../../caddy/client.js";
 import * as http from "http";
 
@@ -52,6 +52,17 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 describeIntegration("CaddyClient Integration Tests", () => {
   let client: CaddyClient;
 
+  // List of all servers created during tests for cleanup
+  const testServers = [
+    "test-server.localhost",
+    "idempotent-server.localhost",
+    "remove-server.localhost",
+    "patch-test.localhost",
+    "route-manipulation.localhost",
+    "functional-test.localhost",
+    "position-test.localhost",
+  ];
+
   beforeAll(async () => {
     client = new CaddyClient({ adminUrl: CADDY_URL });
 
@@ -62,6 +73,28 @@ describeIntegration("CaddyClient Integration Tests", () => {
       throw new Error(
         `Caddy not running at ${CADDY_URL}. Start with: docker compose -f docker-compose.test.yml up -d`
       );
+    }
+  });
+
+  afterAll(async () => {
+    // Clean up all test servers
+    try {
+      const servers = (await client.getServers()) as Record<string, unknown>;
+      let modified = false;
+
+      for (const serverName of testServers) {
+        if (servers[serverName]) {
+          delete servers[serverName];
+          modified = true;
+        }
+      }
+
+      if (modified) {
+        await client.patchServer(servers);
+        await delay(200);
+      }
+    } catch {
+      // Ignore cleanup errors
     }
   });
 
@@ -192,8 +225,9 @@ describeIntegration("CaddyClient Integration Tests", () => {
   });
 
   test("patchServer updates server configuration", async () => {
+    const serverName = "patch-test.localhost";
     const serverConfig = {
-      "patch-test.localhost": {
+      [serverName]: {
         listen: [":443"],
         routes: [
           {
@@ -210,9 +244,11 @@ describeIntegration("CaddyClient Integration Tests", () => {
 
     await client.patchServer(serverConfig);
 
-    // Verify server was created
-    const servers = (await client.getServers()) as Record<string, unknown>;
-    expect(servers).toHaveProperty("patch-test.localhost");
+    // Verify server was created by trying to get its config
+    const config = await client.getServerConfig(serverName);
+    expect(config).toBeDefined();
+    expect(config).toHaveProperty("listen");
+    expect(config).toHaveProperty("routes");
   });
 
   test("validates real API error responses", async () => {
@@ -250,6 +286,34 @@ describeIntegration("CaddyClient Integration Tests", () => {
           ],
         },
       });
+    });
+
+    beforeEach(async () => {
+      // Reset server to clean state before each test
+      try {
+        await client.patchServer({
+          [testServerName]: {
+            listen: [":443"],
+            routes: [
+              {
+                "@id": "healthcheck",
+                match: [{ path: ["/health"] }],
+                handle: [
+                  {
+                    handler: "static_response",
+                    status_code: 200,
+                    body: "OK",
+                  },
+                ],
+                terminal: true,
+              },
+            ],
+          },
+        });
+        await delay(100);
+      } catch {
+        // Ignore errors
+      }
     });
 
     describe("insertRoute", () => {
@@ -559,7 +623,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             routes: [],
           },
         });
-        await delay(100);
+        await delay(300); // Increased delay to ensure server is ready
 
         // Insert health check
         await client.insertRoute(
@@ -679,7 +743,9 @@ describeIntegration("CaddyClient Integration Tests", () => {
       beforeEach(async () => {
         // Clean up: Delete the server completely before each test
         try {
-          await client.request(`/config/apps/http/servers/${functionalTestServer}`, {
+          // Server names with dots need to have dots percent-encoded to prevent path traversal issues
+          const escapedServer = functionalTestServer.replace(/\./g, "%2E");
+          await client.request(`/config/apps/http/servers/${escapedServer}`, {
             method: "DELETE",
           });
           await delay(200); // Wait for server deletion to take effect
@@ -700,7 +766,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             },
           },
         });
-        await delay(100);
+        await delay(300); // Increased delay for server to be ready
 
         // Scenario: Test that route order determines which backend handles the request
         // We'll create overlapping routes and verify the FIRST matching route wins
@@ -812,7 +878,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             },
           },
         });
-        await delay(100);
+        await delay(300); // Increased delay for server to be ready
 
         // Scenario 1: Specific route BEFORE wildcard
         // Route 1: /api/* -> backend 2
@@ -926,6 +992,21 @@ describeIntegration("CaddyClient Integration Tests", () => {
     describe("Route ordering and positioning tests", () => {
       const positionTestServer = "position-test.localhost";
 
+      beforeEach(async () => {
+        // Reset position test server before each test
+        try {
+          await client.patchServer({
+            [positionTestServer]: {
+              listen: [":8443"],
+              routes: [],
+            },
+          });
+          await delay(100);
+        } catch {
+          // Ignore errors
+        }
+      });
+
       test("verifies beginning position truly inserts at start", async () => {
         // Reset server
         await client.patchServer({
@@ -941,6 +1022,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             ],
           },
         });
+        await delay(300); // Wait for server to be ready
 
         // Insert at beginning
         await client.insertRoute(
@@ -990,6 +1072,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             ],
           },
         });
+        await delay(300); // Wait for server to be ready
 
         // Insert with after-health-checks (default)
         await client.insertRoute(positionTestServer, {
@@ -1026,6 +1109,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             ],
           },
         });
+        await delay(300); // Wait for server to be ready
 
         // Insert three routes in sequence using after-health-checks
         // Each insertion should insert immediately after health check
@@ -1082,6 +1166,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
             ],
           },
         });
+        await delay(300); // Wait for server to be ready
 
         // Insert at end
         await client.insertRoute(

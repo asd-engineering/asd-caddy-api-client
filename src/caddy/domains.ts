@@ -236,7 +236,9 @@ export async function addDomainWithTls(options: AddDomainWithTlsOptions): Promis
 
   routes2.push({
     "@id": validated.domain,
+    match: [{ host: [validated.domain] }],
     handle: handlers2,
+    terminal: true,
   });
 
   // Build server configuration
@@ -289,7 +291,13 @@ export async function addDomainWithTls(options: AddDomainWithTlsOptions): Promis
     tags: [certTag, "manual"],
   });
 
-  // Apply configuration
+  // Apply TLS certificate configuration - use POST to ensure TLS app is initialized
+  await client.request("/config/apps/tls", {
+    method: "POST",
+    body: JSON.stringify(config.apps.tls),
+  });
+
+  // Apply server configuration
   await client.patchServer(serverConfig);
 
   // Return domain config
