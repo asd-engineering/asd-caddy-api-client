@@ -1,146 +1,682 @@
 /**
  * Unit tests for domain management functions
- * Note: Domain management is an internal module, so we mock the underlying client
  */
 import { describe, test, expect, beforeEach, vi } from "vitest";
-import { CaddyClient } from "../caddy/client.js";
+import {
+  addDomainWithAutoTls,
+  addDomainWithTls,
+  updateDomain,
+  deleteDomain,
+  getDomainConfig,
+} from "../caddy/domains.js";
+import { DomainNotFoundError, DomainAlreadyExistsError } from "../errors.js";
 
 // Mock fetch globally
 const mockFetch = vi.fn();
 global.fetch = mockFetch as typeof fetch;
 
-describe("Domain Management via CaddyClient", () => {
+describe("Domain Management", () => {
   beforeEach(() => {
     mockFetch.mockReset();
   });
 
-  describe("patchServer", () => {
-    test("updates server configuration for domain", async () => {
+  describe("addDomainWithAutoTls", () => {
+    test("adds domain with automatic TLS and security headers", async () => {
+      // Mock getDomainConfig (domain doesn't exist)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ "other.com": {} }),
+      } as Response);
+
+      // Mock getConfig (for TLS automation)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          apps: {
+            tls: {
+              automation: { policies: [] },
+            },
+          },
+        }),
+      } as Response);
+
+      // Mock patchServer
       mockFetch.mockResolvedValueOnce({
         ok: true,
         text: async () => "",
       } as Response);
 
-      const client = new CaddyClient();
-      const serverConfig = {
-        "example.com": {
-          listen: [":443"],
-          routes: [
-            {
-              handle: [
-                {
-                  handler: "reverse_proxy",
-                  upstreams: [{ dial: "127.0.0.1:3000" }],
-                },
-              ],
-            },
-          ],
+      const result = await addDomainWithAutoTls({
+        domain: "example.com",
+        target: "192.168.1.100",
+        targetPort: 8080,
+        enableSecurityHeaders: true,
+        enableHsts: true,
+        hstsMaxAge: 63072000,
+        frameOptions: "SAMEORIGIN",
+        adminUrl: "http://127.0.0.1:2019",
+      });
+
+      expect(result).toMatchObject({
+        domain: "example.com",
+        target: "192.168.1.100",
+        targetPort: 8080,
+        tlsEnabled: true,
+        autoTls: true,
+        securityHeaders: {
+          enableHsts: true,
+          hstsMaxAge: 63072000,
+          frameOptions: "SAMEORIGIN",
+          enableCompression: true,
         },
-      };
+      });
 
-      await client.patchServer(serverConfig);
-
+      // Verify patchServer was called with correct configuration
       expect(mockFetch).toHaveBeenCalledWith(
         "http://127.0.0.1:2019/config/apps/http/servers",
         expect.objectContaining({
           method: "PATCH",
-          body: JSON.stringify(serverConfig),
+          body: expect.stringContaining('"example.com"'),
         })
       );
     });
 
-    test("adds domain with TLS configuration", async () => {
+    test("throws DomainAlreadyExistsError if domain exists", async () => {
+      // Mock getDomainConfig (domain exists)
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        text: async () => "",
-      } as Response);
-
-      const client = new CaddyClient();
-      const tlsConfig = {
-        "secure.example.com": {
-          listen: [":443"],
-          automatic_https: {
-            disable: false,
+        json: async () => ({
+          "example.com": {
+            routes: [
+              {
+                handle: [
+                  {
+                    handler: "reverse_proxy",
+                    upstreams: [{ dial: "127.0.0.1:3000" }],
+                  },
+                ],
+              },
+            ],
           },
-          routes: [
-            {
-              handle: [
-                {
-                  handler: "reverse_proxy",
-                  upstreams: [{ dial: "127.0.0.1:3000" }],
-                },
-              ],
-            },
-          ],
-        },
-      };
-
-      await client.patchServer(tlsConfig);
-
-      expect(mockFetch).toHaveBeenCalled();
-    });
-  });
-
-  describe("getServers", () => {
-    test("retrieves all server configurations", async () => {
-      const mockServers = {
-        "example.com": {
-          listen: [":443"],
-        },
-        "test.com": {
-          listen: [":443"],
-        },
-      };
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockServers,
+        }),
       } as Response);
 
-      const client = new CaddyClient();
-      const servers = await client.getServers();
+      await expect(
+        addDomainWithAutoTls({
+          domain: "example.com",
+          target: "127.0.0.1",
+          targetPort: 3000,
+          adminUrl: "http://127.0.0.1:2019",
+        })
+      ).rejects.toThrow(DomainAlreadyExistsError);
+    });
 
-      expect(servers).toEqual(mockServers);
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://127.0.0.1:2019/config/apps/http/servers",
-        expect.any(Object)
-      );
+    test("validates input schema", async () => {
+      await expect(
+        addDomainWithAutoTls({
+          domain: "", // Invalid empty domain
+          target: "127.0.0.1",
+          targetPort: 3000,
+        })
+      ).rejects.toThrow();
     });
   });
 
-  describe("reload", () => {
-    test("reloads Caddy configuration", async () => {
+  describe("addDomainWithTls", () => {
+    test("adds domain with custom TLS certificate", async () => {
+      // Mock getDomainConfig (domain doesn't exist)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+
+      // Mock getConfig (for TLS certificates)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          apps: {
+            tls: {
+              certificates: { load_files: [] },
+            },
+          },
+        }),
+      } as Response);
+
+      // Mock patchServer
       mockFetch.mockResolvedValueOnce({
         ok: true,
         text: async () => "",
       } as Response);
 
-      const client = new CaddyClient();
-      await client.reload();
+      const result = await addDomainWithTls({
+        domain: "secure.example.com",
+        target: "127.0.0.1",
+        targetPort: 8443,
+        certFile: "/etc/ssl/certs/example.crt",
+        keyFile: "/etc/ssl/private/example.key",
+        enableSecurityHeaders: true,
+        adminUrl: "http://127.0.0.1:2019",
+      });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://127.0.0.1:2019/load",
-        expect.objectContaining({
-          method: "POST",
+      expect(result).toMatchObject({
+        domain: "secure.example.com",
+        target: "127.0.0.1",
+        targetPort: 8443,
+        tlsEnabled: true,
+        autoTls: false,
+        certFile: "/etc/ssl/certs/example.crt",
+        keyFile: "/etc/ssl/private/example.key",
+      });
+    });
+
+    test("throws DomainAlreadyExistsError if domain exists", async () => {
+      // Mock getDomainConfig (domain exists)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          "secure.example.com": {
+            routes: [],
+          },
+        }),
+      } as Response);
+
+      await expect(
+        addDomainWithTls({
+          domain: "secure.example.com",
+          target: "127.0.0.1",
+          targetPort: 3000,
+          certFile: "/etc/ssl/certs/example.crt",
+          keyFile: "/etc/ssl/private/example.key",
         })
-      );
+      ).rejects.toThrow(DomainAlreadyExistsError);
     });
   });
 
-  describe("getVersion", () => {
-    test("retrieves Caddy version information", async () => {
-      const mockVersion = { version: "v2.7.6" };
+  describe("getDomainConfig", () => {
+    test("returns null if domain doesn't exist", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+
+      const result = await getDomainConfig("nonexistent.com");
+      expect(result).toBeNull();
+    });
+
+    test("parses domain configuration with reverse proxy target and port", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          "example.com": {
+            listen: [":443"],
+            routes: [
+              {
+                handle: [
+                  {
+                    handler: "reverse_proxy",
+                    upstreams: [{ dial: "192.168.1.100:8080" }],
+                  },
+                ],
+              },
+            ],
+            automatic_https: { disable: false },
+          },
+        }),
+      } as Response);
+
+      const result = await getDomainConfig("example.com");
+
+      expect(result).toMatchObject({
+        domain: "example.com",
+        target: "192.168.1.100",
+        targetPort: 8080,
+        tlsEnabled: true,
+        autoTls: true,
+      });
+    });
+
+    test("parses security headers from configuration", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          "example.com": {
+            routes: [
+              {
+                handle: [
+                  {
+                    handler: "headers",
+                    headers: {
+                      response: {
+                        set: {
+                          "Strict-Transport-Security": ["max-age=63072000; includeSubDomains"],
+                          "X-Frame-Options": ["SAMEORIGIN"],
+                        },
+                      },
+                    },
+                  },
+                  {
+                    handler: "reverse_proxy",
+                    upstreams: [{ dial: "127.0.0.1:3000" }],
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+      } as Response);
+
+      const result = await getDomainConfig("example.com");
+
+      expect(result?.securityHeaders).toMatchObject({
+        enableHsts: true,
+        hstsMaxAge: 63072000,
+        frameOptions: "SAMEORIGIN",
+      });
+    });
+
+    test("detects disabled automatic HTTPS", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          "example.com": {
+            routes: [
+              {
+                handle: [
+                  {
+                    handler: "reverse_proxy",
+                    upstreams: [{ dial: "127.0.0.1:3000" }],
+                  },
+                ],
+              },
+            ],
+            automatic_https: { disable: true },
+          },
+        }),
+      } as Response);
+
+      const result = await getDomainConfig("example.com");
+      expect(result?.autoTls).toBe(false);
+    });
+
+    test("returns null on fetch error", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"));
+
+      const result = await getDomainConfig("example.com");
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("updateDomain", () => {
+    test("updates existing domain configuration", async () => {
+      // Mock getDomainConfig (domain exists) - called by updateDomain
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          "example.com": {
+            routes: [
+              {
+                handle: [
+                  {
+                    handler: "reverse_proxy",
+                    upstreams: [{ dial: "127.0.0.1:3000" }],
+                  },
+                ],
+              },
+            ],
+            automatic_https: { disable: false },
+          },
+        }),
+      } as Response);
+
+      // Mock getDomainConfig (domain exists) - called by deleteDomain
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          "example.com": {
+            routes: [
+              {
+                handle: [
+                  {
+                    handler: "reverse_proxy",
+                    upstreams: [{ dial: "127.0.0.1:3000" }],
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+      } as Response);
+
+      // Mock deleteDomain - getConfig
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          apps: {
+            http: {
+              servers: {
+                "example.com": {},
+              },
+            },
+            tls: {
+              certificates: { load_files: [] },
+              automation: { policies: [] },
+            },
+          },
+        }),
+      } as Response);
+
+      // Mock deleteDomain - POST updated config
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      // Mock addDomainWithAutoTls - getDomainConfig (doesn't exist after delete)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+
+      // Mock addDomainWithAutoTls - getConfig
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          apps: {
+            tls: {
+              automation: { policies: [] },
+            },
+          },
+        }),
+      } as Response);
+
+      // Mock addDomainWithAutoTls - patchServer
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const result = await updateDomain({
+        domain: "example.com",
+        target: "192.168.1.200",
+        targetPort: 8080,
+        adminUrl: "http://127.0.0.1:2019",
+      });
+
+      expect(result).toMatchObject({
+        domain: "example.com",
+        target: "192.168.1.200",
+        targetPort: 8080,
+      });
+    });
+
+    test("throws DomainNotFoundError if domain doesn't exist", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+
+      await expect(
+        updateDomain({
+          domain: "nonexistent.com",
+          target: "127.0.0.1",
+          targetPort: 3000,
+        })
+      ).rejects.toThrow(DomainNotFoundError);
+    });
+
+    test("merges security headers with existing configuration", async () => {
+      // Mock getDomainConfig - called by updateDomain
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          "example.com": {
+            routes: [
+              {
+                handle: [
+                  {
+                    handler: "headers",
+                    headers: {
+                      response: {
+                        set: {
+                          "X-Frame-Options": ["DENY"],
+                        },
+                      },
+                    },
+                  },
+                  {
+                    handler: "reverse_proxy",
+                    upstreams: [{ dial: "127.0.0.1:3000" }],
+                  },
+                ],
+              },
+            ],
+            automatic_https: { disable: false },
+          },
+        }),
+      } as Response);
+
+      // Mock getDomainConfig - called by deleteDomain
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          "example.com": {
+            routes: [],
+          },
+        }),
+      } as Response);
+
+      // Mock deleteDomain calls
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          apps: {
+            http: { servers: { "example.com": {} } },
+            tls: { certificates: { load_files: [] }, automation: { policies: [] } },
+          },
+        }),
+      } as Response);
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => mockVersion,
+        text: async () => "",
       } as Response);
 
-      const client = new CaddyClient();
-      const version = await client.getVersion();
+      // Mock addDomainWithAutoTls calls
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
 
-      expect(version).toEqual(mockVersion);
-      expect(mockFetch).toHaveBeenCalledWith("http://127.0.0.1:2019/", expect.any(Object));
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ apps: { tls: { automation: { policies: [] } } } }),
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const result = await updateDomain({
+        domain: "example.com",
+        enableHsts: true,
+        hstsMaxAge: 63072000,
+      });
+
+      expect(result.securityHeaders).toMatchObject({
+        enableHsts: true,
+        hstsMaxAge: 63072000,
+        frameOptions: "DENY", // Preserved from existing config
+      });
+    });
+  });
+
+  describe("deleteDomain", () => {
+    test("deletes domain and cleans up TLS certificates", async () => {
+      // Mock getDomainConfig (domain exists)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          "example.com": {
+            routes: [],
+          },
+        }),
+      } as Response);
+
+      // Mock getConfig with certificates to clean up
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          apps: {
+            http: {
+              servers: {
+                "example.com": {},
+                "other.com": {},
+              },
+            },
+            tls: {
+              certificates: {
+                load_files: [
+                  {
+                    certificate: "/etc/ssl/certs/example.com.crt",
+                    key: "/etc/ssl/private/example.com.key",
+                    tags: ["manual"],
+                  },
+                  {
+                    certificate: "/etc/ssl/certs/other.com.crt",
+                    key: "/etc/ssl/private/other.com.key",
+                    tags: ["manual"],
+                  },
+                ],
+              },
+              automation: {
+                policies: [{ subjects: ["example.com"] }, { subjects: ["other.com"] }],
+              },
+            },
+          },
+        }),
+      } as Response);
+
+      // Mock POST to apply cleaned config
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      await deleteDomain({
+        domain: "example.com",
+        adminUrl: "http://127.0.0.1:2019",
+      });
+
+      // Verify config was updated with certificates and policies removed
+      const lastCall = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
+      expect(lastCall?.[0]).toBe("http://127.0.0.1:2019/config/");
+      expect(lastCall?.[1]).toMatchObject({ method: "POST" });
+
+      const postedConfig = JSON.parse((lastCall?.[1] as RequestInit)?.body as string);
+
+      // Domain should be removed from servers
+      expect(postedConfig.apps.http.servers).not.toHaveProperty("example.com");
+      expect(postedConfig.apps.http.servers).toHaveProperty("other.com");
+
+      // Certificate for example.com should be removed
+      expect(postedConfig.apps.tls.certificates.load_files).toHaveLength(1);
+      expect(postedConfig.apps.tls.certificates.load_files[0].certificate).toContain("other.com");
+
+      // TLS automation policy for example.com should be removed
+      expect(postedConfig.apps.tls.automation.policies).toHaveLength(1);
+      expect(postedConfig.apps.tls.automation.policies[0].subjects).toEqual(["other.com"]);
+    });
+
+    test("cleans up certificates by domain tags", async () => {
+      // Mock getDomainConfig
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ "example.com": {} }),
+      } as Response);
+
+      // Mock getConfig with tagged certificates
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          apps: {
+            http: { servers: { "example.com": {} } },
+            tls: {
+              certificates: {
+                load_files: [
+                  {
+                    certificate: "/etc/ssl/cert.crt",
+                    key: "/etc/ssl/key.key",
+                    tags: ["example.com", "manual"],
+                  },
+                ],
+                load_pem: [
+                  {
+                    certificate: "-----BEGIN CERTIFICATE-----",
+                    key: "-----BEGIN PRIVATE KEY-----",
+                    tags: ["example.com"],
+                  },
+                ],
+              },
+              automation: { policies: [] },
+            },
+          },
+        }),
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      await deleteDomain({ domain: "example.com" });
+
+      const lastCall = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
+      const postedConfig = JSON.parse((lastCall?.[1] as RequestInit)?.body as string);
+
+      // Both load_files and load_pem should be empty
+      expect(postedConfig.apps.tls.certificates.load_files).toHaveLength(0);
+      expect(postedConfig.apps.tls.certificates.load_pem).toHaveLength(0);
+    });
+
+    test("throws DomainNotFoundError if domain doesn't exist", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+
+      await expect(
+        deleteDomain({
+          domain: "nonexistent.com",
+        })
+      ).rejects.toThrow(DomainNotFoundError);
+    });
+
+    test("handles missing TLS configuration gracefully", async () => {
+      // Mock getDomainConfig
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ "example.com": {} }),
+      } as Response);
+
+      // Mock getConfig without TLS section
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          apps: {
+            http: {
+              servers: { "example.com": {} },
+            },
+          },
+        }),
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      await expect(deleteDomain({ domain: "example.com" })).resolves.not.toThrow();
     });
   });
 });
