@@ -1,0 +1,496 @@
+/**
+ * Core type definitions for Caddy API client
+ */
+
+// ============================================================================
+// Basic Types
+// ============================================================================
+
+/**
+ * Domain name (e.g., "example.com")
+ */
+export type Domain = string;
+
+/**
+ * Dial address in host:port format (e.g., "127.0.0.1:3000")
+ */
+export type DialAddress = string;
+
+/**
+ * HTTP method
+ */
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
+
+/**
+ * Frame options for X-Frame-Options header
+ */
+export type FrameOptions = "DENY" | "SAMEORIGIN";
+
+/**
+ * Redirect mode for HTTP to HTTPS
+ */
+export type RedirectMode = "none" | "permanent" | "temporary";
+
+/**
+ * TLS issuer type
+ */
+export type TlsIssuer = "letsencrypt" | "zerossl" | "acme";
+
+// ============================================================================
+// Caddy JSON Config Types
+// ============================================================================
+
+/**
+ * Caddy route matcher
+ */
+export interface CaddyRouteMatcher {
+  host?: string[];
+  path?: string[];
+  method?: HttpMethod[];
+  header?: Record<string, string[]>;
+  query?: Record<string, string[]>;
+}
+
+/**
+ * Caddy route handler
+ */
+export interface CaddyRouteHandler {
+  handler: string;
+  routes?: CaddyRoute[];
+  body?: string;
+  status_code?: number;
+  headers?: {
+    request?: {
+      set?: Record<string, string[]>;
+      add?: Record<string, string[]>;
+      delete?: string[];
+    };
+    response?: {
+      set?: Record<string, string[]>;
+      add?: Record<string, string[]>;
+      delete?: string[];
+      require?: {
+        status_code?: number[];
+      };
+    };
+  };
+  upstreams?: { dial: string }[];
+  transport?: {
+    protocol?: string;
+  };
+  uri?: string;
+  strip_path_prefix?: string;
+  // Load balancing
+  load_balancing?: {
+    policy?: string;
+  };
+  health_checks?: {
+    active?: {
+      path?: string;
+      interval?: string;
+      timeout?: string;
+      expect_status?: number;
+    };
+  };
+  // Authentication
+  providers?: {
+    http_basic?: {
+      accounts?: {
+        username?: string;
+        password?: string;
+      }[];
+      realm?: string;
+    };
+  };
+  // Allow additional properties for extensibility
+  [key: string]: unknown;
+}
+
+/**
+ * Caddy route definition
+ */
+export interface CaddyRoute {
+  match?: CaddyRouteMatcher[];
+  handle: CaddyRouteHandler[];
+  terminal?: boolean;
+}
+
+/**
+ * Caddy server configuration
+ */
+export interface CaddyServer {
+  listen: string[];
+  routes: CaddyRoute[];
+  automatic_https?: {
+    disable?: boolean;
+    skip?: string[];
+    disable_redirects?: boolean;
+  };
+  tls_connection_policies?: {
+    certificate_selection?: {
+      any_tag?: string[];
+    };
+  }[];
+}
+
+/**
+ * Caddy TLS automation policy
+ */
+export interface CaddyTlsAutomationPolicy {
+  subjects?: string[];
+  issuers?: {
+    module: string;
+    ca?: string;
+    email?: string;
+  }[];
+  on_demand?: boolean;
+}
+
+/**
+ * Caddy TLS certificate
+ */
+export interface CaddyTlsCertificate {
+  certificate: string;
+  key: string;
+  tags?: string[];
+}
+
+// ============================================================================
+// Client Options
+// ============================================================================
+
+/**
+ * Options for CaddyClient constructor
+ */
+export interface CaddyClientOptions {
+  /**
+   * Caddy Admin API base URL
+   * @default "http://127.0.0.1:2019"
+   */
+  adminUrl?: string;
+
+  /**
+   * Request timeout in milliseconds
+   * @default 5000
+   */
+  timeout?: number;
+}
+
+// ============================================================================
+// Domain Management Options
+// ============================================================================
+
+/**
+ * Security headers configuration
+ */
+export interface SecurityHeaders {
+  /**
+   * Enable HSTS (HTTP Strict Transport Security)
+   * @default false
+   */
+  enableHsts?: boolean;
+
+  /**
+   * HSTS max-age in seconds
+   * @default 31536000 (1 year)
+   */
+  hstsMaxAge?: number;
+
+  /**
+   * X-Frame-Options header value
+   * @default "DENY"
+   */
+  frameOptions?: FrameOptions;
+
+  /**
+   * Enable gzip/brotli compression
+   * @default true
+   */
+  enableCompression?: boolean;
+}
+
+/**
+ * Options for adding a domain with automatic TLS
+ */
+export interface AddDomainWithAutoTlsOptions {
+  /**
+   * Domain name (e.g., "example.com")
+   */
+  domain: Domain;
+
+  /**
+   * Target upstream address (e.g., "127.0.0.1:3000")
+   */
+  target: string;
+
+  /**
+   * Target upstream port
+   */
+  targetPort: number;
+
+  /**
+   * Enable security headers (HSTS, X-Frame-Options, etc.)
+   * @default true
+   */
+  enableSecurityHeaders?: boolean;
+
+  /**
+   * Enable HSTS
+   * @default false
+   */
+  enableHsts?: boolean;
+
+  /**
+   * HSTS max-age in seconds
+   * @default 31536000
+   */
+  hstsMaxAge?: number;
+
+  /**
+   * X-Frame-Options value
+   * @default "DENY"
+   */
+  frameOptions?: FrameOptions;
+
+  /**
+   * Enable compression
+   * @default true
+   */
+  enableCompression?: boolean;
+
+  /**
+   * HTTP to HTTPS redirect mode
+   * @default "none"
+   */
+  redirectMode?: RedirectMode;
+
+  /**
+   * Caddy Admin API URL (overrides client default)
+   */
+  adminUrl?: string;
+}
+
+/**
+ * Options for adding a domain with custom TLS certificate
+ */
+export interface AddDomainWithTlsOptions extends Omit<AddDomainWithAutoTlsOptions, "domain"> {
+  domain: Domain;
+  certFile: string;
+  keyFile: string;
+}
+
+/**
+ * Options for updating a domain
+ */
+export interface UpdateDomainOptions {
+  domain: Domain;
+  target?: string;
+  targetPort?: number;
+  enableSecurityHeaders?: boolean;
+  enableHsts?: boolean;
+  hstsMaxAge?: number;
+  frameOptions?: FrameOptions;
+  enableCompression?: boolean;
+  redirectMode?: RedirectMode;
+  adminUrl?: string;
+}
+
+/**
+ * Options for deleting a domain
+ */
+export interface DeleteDomainOptions {
+  domain: Domain;
+  adminUrl?: string;
+}
+
+/**
+ * Domain configuration
+ */
+export interface DomainConfig {
+  domain: Domain;
+  target: string;
+  targetPort: number;
+  tlsEnabled: boolean;
+  autoTls: boolean;
+  certFile?: string;
+  keyFile?: string;
+  securityHeaders: SecurityHeaders;
+  redirectMode: RedirectMode;
+}
+
+// ============================================================================
+// Route Builder Options
+// ============================================================================
+
+/**
+ * Options for building service routes
+ */
+export interface ServiceRouteOptions {
+  /**
+   * Host for host-based route
+   */
+  host?: string;
+
+  /**
+   * Path for path-based route
+   */
+  path?: string;
+
+  /**
+   * Host for path-based route
+   * @default "asd.localhost"
+   */
+  pathRouteHost?: string;
+
+  /**
+   * Dial address (host:port)
+   */
+  dial: DialAddress;
+
+  /**
+   * Service identifier for health checks
+   */
+  serviceId?: string;
+
+  /**
+   * Enable host-based route
+   * @default true
+   */
+  enableHostRoute?: boolean;
+
+  /**
+   * Enable path-based route
+   * @default true
+   */
+  enablePathRoute?: boolean;
+
+  /**
+   * Strip path prefix
+   * @default true
+   */
+  stripPrefix?: boolean;
+
+  /**
+   * Route priority (higher = matches first)
+   * @default 50
+   */
+  priority?: number;
+
+  /**
+   * Security headers configuration
+   */
+  securityHeaders?: SecurityHeaders;
+
+  /**
+   * Basic authentication configuration
+   */
+  basicAuth?: BasicAuthOptions;
+}
+
+/**
+ * Basic authentication options
+ */
+export interface BasicAuthOptions {
+  enabled: boolean;
+  username?: string;
+  passwordHash?: string;
+  realm?: string;
+}
+
+/**
+ * Options for building health check route
+ */
+export interface HealthCheckRouteOptions {
+  host: string;
+  serviceId: string;
+  priority?: number;
+}
+
+/**
+ * Options for building host route
+ */
+export interface HostRouteOptions {
+  host: string;
+  dial: DialAddress;
+  securityHeaders?: SecurityHeaders;
+  basicAuth?: BasicAuthOptions;
+  priority?: number;
+}
+
+/**
+ * Options for building path route
+ */
+export interface PathRouteOptions {
+  path: string;
+  host: string;
+  dial: DialAddress;
+  stripPrefix?: boolean;
+  securityHeaders?: SecurityHeaders;
+  basicAuth?: BasicAuthOptions;
+  priority?: number;
+}
+
+/**
+ * Options for building load balancer route
+ */
+export interface LoadBalancerRouteOptions {
+  host: string;
+  upstreams: DialAddress[];
+  healthCheckPath?: string;
+  healthCheckInterval?: string;
+  policy?: "first" | "random" | "least_conn" | "round_robin";
+  priority?: number;
+}
+
+// ============================================================================
+// MITMProxy Options
+// ============================================================================
+
+/**
+ * Options for starting mitmweb
+ */
+export interface MitmwebOptions {
+  /**
+   * Port for mitmweb UI
+   * @default 8081
+   */
+  webPort?: number;
+
+  /**
+   * Port for proxy
+   * @default 8080
+   */
+  proxyPort?: number;
+
+  /**
+   * Listen address
+   * @default "127.0.0.1"
+   */
+  listenAddress?: string;
+
+  /**
+   * Auto-open browser
+   * @default true
+   */
+  openBrowser?: boolean;
+
+  /**
+   * Custom Python addon scripts
+   */
+  scripts?: string[];
+
+  /**
+   * Working directory for mitmproxy
+   */
+  workingDir?: string;
+}
+
+/**
+ * Mitmweb status
+ */
+export interface MitmwebStatus {
+  running: boolean;
+  pid?: number;
+  webUrl?: string;
+  proxyUrl?: string;
+}
