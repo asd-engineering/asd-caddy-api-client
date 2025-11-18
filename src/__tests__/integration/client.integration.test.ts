@@ -58,6 +58,15 @@ describeIntegration("CaddyClient Integration Tests", () => {
   });
 
   test("can add and retrieve routes from real Caddy", async () => {
+    // First create a server using patchServer
+    const serverName = "test-server.localhost";
+    await client.patchServer({
+      [serverName]: {
+        listen: [":443"],
+        routes: [],
+      },
+    });
+
     const testRoute = {
       match: [{ host: ["integration-test.localhost"] }],
       handle: [
@@ -69,12 +78,12 @@ describeIntegration("CaddyClient Integration Tests", () => {
       terminal: true,
     };
 
-    // Add route
-    const added = await client.addRoute("srv0", testRoute);
+    // Add route to the server we just created
+    const added = await client.addRoute(serverName, testRoute);
     expect(added).toBe(true);
 
     // Retrieve routes to verify
-    const routes = await client.getRoutes("srv0");
+    const routes = await client.getRoutes(serverName);
     expect(routes.length).toBeGreaterThan(0);
 
     const foundRoute = routes.find((r) => r.match?.[0]?.host?.[0] === "integration-test.localhost");
@@ -83,6 +92,15 @@ describeIntegration("CaddyClient Integration Tests", () => {
   });
 
   test("addRoute is idempotent (returns false if route exists)", async () => {
+    // Create a server first
+    const serverName = "idempotent-server.localhost";
+    await client.patchServer({
+      [serverName]: {
+        listen: [":443"],
+        routes: [],
+      },
+    });
+
     const testRoute = {
       match: [{ host: ["idempotent-test.localhost"] }],
       handle: [
@@ -95,16 +113,26 @@ describeIntegration("CaddyClient Integration Tests", () => {
     };
 
     // First add
-    const firstAdd = await client.addRoute("srv0", testRoute);
+    const firstAdd = await client.addRoute(serverName, testRoute);
     expect(firstAdd).toBe(true);
 
     // Second add (should detect existing route)
-    const secondAdd = await client.addRoute("srv0", testRoute);
+    const secondAdd = await client.addRoute(serverName, testRoute);
     expect(secondAdd).toBe(false);
   });
 
   test("removeRoutesByHost removes routes from real Caddy", async () => {
     const hostname = "remove-test.localhost";
+    const serverName = "remove-server.localhost";
+
+    // Create server first
+    await client.patchServer({
+      [serverName]: {
+        listen: [":443"],
+        routes: [],
+      },
+    });
+
     const testRoute = {
       match: [{ host: [hostname] }],
       handle: [
@@ -117,14 +145,14 @@ describeIntegration("CaddyClient Integration Tests", () => {
     };
 
     // Add route
-    await client.addRoute("srv0", testRoute);
+    await client.addRoute(serverName, testRoute);
 
     // Remove by hostname
-    const removedCount = await client.removeRoutesByHost(hostname, "srv0");
+    const removedCount = await client.removeRoutesByHost(hostname, serverName);
     expect(removedCount).toBeGreaterThan(0);
 
     // Verify removed
-    const routes = await client.getRoutes("srv0");
+    const routes = await client.getRoutes(serverName);
     const stillExists = routes.some((r) => r.match?.[0]?.host?.[0] === hostname);
     expect(stillExists).toBe(false);
   });
