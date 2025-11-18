@@ -247,4 +247,101 @@ export class CaddyClient {
     const response = await this.request("/");
     return response.json();
   }
+
+  /**
+   * Insert a route at a specific position in the server's route list
+   * @param server - Server name
+   * @param route - Route to insert
+   * @param position - Where to insert the route
+   * @returns void
+   */
+  async insertRoute(
+    server: string,
+    route: CaddyRoute,
+    position: "beginning" | "end" | "after-health-checks" = "after-health-checks"
+  ): Promise<void> {
+    const validated = CaddyRouteSchema.parse(route);
+    const routes = await this.getRoutes(server);
+
+    let insertIndex = 0;
+
+    if (position === "after-health-checks") {
+      // Find position after health check/static routes
+      for (let i = 0; i < routes.length; i++) {
+        const handler = routes[i].handle?.[0];
+        if (handler?.handler === "static_response") {
+          insertIndex = i + 1;
+        } else if (routes[i]["@id"]) {
+          break; // Stop at first domain route
+        }
+      }
+    } else if (position === "end") {
+      insertIndex = routes.length;
+    }
+    // "beginning" keeps insertIndex = 0
+
+    // Insert route at the calculated position
+    routes.splice(insertIndex, 0, validated);
+
+    // Update server routes
+    await this.patchServer({
+      [server]: {
+        routes,
+      },
+    });
+  }
+
+  /**
+   * Replace a route by its @id
+   * @param server - Server name
+   * @param id - Route @id to replace
+   * @param newRoute - New route configuration
+   * @returns true if route was found and replaced, false otherwise
+   */
+  async replaceRouteById(server: string, id: string, newRoute: CaddyRoute): Promise<boolean> {
+    const validated = CaddyRouteSchema.parse(newRoute);
+    const routes = await this.getRoutes(server);
+    const index = routes.findIndex((r) => r["@id"] === id);
+
+    if (index === -1) {
+      return false; // Route not found
+    }
+
+    // Replace route while preserving the @id
+    routes[index] = { ...validated, "@id": id };
+
+    // Update server routes
+    await this.patchServer({
+      [server]: {
+        routes,
+      },
+    });
+
+    return true;
+  }
+
+  /**
+   * Remove a route by its @id
+   * @param server - Server name
+   * @param id - Route @id to remove
+   * @returns true if route was found and removed, false otherwise
+   */
+  async removeRouteById(server: string, id: string): Promise<boolean> {
+    const routes = await this.getRoutes(server);
+    const initialLength = routes.length;
+    const filtered = routes.filter((r) => r["@id"] !== id);
+
+    if (filtered.length === initialLength) {
+      return false; // Route not found
+    }
+
+    // Update server routes
+    await this.patchServer({
+      [server]: {
+        routes: filtered,
+      },
+    });
+
+    return true;
+  }
 }

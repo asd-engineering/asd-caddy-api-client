@@ -13,6 +13,7 @@ export {
   rotateCertificate,
   removeOldCertificates,
 } from "./domains.js";
+export * from "./tls.js";
 
 // Re-export types and schemas for convenience
 export type {
@@ -25,6 +26,7 @@ export type {
   HostRouteOptions,
   PathRouteOptions,
   LoadBalancerRouteOptions,
+  TlsConnectionPolicy,
 } from "../types.js";
 
 export {

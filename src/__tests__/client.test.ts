@@ -428,4 +428,379 @@ describe("CaddyClient", () => {
       }
     });
   });
+
+  describe("insertRoute", () => {
+    const mockRoute: CaddyRoute = {
+      "@id": "test-route",
+      match: [{ host: ["test.com"] }],
+      handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:3000" }] }],
+      terminal: true,
+    };
+
+    test("inserts route at beginning", async () => {
+      const existingRoutes: CaddyRoute[] = [
+        {
+          "@id": "route1",
+          match: [{ host: ["existing.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:4000" }] }],
+          terminal: true,
+        },
+      ];
+
+      // Mock getRoutes
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => existingRoutes,
+      } as Response);
+
+      // Mock patchServer
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const client = new CaddyClient();
+      await client.insertRoute("https_server", mockRoute, "beginning");
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        2,
+        "http://127.0.0.1:2019/config/apps/http/servers",
+        expect.objectContaining({
+          method: "PATCH",
+          body: expect.stringContaining("test-route"),
+        })
+      );
+
+      // Verify route was inserted at beginning (index 0)
+      const patchCall = mockFetch.mock.calls[1][1];
+      const patchedConfig = JSON.parse(patchCall?.body as string);
+      expect(patchedConfig.https_server.routes[0]["@id"]).toBe("test-route");
+    });
+
+    test("inserts route at end", async () => {
+      const existingRoutes: CaddyRoute[] = [
+        {
+          "@id": "route1",
+          match: [{ host: ["existing.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:4000" }] }],
+          terminal: true,
+        },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const client = new CaddyClient();
+      await client.insertRoute("https_server", mockRoute, "end");
+
+      const patchCall = mockFetch.mock.calls[1][1];
+      const patchedConfig = JSON.parse(patchCall?.body as string);
+      expect(patchedConfig.https_server.routes[1]["@id"]).toBe("test-route");
+    });
+
+    test("inserts route after health checks", async () => {
+      const existingRoutes: CaddyRoute[] = [
+        {
+          "@id": "healthcheck",
+          match: [{ path: ["/health"] }],
+          handle: [{ handler: "static_response", status_code: 200 }],
+          terminal: true,
+        },
+        {
+          "@id": "route1",
+          match: [{ host: ["existing.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:4000" }] }],
+          terminal: true,
+        },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const client = new CaddyClient();
+      await client.insertRoute("https_server", mockRoute, "after-health-checks");
+
+      const patchCall = mockFetch.mock.calls[1][1];
+      const patchedConfig = JSON.parse(patchCall?.body as string);
+      // Should be inserted after health check (index 1)
+      expect(patchedConfig.https_server.routes[1]["@id"]).toBe("test-route");
+    });
+
+    test("defaults to after-health-checks position", async () => {
+      const existingRoutes: CaddyRoute[] = [];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const client = new CaddyClient();
+      await client.insertRoute("https_server", mockRoute);
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    test("validates route before inserting", async () => {
+      const invalidRoute = {
+        handle: [],
+      } as CaddyRoute;
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      } as Response);
+
+      const client = new CaddyClient();
+      await expect(client.insertRoute("https_server", invalidRoute)).rejects.toThrow();
+    });
+  });
+
+  describe("replaceRouteById", () => {
+    const newRoute: CaddyRoute = {
+      match: [{ host: ["updated.com"] }],
+      handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:5000" }] }],
+      terminal: true,
+    };
+
+    test("replaces existing route by id", async () => {
+      const existingRoutes: CaddyRoute[] = [
+        {
+          "@id": "route1",
+          match: [{ host: ["old.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:3000" }] }],
+          terminal: true,
+        },
+        {
+          "@id": "route2",
+          match: [{ host: ["another.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:4000" }] }],
+          terminal: true,
+        },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const client = new CaddyClient();
+      const result = await client.replaceRouteById("https_server", "route1", newRoute);
+
+      expect(result).toBe(true);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      const patchCall = mockFetch.mock.calls[1][1];
+      const patchedConfig = JSON.parse(patchCall?.body as string);
+      expect(patchedConfig.https_server.routes[0]["@id"]).toBe("route1");
+      expect(patchedConfig.https_server.routes[0].match[0].host[0]).toBe("updated.com");
+    });
+
+    test("preserves @id when replacing route", async () => {
+      const existingRoutes: CaddyRoute[] = [
+        {
+          "@id": "preserve-me",
+          match: [{ host: ["old.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:3000" }] }],
+          terminal: true,
+        },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const client = new CaddyClient();
+      await client.replaceRouteById("https_server", "preserve-me", newRoute);
+
+      const patchCall = mockFetch.mock.calls[1][1];
+      const patchedConfig = JSON.parse(patchCall?.body as string);
+      expect(patchedConfig.https_server.routes[0]["@id"]).toBe("preserve-me");
+    });
+
+    test("returns false when route id not found", async () => {
+      const existingRoutes: CaddyRoute[] = [
+        {
+          "@id": "route1",
+          match: [{ host: ["existing.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:3000" }] }],
+          terminal: true,
+        },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => existingRoutes,
+      } as Response);
+
+      const client = new CaddyClient();
+      const result = await client.replaceRouteById("https_server", "non-existent", newRoute);
+
+      expect(result).toBe(false);
+      expect(mockFetch).toHaveBeenCalledTimes(1); // Only GET, no PATCH
+    });
+
+    test("validates route before replacing", async () => {
+      const invalidRoute = {
+        handle: [],
+      } as CaddyRoute;
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [
+          {
+            "@id": "route1",
+            match: [{ host: ["test.com"] }],
+            handle: [{ handler: "reverse_proxy" }],
+            terminal: true,
+          },
+        ],
+      } as Response);
+
+      const client = new CaddyClient();
+      await expect(
+        client.replaceRouteById("https_server", "route1", invalidRoute)
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("removeRouteById", () => {
+    test("removes route by id", async () => {
+      const existingRoutes: CaddyRoute[] = [
+        {
+          "@id": "route1",
+          match: [{ host: ["keep.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:3000" }] }],
+          terminal: true,
+        },
+        {
+          "@id": "route2",
+          match: [{ host: ["remove.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:4000" }] }],
+          terminal: true,
+        },
+        {
+          "@id": "route3",
+          match: [{ host: ["keep-also.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:5000" }] }],
+          terminal: true,
+        },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const client = new CaddyClient();
+      const result = await client.removeRouteById("https_server", "route2");
+
+      expect(result).toBe(true);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      const patchCall = mockFetch.mock.calls[1][1];
+      const patchedConfig = JSON.parse(patchCall?.body as string);
+      expect(patchedConfig.https_server.routes).toHaveLength(2);
+      expect(patchedConfig.https_server.routes.find((r: CaddyRoute) => r["@id"] === "route2")).toBeUndefined();
+    });
+
+    test("returns false when route id not found", async () => {
+      const existingRoutes: CaddyRoute[] = [
+        {
+          "@id": "route1",
+          match: [{ host: ["existing.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:3000" }] }],
+          terminal: true,
+        },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => existingRoutes,
+      } as Response);
+
+      const client = new CaddyClient();
+      const result = await client.removeRouteById("https_server", "non-existent");
+
+      expect(result).toBe(false);
+      expect(mockFetch).toHaveBeenCalledTimes(1); // Only GET, no PATCH
+    });
+
+    test("removes multiple routes with same id", async () => {
+      const existingRoutes: CaddyRoute[] = [
+        {
+          "@id": "route1",
+          match: [{ host: ["test.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:3000" }] }],
+          terminal: true,
+        },
+        {
+          "@id": "duplicate",
+          match: [{ host: ["dup1.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:4000" }] }],
+          terminal: true,
+        },
+        {
+          "@id": "duplicate",
+          match: [{ host: ["dup2.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:5000" }] }],
+          terminal: true,
+        },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => existingRoutes,
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const client = new CaddyClient();
+      const result = await client.removeRouteById("https_server", "duplicate");
+
+      expect(result).toBe(true);
+      const patchCall = mockFetch.mock.calls[1][1];
+      const patchedConfig = JSON.parse(patchCall?.body as string);
+      expect(patchedConfig.https_server.routes).toHaveLength(1);
+      expect(patchedConfig.https_server.routes[0]["@id"]).toBe("route1");
+    });
+  });
 });

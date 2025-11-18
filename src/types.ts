@@ -27,9 +27,12 @@ export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | 
 export type FrameOptions = "DENY" | "SAMEORIGIN";
 
 /**
- * Redirect mode for HTTP to HTTPS
+ * Redirect mode for domain redirects
+ * - "none": No redirect
+ * - "www_to_domain": Redirect www.example.com to example.com
+ * - "domain_to_www": Redirect example.com to www.example.com
  */
-export type RedirectMode = "none" | "permanent" | "temporary";
+export type RedirectMode = "none" | "www_to_domain" | "domain_to_www";
 
 /**
  * TLS issuer type
@@ -110,9 +113,43 @@ export interface CaddyRouteHandler {
  * Caddy route definition
  */
 export interface CaddyRoute {
+  "@id"?: string; // Route identifier for tracking and updates
   match?: CaddyRouteMatcher[];
   handle: CaddyRouteHandler[];
   terminal?: boolean;
+}
+
+/**
+ * TLS connection policy configuration
+ */
+export interface TlsConnectionPolicy {
+  /** SNI hostnames to match */
+  match?: {
+    sni?: string[];
+  };
+  /** Certificate selection criteria */
+  certificate_selection?: {
+    any_tag?: string[];
+    all_tags?: string[];
+    serial_number?: string;
+    subject_organization?: string;
+  };
+  /** Minimum TLS protocol version (e.g., "1.2", "1.3") */
+  protocol_min?: string;
+  /** Maximum TLS protocol version (e.g., "1.2", "1.3") */
+  protocol_max?: string;
+  /** Cipher suites to allow */
+  cipher_suites?: string[];
+  /** Elliptic curves to allow */
+  curves?: string[];
+  /** ALPN protocols (e.g., ["h3", "h2", "http/1.1"]) */
+  alpn?: string[];
+  /** Client authentication settings */
+  client_authentication?: {
+    mode?: "request" | "require" | "verify_if_given";
+    trusted_ca_certs?: string[];
+    trusted_ca_certs_pem_files?: string[];
+  };
 }
 
 /**
@@ -126,11 +163,7 @@ export interface CaddyServer {
     skip?: string[];
     disable_redirects?: boolean;
   };
-  tls_connection_policies?: {
-    certificate_selection?: {
-      any_tag?: string[];
-    };
-  }[];
+  tls_connection_policies?: TlsConnectionPolicy[];
 }
 
 /**

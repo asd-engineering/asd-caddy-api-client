@@ -11,6 +11,8 @@ import {
   buildReverseProxyHandler,
   buildSecurityHeadersHandler,
   buildRewriteHandler,
+  buildRedirectRoute,
+  buildCompressionHandler,
 } from "../caddy/routes.js";
 
 describe("buildHealthCheckRoute", () => {
@@ -266,5 +268,100 @@ describe("buildRewriteHandler", () => {
 
     expect(handler.handler).toBe("rewrite");
     expect(handler.strip_path_prefix).toBe("/api");
+  });
+});
+
+describe("buildRedirectRoute", () => {
+  test("creates www to domain redirect with permanent status", () => {
+    const route = buildRedirectRoute({
+      fromHost: "www.example.com",
+      toHost: "example.com",
+      permanent: true,
+      id: "example.com-redirect",
+    });
+
+    expect(route["@id"]).toBe("example.com-redirect");
+    expect(route.match).toBeDefined();
+    expect(route.match![0].host).toEqual(["www.example.com"]);
+    expect(route.handle[0].handler).toBe("static_response");
+    expect(route.handle[0].status_code).toBe(301);
+    expect(route.handle[0].headers?.response?.set?.Location).toEqual([
+      "https://example.com{http.request.uri}",
+    ]);
+    expect(route.terminal).toBe(true);
+  });
+
+  test("creates domain to www redirect with temporary status", () => {
+    const route = buildRedirectRoute({
+      fromHost: "example.com",
+      toHost: "www.example.com",
+      permanent: false,
+      id: "example.com-redirect",
+    });
+
+    expect(route.handle[0].status_code).toBe(302);
+    expect(route.handle[0].headers?.response?.set?.Location).toEqual([
+      "https://www.example.com{http.request.uri}",
+    ]);
+  });
+
+  test("defaults to permanent redirect", () => {
+    const route = buildRedirectRoute({
+      fromHost: "www.example.com",
+      toHost: "example.com",
+    });
+
+    expect(route.handle[0].status_code).toBe(301);
+  });
+
+  test("preserves query string and path with redirect", () => {
+    const route = buildRedirectRoute({
+      fromHost: "www.example.com",
+      toHost: "example.com",
+    });
+
+    // Check that {http.request.uri} is included to preserve path and query
+    expect(route.handle[0].headers?.response?.set?.Location[0]).toContain("{http.request.uri}");
+  });
+});
+
+describe("buildCompressionHandler", () => {
+  test("creates compression handler with gzip and zstd by default", () => {
+    const handler = buildCompressionHandler();
+
+    expect(handler.handler).toBe("encode");
+    expect(handler.encodings).toHaveProperty("gzip");
+    expect(handler.encodings).toHaveProperty("zstd");
+    expect(handler.encodings).not.toHaveProperty("br");
+  });
+
+  test("allows disabling gzip", () => {
+    const handler = buildCompressionHandler({ gzip: false });
+
+    expect(handler.encodings).not.toHaveProperty("gzip");
+    expect(handler.encodings).toHaveProperty("zstd");
+  });
+
+  test("allows disabling zstd", () => {
+    const handler = buildCompressionHandler({ zstd: false });
+
+    expect(handler.encodings).toHaveProperty("gzip");
+    expect(handler.encodings).not.toHaveProperty("zstd");
+  });
+
+  test("allows enabling brotli", () => {
+    const handler = buildCompressionHandler({ brotli: true });
+
+    expect(handler.encodings).toHaveProperty("gzip");
+    expect(handler.encodings).toHaveProperty("zstd");
+    expect(handler.encodings).toHaveProperty("br");
+  });
+
+  test("supports custom combinations", () => {
+    const handler = buildCompressionHandler({ gzip: true, zstd: false, brotli: true });
+
+    expect(handler.encodings).toHaveProperty("gzip");
+    expect(handler.encodings).not.toHaveProperty("zstd");
+    expect(handler.encodings).toHaveProperty("br");
   });
 });

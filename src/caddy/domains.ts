@@ -23,6 +23,7 @@ import {
   splitCertificateBundle,
   parseCertificate,
 } from "../utils/certificate.js";
+import { buildRedirectRoute, buildCompressionHandler } from "./routes.js";
 
 /**
  * Add a domain with automatic TLS (Let's Encrypt)
@@ -41,40 +42,72 @@ export async function addDomainWithAutoTls(
     throw new DomainAlreadyExistsError(validated.domain);
   }
 
+  // Build routes array
+  const routes = [];
+
+  // Add redirect route if specified
+  if (validated.redirectMode === "www_to_domain") {
+    routes.push(
+      buildRedirectRoute({
+        fromHost: `www.${validated.domain}`,
+        toHost: validated.domain,
+        permanent: true,
+        id: `${validated.domain}-redirect`,
+      })
+    );
+  } else if (validated.redirectMode === "domain_to_www") {
+    routes.push(
+      buildRedirectRoute({
+        fromHost: validated.domain,
+        toHost: `www.${validated.domain}`,
+        permanent: true,
+        id: `${validated.domain}-redirect`,
+      })
+    );
+  }
+
+  // Add main domain route
+  const handlers = [];
+
+  // Add security headers if enabled
+  if (validated.enableSecurityHeaders) {
+    handlers.push({
+      handler: "headers",
+      response: {
+        set: {
+          "X-Frame-Options": [validated.frameOptions ?? "DENY"],
+          "X-Content-Type-Options": ["nosniff"],
+          ...(validated.enableHsts
+            ? {
+                "Strict-Transport-Security": [`max-age=${validated.hstsMaxAge}; includeSubDomains`],
+              }
+            : {}),
+        },
+      },
+    });
+  }
+
+  // Add compression handler if enabled
+  if (validated.enableCompression !== false) {
+    handlers.push(buildCompressionHandler());
+  }
+
+  // Add reverse proxy handler
+  handlers.push({
+    handler: "reverse_proxy",
+    upstreams: [{ dial: `${validated.target}:${validated.targetPort}` }],
+  });
+
+  routes.push({
+    "@id": validated.domain,
+    handle: handlers,
+  });
+
   // Build server configuration for the domain
   const serverConfig = {
     [validated.domain]: {
       listen: [":443"],
-      routes: [
-        {
-          handle: [
-            ...(validated.enableSecurityHeaders
-              ? [
-                  {
-                    handler: "headers",
-                    response: {
-                      set: {
-                        "X-Frame-Options": [validated.frameOptions ?? "DENY"],
-                        "X-Content-Type-Options": ["nosniff"],
-                        ...(validated.enableHsts
-                          ? {
-                              "Strict-Transport-Security": [
-                                `max-age=${validated.hstsMaxAge}; includeSubDomains`,
-                              ],
-                            }
-                          : {}),
-                      },
-                    },
-                  },
-                ]
-              : []),
-            {
-              handler: "reverse_proxy",
-              upstreams: [{ dial: `${validated.target}:${validated.targetPort}` }],
-            },
-          ],
-        },
-      ],
+      routes,
       automatic_https: {
         disable: false,
       },
@@ -145,40 +178,72 @@ export async function addDomainWithTls(options: AddDomainWithTlsOptions): Promis
     throw new DomainAlreadyExistsError(validated.domain);
   }
 
+  // Build routes array
+  const routes2 = [];
+
+  // Add redirect route if specified
+  if (validated.redirectMode === "www_to_domain") {
+    routes2.push(
+      buildRedirectRoute({
+        fromHost: `www.${validated.domain}`,
+        toHost: validated.domain,
+        permanent: true,
+        id: `${validated.domain}-redirect`,
+      })
+    );
+  } else if (validated.redirectMode === "domain_to_www") {
+    routes2.push(
+      buildRedirectRoute({
+        fromHost: validated.domain,
+        toHost: `www.${validated.domain}`,
+        permanent: true,
+        id: `${validated.domain}-redirect`,
+      })
+    );
+  }
+
+  // Add main domain route
+  const handlers2 = [];
+
+  // Add security headers if enabled
+  if (validated.enableSecurityHeaders) {
+    handlers2.push({
+      handler: "headers",
+      response: {
+        set: {
+          "X-Frame-Options": [validated.frameOptions ?? "DENY"],
+          "X-Content-Type-Options": ["nosniff"],
+          ...(validated.enableHsts
+            ? {
+                "Strict-Transport-Security": [`max-age=${validated.hstsMaxAge}; includeSubDomains`],
+              }
+            : {}),
+        },
+      },
+    });
+  }
+
+  // Add compression handler if enabled
+  if (validated.enableCompression !== false) {
+    handlers2.push(buildCompressionHandler());
+  }
+
+  // Add reverse proxy handler
+  handlers2.push({
+    handler: "reverse_proxy",
+    upstreams: [{ dial: `${validated.target}:${validated.targetPort}` }],
+  });
+
+  routes2.push({
+    "@id": validated.domain,
+    handle: handlers2,
+  });
+
   // Build server configuration
   const serverConfig = {
     [validated.domain]: {
       listen: [":443"],
-      routes: [
-        {
-          handle: [
-            ...(validated.enableSecurityHeaders
-              ? [
-                  {
-                    handler: "headers",
-                    response: {
-                      set: {
-                        "X-Frame-Options": [validated.frameOptions ?? "DENY"],
-                        "X-Content-Type-Options": ["nosniff"],
-                        ...(validated.enableHsts
-                          ? {
-                              "Strict-Transport-Security": [
-                                `max-age=${validated.hstsMaxAge}; includeSubDomains`,
-                              ],
-                            }
-                          : {}),
-                      },
-                    },
-                  },
-                ]
-              : []),
-            {
-              handler: "reverse_proxy",
-              upstreams: [{ dial: `${validated.target}:${validated.targetPort}` }],
-            },
-          ],
-        },
-      ],
+      routes: routes2,
       tls_connection_policies: [
         {
           certificate_selection: {

@@ -135,7 +135,7 @@ describe("Domain Management", () => {
   describe("addDomainWithTls", () => {
     test("adds domain with custom TLS certificate", async () => {
       // Mock certificate file reading
-      const {  readFile } = await import("fs/promises");
+      const { readFile } = await import("fs/promises");
       const mockReadFile = readFile as ReturnType<typeof vi.fn>;
       mockReadFile.mockResolvedValueOnce(`-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIJAKL0UG+mRkSvMA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
@@ -799,11 +799,7 @@ lQ==
       } as Response);
 
       await expect(
-        rotateCertificate(
-          "nonexistent.com",
-          "/new/cert.crt",
-          "/new/cert.key"
-        )
+        rotateCertificate("nonexistent.com", "/new/cert.crt", "/new/cert.key")
       ).rejects.toThrow(DomainNotFoundError);
     });
 
@@ -835,11 +831,7 @@ lQ==
         text: async () => "",
       } as Response);
 
-      const certTag = await rotateCertificate(
-        "example.com",
-        "/new/cert.crt",
-        "/new/cert.key"
-      );
+      const certTag = await rotateCertificate("example.com", "/new/cert.crt", "/new/cert.key");
 
       expect(certTag).toMatch(/^example\.com-a2f4506fa64644af-\d{14}$/);
     });
@@ -861,11 +853,7 @@ lQ==
       } as Response);
 
       await expect(
-        rotateCertificate(
-          "example.com",
-          "/invalid/cert.crt",
-          "/invalid/cert.key"
-        )
+        rotateCertificate("example.com", "/invalid/cert.crt", "/invalid/cert.key")
       ).rejects.toThrow();
     });
   });

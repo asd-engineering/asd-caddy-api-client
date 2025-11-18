@@ -46,7 +46,7 @@ export const FrameOptionsSchema = z.enum(["DENY", "SAMEORIGIN"]);
 /**
  * Redirect mode schema
  */
-export const RedirectModeSchema = z.enum(["none", "permanent", "temporary"]);
+export const RedirectModeSchema = z.enum(["none", "www_to_domain", "domain_to_www"]);
 
 /**
  * TLS issuer schema
@@ -84,6 +84,7 @@ export const CaddyRouteHandlerSchema: z.ZodType<{
  * Caddy route schema
  */
 export const CaddyRouteSchema = z.object({
+  "@id": z.string().optional(),
   match: z.array(CaddyRouteMatcherSchema).optional(),
   handle: z.array(CaddyRouteHandlerSchema),
   terminal: z.boolean().optional(),

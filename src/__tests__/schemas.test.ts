@@ -118,14 +118,14 @@ describe("AddDomainWithAutoTlsOptionsSchema", () => {
       hstsMaxAge: 63072000,
       frameOptions: "SAMEORIGIN",
       enableCompression: false,
-      redirectMode: "permanent",
+      redirectMode: "www_to_domain",
       adminUrl: "http://127.0.0.1:2019",
     });
 
     expect(result.enableHsts).toBe(true);
     expect(result.hstsMaxAge).toBe(63072000);
     expect(result.frameOptions).toBe("SAMEORIGIN");
-    expect(result.redirectMode).toBe("permanent");
+    expect(result.redirectMode).toBe("www_to_domain");
   });
 
   test("rejects invalid port", () => {

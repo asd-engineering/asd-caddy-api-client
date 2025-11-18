@@ -375,3 +375,70 @@ export function buildIframeHeadersHandler(allowedOrigin = "*"): CaddyRouteHandle
     },
   };
 }
+
+/**
+ * Build a redirect route for domain redirects (www <-> non-www)
+ * @param options - Redirect configuration
+ * @returns Caddy route for redirect
+ */
+export function buildRedirectRoute(options: {
+  fromHost: string;
+  toHost: string;
+  permanent?: boolean;
+  id?: string;
+}): CaddyRoute {
+  const statusCode = options.permanent !== false ? 301 : 302; // Default to permanent (301)
+
+  return {
+    "@id": options.id,
+    match: [{ host: [options.fromHost] }],
+    handle: [
+      {
+        handler: "static_response",
+        status_code: statusCode,
+        headers: {
+          response: {
+            set: {
+              Location: [`https://${options.toHost}{http.request.uri}`],
+            },
+          },
+        },
+      },
+    ],
+    terminal: true,
+  };
+}
+
+/**
+ * Build a compression (encode) handler
+ * Supports gzip, zstd, and brotli compression
+ * @param options - Compression options
+ * @returns Encode handler
+ */
+export function buildCompressionHandler(options?: {
+  gzip?: boolean;
+  zstd?: boolean;
+  brotli?: boolean;
+}): CaddyRouteHandler {
+  const encodings: Record<string, Record<string, unknown>> = {};
+
+  // Enable gzip by default
+  if (options?.gzip !== false) {
+    encodings.gzip = {};
+  }
+
+  // Enable zstd by default
+  if (options?.zstd !== false) {
+    encodings.zstd = {};
+  }
+
+  // Brotli is opt-in
+  if (options?.brotli === true) {
+    encodings.br = {};
+  }
+
+  return {
+    handler: "encode",
+    encodings,
+  };
+}
