@@ -26,15 +26,9 @@ async function main() {
     },
   });
 
-  // Add routes to Caddy
-  for (const route of routes) {
-    const added = await client.addRoute("https_server", route);
-    if (added) {
-      console.log("✅ Route added");
-    } else {
-      console.log("ℹ️  Route already exists");
-    }
-  }
+  // Add routes to Caddy (new simplified method - no loop needed!)
+  const result = await client.addRoutes("https_server", routes);
+  console.log(`✅ Added ${result.added} route(s), skipped ${result.skipped} (already exist)`);
 
   // Get all routes
   const existingRoutes = await client.getRoutes("https_server");

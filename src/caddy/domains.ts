@@ -23,7 +23,7 @@ import {
   splitCertificateBundle,
   parseCertificate,
 } from "../utils/certificate.js";
-import { buildRedirectRoute, buildCompressionHandler } from "./routes.js";
+import { buildRedirectRoute, buildCompressionHandler, buildWwwRedirect } from "./routes.js";
 
 /**
  * Add a domain with automatic TLS (Let's Encrypt)
@@ -45,23 +45,21 @@ export async function addDomainWithAutoTls(
   // Build routes array
   const routes = [];
 
-  // Add redirect route if specified
+  // Add redirect route if specified (using new buildWwwRedirect)
   if (validated.redirectMode === "www_to_domain") {
     routes.push(
-      buildRedirectRoute({
-        fromHost: `www.${validated.domain}`,
-        toHost: validated.domain,
+      buildWwwRedirect({
+        domain: validated.domain,
+        mode: "www-to-domain",
         permanent: true,
-        id: `${validated.domain}-redirect`,
       })
     );
   } else if (validated.redirectMode === "domain_to_www") {
     routes.push(
-      buildRedirectRoute({
-        fromHost: validated.domain,
-        toHost: `www.${validated.domain}`,
+      buildWwwRedirect({
+        domain: validated.domain,
+        mode: "domain-to-www",
         permanent: true,
-        id: `${validated.domain}-redirect`,
       })
     );
   }
@@ -702,4 +700,56 @@ export async function removeOldCertificates(
   }
 
   return removedCount;
+}
+
+/**
+ * List all configured domains across all servers
+ * Extracts unique hostnames from all routes in all servers
+ *
+ * @param adminUrl - Caddy admin API URL (optional, defaults to http://127.0.0.1:2019)
+ * @returns Array of unique domain names
+ *
+ * @example
+ * const domains = await listDomains();
+ * console.log(domains); // ["example.com", "www.example.com", "api.example.com"]
+ */
+export async function listDomains(adminUrl?: string): Promise<string[]> {
+  const client = new CaddyClient({ adminUrl });
+
+  try {
+    const servers = (await client.getServers()) as Record<
+      string,
+      {
+        routes?: {
+          match?: {
+            host?: string[];
+          }[];
+        }[];
+      }
+    >;
+
+    const domains = new Set<string>();
+
+    // Extract all hostnames from all routes in all servers
+    for (const serverConfig of Object.values(servers)) {
+      if (!serverConfig.routes) continue;
+
+      for (const route of serverConfig.routes) {
+        if (!route.match) continue;
+
+        for (const matcher of route.match) {
+          if (!matcher.host) continue;
+
+          for (const host of matcher.host) {
+            domains.add(host);
+          }
+        }
+      }
+    }
+
+    return Array.from(domains).sort();
+  } catch {
+    // If Caddy isn't running or has no servers, return empty array
+    return [];
+  }
 }

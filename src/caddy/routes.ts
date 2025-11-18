@@ -439,3 +439,85 @@ export function buildCompressionHandler(options?: {
     encodings,
   };
 }
+
+/**
+ * Build a WWW redirect route (www.example.com ↔ example.com)
+ *
+ * Common patterns:
+ * - "www-to-domain": www.example.com → example.com
+ * - "domain-to-www": example.com → www.example.com
+ *
+ * @param options - WWW redirect options
+ * @returns Caddy route that redirects between www and non-www versions
+ *
+ * @example
+ * // Redirect www.example.com → example.com
+ * const route = buildWwwRedirect({
+ *   domain: "example.com",
+ *   mode: "www-to-domain",
+ *   permanent: true
+ * });
+ *
+ * @example
+ * // Redirect example.com → www.example.com
+ * const route = buildWwwRedirect({
+ *   domain: "example.com",
+ *   mode: "domain-to-www",
+ *   permanent: true
+ * });
+ */
+export function buildWwwRedirect(options: {
+  domain: string;
+  mode: "www-to-domain" | "domain-to-www";
+  permanent?: boolean;
+  priority?: number;
+}): CaddyRoute {
+  const { domain, mode, permanent = true, priority } = options;
+
+  // Remove www. prefix if present to get base domain
+  const baseDomain = domain.replace(/^www\./, "");
+
+  if (mode === "www-to-domain") {
+    // Redirect www.example.com → example.com
+    return {
+      "@id": `redirect-www-to-domain-${baseDomain}`,
+      match: [
+        {
+          host: [`www.${baseDomain}`],
+        },
+      ],
+      handle: [
+        {
+          handler: "static_response",
+          status_code: permanent ? 301 : 302,
+          headers: {
+            Location: [`https://${baseDomain}{http.request.uri}`],
+          },
+        },
+      ],
+      terminal: true,
+      ...(priority !== undefined && { priority }),
+    };
+  } else {
+    // Redirect example.com → www.example.com
+    return {
+      "@id": `redirect-domain-to-www-${baseDomain}`,
+      match: [
+        {
+          host: [baseDomain],
+        },
+      ],
+      handle: [
+        {
+          handler: "static_response",
+          status_code: permanent ? 301 : 302,
+          headers: {
+            Location: [`https://www.${baseDomain}{http.request.uri}`],
+          },
+        },
+      ],
+      terminal: true,
+      ...(priority !== undefined && { priority }),
+    };
+  }
+}

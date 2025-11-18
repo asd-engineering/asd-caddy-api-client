@@ -151,6 +151,38 @@ export class CaddyClient {
   }
 
   /**
+   * Add multiple routes to a server (convenience method to avoid loops)
+   * This method adds routes one at a time and handles idempotency for each.
+   *
+   * @param server - Server name
+   * @param routes - Array of routes to add
+   * @returns Object with counts of added and skipped routes
+   *
+   * @example
+   * const routes = buildServiceRoutes({ host: "api.localhost", dial: "localhost:3000" });
+   * const result = await client.addRoutes("https_server", routes);
+   * console.log(`Added ${result.added}, skipped ${result.skipped}`);
+   */
+  async addRoutes(
+    server: string,
+    routes: CaddyRoute[]
+  ): Promise<{ added: number; skipped: number }> {
+    let added = 0;
+    let skipped = 0;
+
+    for (const route of routes) {
+      const wasAdded = await this.addRoute(server, route);
+      if (wasAdded) {
+        added++;
+      } else {
+        skipped++;
+      }
+    }
+
+    return { added, skipped };
+  }
+
+  /**
    * Check if a route already exists in the routes array
    * @param routes - Existing routes
    * @param matcher - Route matcher to check

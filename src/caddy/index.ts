@@ -10,6 +10,7 @@ export {
   updateDomain,
   deleteDomain,
   getDomainConfig,
+  listDomains,
   rotateCertificate,
   removeOldCertificates,
 } from "./domains.js";
