@@ -1,0 +1,6 @@
+{
+	admin 0.0.0.0:2019
+	auto_https off
+}
+
+# Empty initial configuration - tests will add routes dynamically

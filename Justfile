@@ -52,6 +52,35 @@ test-watch:
 test-coverage:
     bun run test:coverage
 
+# Run integration tests (requires Caddy running)
+test-integration:
+    #!/usr/bin/env bash
+    set -e
+    echo "🔍 Checking if Caddy is running..."
+    if ! curl -s http://127.0.0.1:2019 > /dev/null 2>&1; then
+        echo "⚠️  Caddy not running. Starting with docker compose..."
+        docker compose -f docker-compose.test.yml up -d
+        echo "⏳ Waiting for Caddy to start..."
+        sleep 2
+    fi
+    echo ""
+    echo "🧪 Running integration tests..."
+    bun run test:integration
+    echo ""
+    echo "✅ Integration tests completed!"
+
+# Start test infrastructure (Caddy + backends)
+test-infra-up:
+    docker compose -f docker-compose.test.yml up -d
+    @echo "✅ Test infrastructure started"
+    @echo "   Caddy Admin API: http://127.0.0.1:2019"
+    @echo "   Echo server: http://127.0.0.1:5678"
+
+# Stop test infrastructure
+test-infra-down:
+    docker compose -f docker-compose.test.yml down
+    @echo "✅ Test infrastructure stopped"
+
 # Type check
 typecheck:
     bun run typecheck
