@@ -586,7 +586,10 @@ describeIntegration("ASD Complex Production Scenario", () => {
     expect(serverStateAfterSecondApply).toEqual(serverStateAfterFirstApply);
     expect(configAfterSecondApply).toEqual(configAfterFirstApply);
 
-    // Verify routes are still functional after reapplication
+    // ===== COMPREHENSIVE ENDPOINT VERIFICATION =====
+    // Verify ALL routes are functional after reapplication with correct headers
+
+    // Test 1: Global health endpoint
     const healthResponse = await httpRequest({
       host: "localhost",
       port: 8080,
@@ -594,15 +597,106 @@ describeIntegration("ASD Complex Production Scenario", () => {
       headers: { Host: "studio.localhost" },
     });
     expect(healthResponse.statusCode).toBe(200);
+    expect(healthResponse.body).toContain("healthy");
     expect(healthResponse.headers["x-asd-health"]).toBe("ok");
+    expect(healthResponse.headers["x-asd-instance"]).toBe("prod-cluster-1");
 
+    // Test 2: Health endpoint works for ANY host
+    const healthResponse2 = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/health",
+      headers: { Host: "db.localhost" },
+    });
+    expect(healthResponse2.statusCode).toBe(200);
+    expect(healthResponse2.body).toContain("healthy");
+
+    // Test 3: API service has correct X-ASD-Service-ID header
     const apiResponse = await httpRequest({
       host: "localhost",
       port: 8080,
       path: "/api/users",
       headers: { Host: "studio.localhost" },
     });
+    expect(apiResponse.statusCode).toBe(200);
+    expect(apiResponse.body).toContain("Hello from backend 2");
     expect(apiResponse.headers["x-asd-service-id"]).toBe("api-backend-v1");
+    expect(apiResponse.headers["x-asd-service-type"]).toBe("api");
+    expect(apiResponse.headers["x-frame-options"]).toBe("DENY");
+    expect(apiResponse.headers["x-content-type-options"]).toBe("nosniff");
+
+    // Test 4: Admin service has correct X-ASD-Service-ID header
+    const adminResponse = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/admin/dashboard",
+      headers: { Host: "studio.localhost" },
+    });
+    expect(adminResponse.statusCode).toBe(200);
+    expect(adminResponse.body).toContain("Hello from backend 3");
+    expect(adminResponse.headers["x-asd-service-id"]).toBe("admin-panel-v2");
+    expect(adminResponse.headers["x-asd-service-type"]).toBe("admin");
+    expect(adminResponse.headers["x-asd-auth-required"]).toBe("true");
+    expect(adminResponse.headers["x-content-type-options"]).toBe("nosniff");
+
+    // Test 5: Code Server (root path) has correct X-ASD-Service-ID header
+    const codeServerResponse = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/",
+      headers: { Host: "studio.localhost" },
+    });
+    expect(codeServerResponse.statusCode).toBe(200);
+    expect(codeServerResponse.body).toContain("Hello from backend 1");
+    expect(codeServerResponse.headers["x-asd-service-id"]).toBe("code-server-main");
+    expect(codeServerResponse.headers["x-asd-service-type"]).toBe("ide");
+    expect(codeServerResponse.headers["x-content-type-options"]).toBe("nosniff");
+
+    // Test 6: Database UI has correct X-ASD-Service-ID header
+    const dbResponse = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/",
+      headers: { Host: "db.localhost" },
+    });
+    expect(dbResponse.statusCode).toBe(200);
+    expect(dbResponse.body).toContain("Hello from backend 2");
+    expect(dbResponse.headers["x-asd-service-id"]).toBe("database-ui-pgadmin");
+    expect(dbResponse.headers["x-asd-service-type"]).toBe("database-management");
+    expect(dbResponse.headers["x-content-type-options"]).toBe("nosniff");
+
+    // Test 7: Monitoring service has correct X-ASD-Service-ID header
+    const metricsResponse = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/",
+      headers: { Host: "metrics.localhost" },
+    });
+    expect(metricsResponse.statusCode).toBe(200);
+    expect(metricsResponse.body).toContain("Hello from backend 3");
+    expect(metricsResponse.headers["x-asd-service-id"]).toBe("monitoring-prometheus");
+    expect(metricsResponse.headers["x-asd-service-type"]).toBe("observability");
+    expect(metricsResponse.headers["x-content-type-options"]).toBe("nosniff");
+
+    // Test 8: Verify route ordering - /api/* takes precedence over /*
+    const apiPrecedenceResponse = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/api/test",
+      headers: { Host: "studio.localhost" },
+    });
+    expect(apiPrecedenceResponse.headers["x-asd-service-id"]).toBe("api-backend-v1");
+    // Should NOT be code-server-main
+
+    // Test 9: Verify /admin/* takes precedence over /*
+    const adminPrecedenceResponse = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/admin/users",
+      headers: { Host: "studio.localhost" },
+    });
+    expect(adminPrecedenceResponse.headers["x-asd-service-id"]).toBe("admin-panel-v2");
+    // Should NOT be code-server-main
 
     // Save final configuration as snapshot for comparison
     if (process.env.UPDATE_SNAPSHOTS === "true") {
