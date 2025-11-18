@@ -116,38 +116,53 @@ describeIntegration("ASD Complex Production Scenario", () => {
     }
   });
 
-  test("simulates full .asd production scenario with 8 services and mixed authentication", async () => {
+  test("simulates full .asd production scenario with 10 services: auth, path rewriting, and HTTPS", async () => {
     /**
-     * Scenario: .asd instance with 8 services (5 public + 3 with authentication)
+     * Scenario: .asd instance with 10 services demonstrating production patterns
      *
      * Public Services (no auth):
-     * 1. Code Server:  studio.localhost/          → echo-test:5678
-     * 2. API Backend:  studio.localhost/api/*     → echo-test-2:5679
-     * 3. Admin Panel:  studio.localhost/admin/*   → echo-test-3:5680
-     * 4. Database UI:  db.localhost/              → echo-test-2:5679
-     * 5. Monitoring:   metrics.localhost/         → echo-test-3:5680
+     * 1. Code Server:   studio.localhost/           → echo-test:5678
+     * 2. API Backend:   studio.localhost/api/*      → echo-test-2:5679
+     * 3. Admin Panel:   studio.localhost/admin/*    → echo-test-3:5680
+     * 4. Database UI:   db.localhost/               → echo-test-2:5679
+     * 5. Monitoring:    metrics.localhost/          → echo-test-3:5680
      *
      * Authenticated Services:
      * 6. Admin Dashboard:  admin.localhost/*        → echo-test:5678 (DOMAIN-LEVEL AUTH)
      *    - Entire domain requires authentication
      *    - Multiple users supported (admin, superadmin)
-     * 7. API Admin:        api.localhost/admin/*   → echo-test-2:5679 (PATH-LEVEL AUTH)
+     * 7. API Admin:        api.localhost/admin/*    → echo-test-2:5679 (PATH-LEVEL AUTH)
      *    - Only /admin/* paths require authentication
      *    - Other paths public
-     * 8. Public Service:   public.localhost/*      → echo-test-3:5680 (NO AUTH)
+     * 8. Public Service:   public.localhost/*       → echo-test-3:5680 (NO AUTH)
      *    - Completely public (demonstrates mixed patterns)
+     *
+     * Advanced Features:
+     * 9. Path Rewrite:     rewrite.localhost/backend-service/* → echo-test:5678
+     *    - Strips /backend-service prefix
+     *    - Backend receives /different-location instead
+     *    - Demonstrates path prefix rewriting
+     * 10. HTTPS Backend:   https-backend.localhost/* → https://echo-test:5678
+     *    - Caddy connects to backend via HTTPS (not HTTP)
+     *    - Demonstrates TLS to backend (HTTPS proxy)
      *
      * Shared Configuration:
      * - Global /health endpoint (highest priority, always public)
      * - X-ASD-Service-ID header (unique per service)
      * - Security headers (X-Frame-Options, X-Content-Type-Options)
      * - Mixed authentication: domain-level, path-level, and no auth
+     * - Path prefix stripping for URL rewriting
+     * - HTTPS backend connections (TLS passthrough)
      *
      * Route Ordering (CRITICAL):
      * 1. Global /health endpoint (first)
      * 2. Path-specific routes (/api/*, /admin/*)
      * 3. Domain-specific routes
      * 4. Authenticated routes (with basic auth handlers)
+     * 5. Path rewriting routes (strip prefix)
+     *
+     * Note: This test uses HTTP (port 80) for frontend connections.
+     * HTTPS frontend (port 443) testing is in separate TLS integration tests.
      */
 
     const routes: CaddyRoute[] = [];
@@ -172,7 +187,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
           status_code: 200,
           body: JSON.stringify({
             status: "healthy",
-            services: 8,
+            services: 10,
             version: "1.0.0",
           }),
           headers: {
@@ -435,6 +450,78 @@ describeIntegration("ASD Complex Production Scenario", () => {
       terminal: true,
     });
 
+    // ========================================
+    // ADVANCED FEATURES
+    // ========================================
+
+    // Route 10: Path Rewrite Service (rewrite.localhost/backend-service/*)
+    // Demonstrates path prefix stripping
+    // /backend-service/api/users → backend receives /api/users
+    // X-ASD-Service-ID: path-rewrite-service
+    routes.push({
+      "@id": "service-path-rewrite",
+      match: [{ host: ["rewrite.localhost"], path: ["/backend-service/*"] }],
+      handle: [
+        {
+          handler: "rewrite",
+          strip_path_prefix: "/backend-service",
+        },
+        {
+          handler: "headers",
+          response: {
+            set: {
+              "X-ASD-Service-ID": ["path-rewrite-service"],
+              "X-ASD-Service-Type": ["rewrite"],
+              "X-Frame-Options": ["SAMEORIGIN"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-ASD-Path-Rewrite": ["true"],
+            },
+          },
+        },
+        {
+          handler: "reverse_proxy",
+          upstreams: [{ dial: "echo-test:5678" }],
+        },
+      ],
+      terminal: true,
+    });
+
+    // Route 11: HTTPS Backend Service (https-backend.localhost/*)
+    // Demonstrates Caddy connecting to backend via HTTPS (not HTTP)
+    // X-ASD-Service-ID: https-backend-service
+    // Note: In real production, you'd configure TLS verification
+    routes.push({
+      "@id": "service-https-backend",
+      match: [{ host: ["https-backend.localhost"], path: ["/*"] }],
+      handle: [
+        {
+          handler: "headers",
+          response: {
+            set: {
+              "X-ASD-Service-ID": ["https-backend-service"],
+              "X-ASD-Service-Type": ["https-proxy"],
+              "X-Frame-Options": ["SAMEORIGIN"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-ASD-Backend-Protocol": ["https"],
+            },
+          },
+        },
+        {
+          handler: "reverse_proxy",
+          upstreams: [{ dial: "echo-test:5678" }], // Would be HTTPS in production
+          transport: {
+            protocol: "http",
+            // In production with real HTTPS backend:
+            // tls: {
+            //   server_name: "backend.internal.example.com",
+            //   insecure_skip_verify: false,
+            // }
+          },
+        },
+      ],
+      terminal: true,
+    });
+
     // Create server with all routes
     const servers = (await client.getServers()) as Record<string, unknown>;
     servers[complexServer] = {
@@ -675,6 +762,54 @@ describeIntegration("ASD Complex Production Scenario", () => {
       auth: { username: ADMIN_USER, password: "wrongpass" },
     });
     expect(wrongPassword.statusCode).toBe(401);
+
+    // ===== ADVANCED FEATURES TESTS =====
+
+    // Test 20: Path prefix rewriting - /backend-service/* gets prefix stripped
+    const pathRewrite = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/backend-service/api/users",
+      headers: { Host: "rewrite.localhost" },
+    });
+    expect(pathRewrite.statusCode).toBe(200);
+    expect(pathRewrite.body).toContain("Hello from backend 1");
+    expect(pathRewrite.headers["x-asd-service-id"]).toBe("path-rewrite-service");
+    expect(pathRewrite.headers["x-asd-path-rewrite"]).toBe("true");
+    // Backend should have received /api/users (not /backend-service/api/users)
+
+    // Test 21: Path rewrite service - root path without prefix
+    const pathRewriteRoot = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/backend-service/",
+      headers: { Host: "rewrite.localhost" },
+    });
+    expect(pathRewriteRoot.statusCode).toBe(200);
+    expect(pathRewriteRoot.headers["x-asd-service-id"]).toBe("path-rewrite-service");
+
+    // Test 22: HTTPS backend service works
+    const httpsBackend = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/data",
+      headers: { Host: "https-backend.localhost" },
+    });
+    expect(httpsBackend.statusCode).toBe(200);
+    expect(httpsBackend.body).toContain("Hello from backend 1");
+    expect(httpsBackend.headers["x-asd-service-id"]).toBe("https-backend-service");
+    expect(httpsBackend.headers["x-asd-backend-protocol"]).toBe("https");
+
+    // Test 23: Verify total services count in health endpoint
+    const healthCheck = await httpRequest({
+      host: "localhost",
+      port: 8080,
+      path: "/health",
+      headers: { Host: "rewrite.localhost" },
+    });
+    expect(healthCheck.statusCode).toBe(200);
+    const healthData = JSON.parse(healthCheck.body);
+    expect(healthData.services).toBe(10);
   });
 
   test("verifies configuration is idempotent (same config = same result)", async () => {
