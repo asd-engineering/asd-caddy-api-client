@@ -69,6 +69,24 @@ test-integration:
     echo ""
     echo "✅ Integration tests completed!"
 
+# Update integration test snapshots (Caddy config fixtures)
+test-integration-update-snapshots:
+    #!/usr/bin/env bash
+    set -e
+    echo "🔍 Checking if Caddy is running..."
+    if ! curl -s http://127.0.0.1:2019 > /dev/null 2>&1; then
+        echo "⚠️  Caddy not running. Starting with docker compose..."
+        docker compose -f docker-compose.test.yml up -d
+        echo "⏳ Waiting for Caddy to start..."
+        sleep 2
+    fi
+    echo ""
+    echo "📸 Running integration tests with UPDATE_SNAPSHOTS=true..."
+    UPDATE_SNAPSHOTS=true bun run test:integration
+    echo ""
+    echo "✅ Snapshots updated in src/__tests__/integration/__fixtures__/"
+    echo "   Review the changes and commit if correct."
+
 # Start test infrastructure (Caddy + backends)
 test-infra-up:
     docker compose -f docker-compose.test.yml up -d
