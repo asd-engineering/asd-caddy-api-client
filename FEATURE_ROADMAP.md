@@ -452,50 +452,24 @@ routes.push({
 
 These features don't exist in Python either, but would improve the TypeScript client:
 
-### 6. Certificate Management Enhancements
+### 1. Switch to 308 Redirect Status Code (P3 - Low)
 
-**Features:**
+**Current**: TypeScript uses `301` (Moved Permanently)
+**Python**: Uses `308` (Permanent Redirect)
 
-- Wildcard certificate detection
-- SAN (Subject Alternative Names) parsing
-- Certificate renewal automation
-- Certificate expiration monitoring with webhooks
-- Multi-domain certificate handling
+**Why 308 is Better:**
 
-**Effort**: 8-12 hours
+- Maintains HTTP method (POST stays POST)
+- Better HTTP/1.1 compliance
+- More explicit about permanence
 
----
+**Implementation:** Update redirect status code in `src/caddy/routes.ts`
 
-### 7. Advanced Security Headers
-
-**Features:**
-
-- `Referrer-Policy` support
-- `Permissions-Policy` support
-- Content Security Policy (CSP) builder
-- Security.txt support
-
-**Effort**: 4-6 hours
+**Effort**: 30 minutes
 
 ---
 
-### 8. Reliability & Performance
-
-**Features:**
-
-- Retry logic with exponential backoff
-- Circuit breaker pattern
-- Request timeout configuration
-- Connection pooling
-- Config diffing/merging
-- Atomic multi-section updates
-- Rollback on failure
-
-**Effort**: 12-16 hours
-
----
-
-### 9. load_pem Support
+### 2. load_pem Support (P3 - Low)
 
 **Current**: TypeScript uses `load_files` (file paths)
 **Python**: Uses `load_pem` (inline PEM strings)
@@ -523,6 +497,59 @@ config.apps.tls.certificates.load_pem = [
 
 ---
 
+### 3. Fix ASD Integration Test Expectation
+
+**Issue**: Path rewrite test expects "Hello from backend 1" but `echo-test:5678` returns different response
+
+**Fix**: Update test expectation to match actual echo-test response
+
+**Effort**: 15 minutes
+
+---
+
+### 4. Certificate Management Enhancements
+
+**Features:**
+
+- Wildcard certificate detection
+- SAN (Subject Alternative Names) parsing
+- Certificate renewal automation
+- Certificate expiration monitoring with webhooks
+- Multi-domain certificate handling
+
+**Effort**: 8-12 hours
+
+---
+
+### 5. Advanced Security Headers
+
+**Features:**
+
+- `Referrer-Policy` support
+- `Permissions-Policy` support
+- Content Security Policy (CSP) builder
+- Security.txt support
+
+**Effort**: 4-6 hours
+
+---
+
+### 6. Reliability & Performance
+
+**Features:**
+
+- Retry logic with exponential backoff
+- Circuit breaker pattern
+- Request timeout configuration
+- Connection pooling
+- Config diffing/merging
+- Atomic multi-section updates
+- Rollback on failure
+
+**Effort**: 12-16 hours
+
+---
+
 ## Implementation Status Summary
 
 ### ✅ Completed (Core Parity + Beyond)
@@ -539,9 +566,12 @@ config.apps.tls.certificates.load_pem = [
 
 ### ❌ Not Implemented (Non-Critical)
 
-10. ❌ load_pem Support (P3)
-11. ❌ Retry Logic (P3)
-12. ❌ Wildcard Certificates (P3)
+10. ❌ Switch to 308 redirect (P3) - 30 minutes
+11. ❌ load_pem Support (P3) - 2-3 hours
+12. ❌ Fix ASD integration test expectation (P3) - 15 minutes
+13. ❌ Retry Logic (P3) - 4-6 hours
+14. ❌ Wildcard Certificates (P3) - 2-3 hours
+15. ❌ Advanced Security Headers (P3) - 4-6 hours
 
 ---
 
@@ -651,7 +681,4 @@ Remaining P3 features are optional enhancements that are not required for produc
 
 **Next Steps** (optional enhancements):
 
-1. Switch redirect status code from 301 to 308 (30 minutes)
-2. Add load_pem support for inline certificates (2-3 hours)
-3. Add retry logic with exponential backoff (4-6 hours)
-4. Add wildcard certificate detection (2-3 hours)
+See "Future Enhancements (P3 - Low)" section above for all remaining tasks.
