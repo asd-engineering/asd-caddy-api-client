@@ -58,12 +58,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/asd/caddy-api-client.git"
+    "url": "https://github.com/asd-engineering/asd-caddy-api-client.git"
   },
   "bugs": {
-    "url": "https://github.com/asd/caddy-api-client/issues"
+    "url": "https://github.com/asd-engineering/asd-caddy-api-client/issues"
   },
-  "homepage": "https://github.com/asd/caddy-api-client#readme",
+  "homepage": "https://asd-engineering.github.io/asd-caddy-api-client",
+  "documentation": "https://asd-engineering.github.io/asd-caddy-api-client",
   "peerDependencies": {
     "zod": "^3.22.0"
   },

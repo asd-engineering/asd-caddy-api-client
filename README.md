@@ -430,7 +430,9 @@ See the [`examples/`](./examples/) directory for standalone examples (require pu
 
 ## API Documentation
 
-Full API documentation is auto-generated from source code using TypeDoc.
+📚 **[View Full API Documentation](https://asd-engineering.github.io/asd-caddy-api-client/)** ← Auto-generated from source code
+
+Full API documentation is generated using TypeDoc and hosted on GitHub Pages. It includes detailed information for all exported functions, classes, and types with examples.
 
 **Generate locally:**
 
@@ -438,8 +440,6 @@ Full API documentation is auto-generated from source code using TypeDoc.
 bun run docs:build      # Generate docs
 bun run docs:serve      # Generate and open in browser
 ```
-
-The API documentation includes detailed information for all exported functions, classes, and types with examples.
 
 ## Documentation
 

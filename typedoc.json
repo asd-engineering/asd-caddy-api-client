@@ -7,7 +7,7 @@
   "includeVersion": true,
   "readme": "README.md",
   "navigationLinks": {
-    "GitHub": "https://github.com/asd/caddy-api-client",
-    "Integration Tests": "https://github.com/asd/caddy-api-client/tree/main/src/__tests__/integration"
+    "GitHub": "https://github.com/asd-engineering/asd-caddy-api-client",
+    "Integration Tests": "https://github.com/asd-engineering/asd-caddy-api-client/tree/main/src/__tests__/integration"
   }
 }
