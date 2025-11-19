@@ -312,15 +312,10 @@ See the [`examples/`](./examples/) directory for complete examples:
 
 ## Documentation
 
-📚 **Comprehensive documentation** available in `docs/`:
+📚 See **[docs/](docs/)** for:
 
-- **[docs/project/](docs/project/)** - Project status, roadmaps, and parity tracking
-  - [POST_PARITY_ROADMAP.md](docs/project/POST_PARITY_ROADMAP.md) - Next steps and priorities
-  - [python-api-parity.md](docs/project/python-api-parity.md) - Comparison with Python client
-  - [FEATURE_ROADMAP.md](docs/project/FEATURE_ROADMAP.md) - Implementation history
-- **[docs/wiki/](docs/wiki/)** - Educational content and design docs
-  - [REFACTOR_PLAN.md](docs/wiki/REFACTOR_PLAN.md) - Architecture design (90+ pages)
-  - [TESTING_STRATEGY.md](docs/wiki/TESTING_STRATEGY.md) - Testing philosophy
+- **[POST_PARITY_ROADMAP.md](docs/project/POST_PARITY_ROADMAP.md)** - Roadmap for npm package and .asd CLI integration
+- **[python-api-parity.md](docs/project/python-api-parity.md)** - Feature comparison with Python client
 
 ## Development
 
