@@ -17,7 +17,7 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { CaddyClient } from "../../caddy/client.js";
 import * as http from "http";
-import { DELAY_SHORT, DELAY_MEDIUM, DELAY_LONG } from "./constants.js";
+import { DELAY_MEDIUM, DELAY_LONG } from "./constants.js";
 
 const CADDY_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:2019";
 const INTEGRATION_TEST = process.env.INTEGRATION_TEST === "true";
@@ -81,30 +81,52 @@ describeIntegration("ASD Production Routing Scenarios", () => {
   });
 
   beforeEach(async () => {
-    // Clean up test server before each test
-    try {
-      const servers = (await client.getServers()) as Record<string, unknown>;
-      servers[testServer] = {
-        listen: [":80"],
-        routes: [],
-        automatic_https: { disable: true },
-      };
-      await client.patchServer(servers);
-      await delay(DELAY_SHORT);
-    } catch {
-      // Server might not exist, that's ok
+    // Ensure only test server exists on port 80 with empty routes
+    const servers = (await client.getServers()) as Record<string, unknown>;
+
+    // Remove any other servers that might be listening on port 80
+    for (const serverName of Object.keys(servers)) {
+      if (serverName !== testServer) {
+        delete servers[serverName];
+      }
     }
+
+    // Create/reset test server
+    servers[testServer] = {
+      listen: [":80"],
+      routes: [],
+      automatic_https: { disable: true },
+    };
+
+    await client.patchServer(servers);
+    await delay(DELAY_MEDIUM); // Wait for Caddy to apply configuration
   });
 
   afterAll(async () => {
-    // Clean up test server
+    // Clean up test server and restore original server
     try {
       const servers = (await client.getServers()) as Record<string, unknown>;
       if (servers[testServer]) {
         delete servers[testServer];
-        await client.patchServer(servers);
-        await delay(DELAY_MEDIUM);
       }
+
+      // Restore the original server from Caddyfile
+      servers.https_server = {
+        listen: [":80"],
+        routes: [
+          {
+            handle: [
+              {
+                handler: "static_response",
+                body: "Caddy test server ready",
+              },
+            ],
+          },
+        ],
+      };
+
+      await client.patchServer(servers);
+      await delay(DELAY_MEDIUM);
     } catch {
       // Ignore cleanup errors
     }

@@ -7,7 +7,7 @@
  * 2. bun test:integration
  * 3. docker compose -f docker-compose.test.yml down
  */
-import { describe, test, expect, beforeAll, beforeEach, afterEach } from "vitest";
+import { describe, test, expect, beforeAll, beforeEach, afterEach, afterAll } from "vitest";
 import { CaddyClient } from "../../caddy/client.js";
 import { addDomainWithTls, deleteDomain } from "../../caddy/domains.js";
 import { buildRedirectRoute, buildCompressionHandler } from "../../caddy/routes.js";
@@ -22,7 +22,7 @@ import * as http from "http";
 import * as https from "https";
 import * as fs from "fs";
 import * as path from "path";
-import { DELAY_SHORT, DELAY_MEDIUM, DELAY_LONG } from "./constants.js";
+import { DELAY_MEDIUM, DELAY_LONG } from "./constants.js";
 
 const CADDY_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:2019";
 const INTEGRATION_TEST = process.env.INTEGRATION_TEST === "true";
@@ -97,23 +97,25 @@ describeIntegration("Critical Modules Integration Tests", () => {
   });
 
   beforeEach(async () => {
-    // Clean up test server before each test
-    try {
-      // First, try to get current servers
-      const servers = (await client.getServers()) as Record<string, unknown>;
+    // Ensure only test server exists on port 80 with empty routes
+    const servers = (await client.getServers()) as Record<string, unknown>;
 
-      // Ensure test server exists with clean state
-      servers[testServer] = {
-        listen: [":80"],
-        routes: [],
-        automatic_https: { disable: true },
-      };
-
-      await client.patchServer(servers);
-      await delay(DELAY_SHORT);
-    } catch {
-      // Server might not exist, that's ok
+    // Remove any other servers that might be listening on port 80
+    for (const serverName of Object.keys(servers)) {
+      if (serverName !== testServer) {
+        delete servers[serverName];
+      }
     }
+
+    // Create/reset test server with clean state
+    servers[testServer] = {
+      listen: [":80"],
+      routes: [],
+      automatic_https: { disable: true },
+    };
+
+    await client.patchServer(servers);
+    await delay(DELAY_MEDIUM); // Wait for Caddy to apply configuration
   });
 
   afterEach(async () => {
@@ -179,6 +181,36 @@ describeIntegration("Critical Modules Integration Tests", () => {
       }
     } catch {
       // Ignore TLS cleanup errors
+    }
+  });
+
+  afterAll(async () => {
+    // Clean up test server and restore original server
+    try {
+      const servers = (await client.getServers()) as Record<string, unknown>;
+      if (servers[testServer]) {
+        delete servers[testServer];
+      }
+
+      // Restore the original server from Caddyfile
+      servers.https_server = {
+        listen: [":80"],
+        routes: [
+          {
+            handle: [
+              {
+                handler: "static_response",
+                body: "Caddy test server ready",
+              },
+            ],
+          },
+        ],
+      };
+
+      await client.patchServer(servers);
+      await delay(DELAY_MEDIUM);
+    } catch {
+      // Ignore cleanup errors
     }
   });
 
