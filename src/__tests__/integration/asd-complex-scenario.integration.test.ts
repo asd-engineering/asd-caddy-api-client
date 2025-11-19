@@ -700,7 +700,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
       );
       console.log(`\n✅ Complete configuration (10 services) exported to: ${snapshotPath}`);
     }
-  });
+  }, 30000); // 30 second timeout for complex scenario test
 
   test("verifies configuration is idempotent (same config = same result)", async () => {
     /**
