@@ -1,0 +1,49 @@
+# Development files
+.github/
+.husky/
+src/
+examples/
+docs/project/
+coverage/
+*.log
+
+# Config files
+.asd/
+.versionrc.json
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+vitest.integration.config.ts
+eslint.config.mjs
+.prettierrc
+.prettierignore
+docker-compose.test.yml
+Justfile
+
+# Test files
+**/__tests__/
+**/*.test.ts
+**/*.spec.ts
+
+# Build artifacts (keep dist/)
+.cache/
+.turbo/
+
+# CI/CD
+.env*
+!.env.example
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

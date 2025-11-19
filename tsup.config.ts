@@ -14,4 +14,8 @@ export default defineConfig({
   treeshake: true,
   minify: false,
   outDir: "dist",
+  esbuildOptions(options) {
+    // Enable JSON imports for VERSION sync from package.json
+    options.resolveExtensions = [".ts", ".js", ".json"];
+  },
 });
