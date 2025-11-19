@@ -74,57 +74,6 @@ jobs:
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
-    services:
-      caddy:
-        image: caddy:2.9-alpine
-        ports:
-          - 2019:2019
-          - 8080:80
-          - 8443:443
-        env:
-          CADDY_ADMIN: 0.0.0.0:2019
-        options: >-
-          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:2019/config/ || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-          --health-start-period 10s
-
-      mitmproxy:
-        image: mitmproxy/mitmproxy:10.4.2
-        ports:
-          - 8081:8081
-          - 8082:8080
-        options: >-
-          --health-cmd "curl -f http://localhost:8081/ || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-          --health-start-period 10s
-        env:
-          MITMPROXY_OPTS: >-
-            mitmweb
-            --mode reverse:http://backend-test:5681
-            --web-host 0.0.0.0
-            --web-port 8081
-            --listen-host 0.0.0.0
-            --listen-port 8080
-            --no-web-open-browser
-            --set keep_host_header=true
-
-      backend-test:
-        image: mendhak/http-https-echo:latest
-        ports:
-          - 5681:5681
-        env:
-          HTTP_PORT: 5681
-          LOG_WITHOUT_NEWLINE: true
-        options: >-
-          --health-cmd "wget --quiet --tries=1 --spider http://localhost:5681/ || exit 1"
-          --health-interval 5s
-          --health-timeout 2s
-          --health-retries 5
-          --health-start-period 5s
 
     steps:
       - name: Checkout code
@@ -138,21 +87,18 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Start Docker Compose services
+        run: docker compose -f docker-compose.test.yml up -d
+
       - name: Wait for services to be ready
         run: |
           echo "Waiting for Caddy..."
-          timeout 30 bash -c 'until curl -f http://localhost:2019/config/; do sleep 2; done'
+          timeout 60 bash -c 'until curl -f http://localhost:2019/config/; do sleep 2; done'
           echo "Waiting for MITMproxy..."
-          timeout 30 bash -c 'until curl -f http://localhost:8081/; do sleep 2; done'
+          timeout 60 bash -c 'until curl -f http://localhost:8081/; do sleep 2; done'
           echo "Waiting for Backend..."
-          timeout 30 bash -c 'until curl -f http://localhost:5681/; do sleep 2; done'
+          timeout 60 bash -c 'until curl -f http://localhost:5681/; do sleep 2; done'
           echo "All services ready!"
-
-      - name: Initialize Caddy configuration
-        run: |
-          curl -X PATCH http://localhost:2019/config/apps/http/servers \
-            -H "Content-Type: application/json" \
-            -d '{"https_server":{"listen":[":80"],"routes":[],"automatic_https":{"disable":true}}}'
 
       - name: Run integration tests
         run: bun run test:integration
@@ -170,6 +116,10 @@ jobs:
           name: integration-tests
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Cleanup Docker services
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v
 
   build:
     name: Build
