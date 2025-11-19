@@ -428,6 +428,19 @@ See the [`examples/`](./examples/) directory for standalone examples (require pu
 - [`load-balancer.ts`](./examples/load-balancer.ts) - Load balancing with health checks
 - [`mitmproxy-integration.ts`](./examples/mitmproxy-integration.ts) - Traffic inspection with MITMproxy
 
+## API Documentation
+
+Full API documentation is auto-generated from source code using TypeDoc.
+
+**Generate locally:**
+
+```bash
+bun run docs:build      # Generate docs
+bun run docs:serve      # Generate and open in browser
+```
+
+The API documentation includes detailed information for all exported functions, classes, and types with examples.
+
 ## Documentation
 
 📚 See **[docs/](docs/)** for:

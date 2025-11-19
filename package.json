@@ -41,6 +41,8 @@
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "docs:build": "typedoc",
+    "docs:serve": "typedoc && npx http-server docs/api -o",
     "prepare": "husky",
     "prepublishOnly": "bun run build && bun run test && bun run typecheck && bun run lint"
   },
@@ -79,6 +81,7 @@
     "husky": "^9.1.6",
     "prettier": "^3.6.2",
     "tsup": "^8.0.1",
+    "typedoc": "^0.28.14",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.0.0",
     "vitest": "^1.0.0",
