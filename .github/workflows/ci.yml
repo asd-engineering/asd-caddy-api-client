@@ -103,6 +103,12 @@ jobs:
           timeout 60 bash -c 'until curl -f http://localhost:8081/; do sleep 2; done'
           echo "Waiting for Backend..."
           timeout 60 bash -c 'until curl -f http://localhost:5681/; do sleep 2; done'
+          echo "Waiting for Echo Server 1..."
+          timeout 60 bash -c 'until curl -f http://localhost:5678/; do sleep 2; done'
+          echo "Waiting for Echo Server 2..."
+          timeout 60 bash -c 'until curl -f http://localhost:5679/; do sleep 2; done'
+          echo "Waiting for Echo Server 3..."
+          timeout 60 bash -c 'until curl -f http://localhost:5680/; do sleep 2; done'
           echo "All services ready!"
 
       - name: Run integration tests
