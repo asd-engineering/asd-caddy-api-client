@@ -1,0 +1,44 @@
+services:
+  caddy:
+    image: caddy:2.9-alpine
+    container_name: caddy-test
+    ports:
+      - "2019:2019" # Admin API
+      - "8443:443" # HTTPS (non-standard port to avoid conflicts)
+      - "8080:80" # HTTP
+    environment:
+      - CADDY_ADMIN=0.0.0.0:2019
+    command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    volumes:
+      - ./test/Caddyfile:/etc/caddy/Caddyfile
+      - ./test/certs:/home/asde/ASD/asd-caddy-api-client/test/certs:ro
+      - caddy_test_data:/data
+      - caddy_test_config:/config
+
+  # Backend service 1 for testing reverse proxy
+  echo-server:
+    image: hashicorp/http-echo:latest
+    container_name: echo-test
+    command: ["-text=Hello from backend 1"]
+    ports:
+      - "5678:5678"
+
+  # Backend service 2 for testing route ordering
+  echo-server-2:
+    image: hashicorp/http-echo:latest
+    container_name: echo-test-2
+    command: ["-text=Hello from backend 2", "-listen=:5679"]
+    ports:
+      - "5679:5679"
+
+  # Backend service 3 for testing route ordering
+  echo-server-3:
+    image: hashicorp/http-echo:latest
+    container_name: echo-test-3
+    command: ["-text=Hello from backend 3", "-listen=:5680"]
+    ports:
+      - "5680:5680"
+
+volumes:
+  caddy_test_data:
+  caddy_test_config:

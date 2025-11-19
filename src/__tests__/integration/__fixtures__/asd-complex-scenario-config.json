@@ -1,0 +1,421 @@
+{
+  "automatic_https": {
+    "disable": true
+  },
+  "listen": [":80"],
+  "routes": [
+    {
+      "@id": "global-health",
+      "handle": [
+        {
+          "handler": "headers",
+          "response": {
+            "set": {
+              "X-ASD-Health": ["ok"],
+              "X-ASD-Instance": ["prod-cluster-1"]
+            }
+          }
+        },
+        {
+          "body": "{\"status\":\"healthy\",\"services\":10,\"version\":\"1.0.0\"}",
+          "handler": "static_response",
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "status_code": 200
+        }
+      ],
+      "match": [
+        {
+          "path": ["/health"]
+        }
+      ],
+      "terminal": true
+    },
+    {
+      "@id": "service-api",
+      "handle": [
+        {
+          "handler": "headers",
+          "response": {
+            "set": {
+              "X-ASD-Service-ID": ["api-backend-v1"],
+              "X-ASD-Service-Type": ["api"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-Frame-Options": ["DENY"]
+            }
+          }
+        },
+        {
+          "handler": "reverse_proxy",
+          "upstreams": [
+            {
+              "dial": "echo-test-2:5679"
+            }
+          ]
+        }
+      ],
+      "match": [
+        {
+          "host": ["studio.localhost"],
+          "path": ["/api/*"]
+        }
+      ],
+      "terminal": true
+    },
+    {
+      "@id": "service-admin",
+      "handle": [
+        {
+          "handler": "headers",
+          "response": {
+            "set": {
+              "X-ASD-Auth-Required": ["true"],
+              "X-ASD-Service-ID": ["admin-panel-v2"],
+              "X-ASD-Service-Type": ["admin"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-Frame-Options": ["DENY"]
+            }
+          }
+        },
+        {
+          "handler": "reverse_proxy",
+          "upstreams": [
+            {
+              "dial": "echo-test-3:5680"
+            }
+          ]
+        }
+      ],
+      "match": [
+        {
+          "host": ["studio.localhost"],
+          "path": ["/admin/*"]
+        }
+      ],
+      "terminal": true
+    },
+    {
+      "@id": "service-code-server",
+      "handle": [
+        {
+          "handler": "headers",
+          "response": {
+            "set": {
+              "X-ASD-Service-ID": ["code-server-main"],
+              "X-ASD-Service-Type": ["ide"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-Frame-Options": ["SAMEORIGIN"]
+            }
+          }
+        },
+        {
+          "handler": "reverse_proxy",
+          "upstreams": [
+            {
+              "dial": "echo-test:5678"
+            }
+          ]
+        }
+      ],
+      "match": [
+        {
+          "host": ["studio.localhost"],
+          "path": ["/*"]
+        }
+      ],
+      "terminal": true
+    },
+    {
+      "@id": "service-dbui",
+      "handle": [
+        {
+          "handler": "headers",
+          "response": {
+            "set": {
+              "X-ASD-Service-ID": ["database-ui-pgadmin"],
+              "X-ASD-Service-Type": ["database-management"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-Frame-Options": ["SAMEORIGIN"]
+            }
+          }
+        },
+        {
+          "handler": "reverse_proxy",
+          "upstreams": [
+            {
+              "dial": "echo-test-2:5679"
+            }
+          ]
+        }
+      ],
+      "match": [
+        {
+          "host": ["db.localhost"]
+        }
+      ],
+      "terminal": true
+    },
+    {
+      "@id": "service-monitoring",
+      "handle": [
+        {
+          "handler": "headers",
+          "response": {
+            "set": {
+              "X-ASD-Service-ID": ["monitoring-prometheus"],
+              "X-ASD-Service-Type": ["observability"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-Frame-Options": ["DENY"]
+            }
+          }
+        },
+        {
+          "handler": "reverse_proxy",
+          "upstreams": [
+            {
+              "dial": "echo-test-3:5680"
+            }
+          ]
+        }
+      ],
+      "match": [
+        {
+          "host": ["metrics.localhost"]
+        }
+      ],
+      "terminal": true
+    },
+    {
+      "@id": "service-admin-dashboard",
+      "handle": [
+        {
+          "handler": "authentication",
+          "providers": {
+            "http_basic": {
+              "accounts": [
+                {
+                  "password": "$2a$14$lVk5aohGe.EmndSm6H1uJeOI/lOcaTHoJYSk/8dn1DDsW5NbNqVLW",
+                  "username": "admin"
+                },
+                {
+                  "password": "$2a$14$lVk5aohGe.EmndSm6H1uJeOI/lOcaTHoJYSk/8dn1DDsW5NbNqVLW",
+                  "username": "superadmin"
+                }
+              ],
+              "realm": "Admin Dashboard"
+            }
+          }
+        },
+        {
+          "handler": "headers",
+          "response": {
+            "set": {
+              "X-ASD-Auth-Type": ["domain-level"],
+              "X-ASD-Service-ID": ["admin-dashboard-protected"],
+              "X-ASD-Service-Type": ["admin-protected"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-Frame-Options": ["DENY"]
+            }
+          }
+        },
+        {
+          "handler": "reverse_proxy",
+          "upstreams": [
+            {
+              "dial": "echo-test:5678"
+            }
+          ]
+        }
+      ],
+      "match": [
+        {
+          "host": ["admin.localhost"],
+          "path": ["/*"]
+        }
+      ],
+      "terminal": true
+    },
+    {
+      "@id": "service-api-admin",
+      "handle": [
+        {
+          "handler": "authentication",
+          "providers": {
+            "http_basic": {
+              "accounts": [
+                {
+                  "password": "$2a$14$6bYQvFSJUbyRLQ3vjnjBWu1ea6Sj3GiJAcp4vaVXF0NtuNhhs7.x.",
+                  "username": "apiuser"
+                }
+              ],
+              "realm": "API Admin"
+            }
+          }
+        },
+        {
+          "handler": "headers",
+          "response": {
+            "set": {
+              "X-ASD-Auth-Type": ["path-level"],
+              "X-ASD-Service-ID": ["api-admin-protected"],
+              "X-ASD-Service-Type": ["api-admin-protected"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-Frame-Options": ["DENY"]
+            }
+          }
+        },
+        {
+          "handler": "reverse_proxy",
+          "upstreams": [
+            {
+              "dial": "echo-test-2:5679"
+            }
+          ]
+        }
+      ],
+      "match": [
+        {
+          "host": ["api.localhost"],
+          "path": ["/admin/*"]
+        }
+      ],
+      "terminal": true
+    },
+    {
+      "@id": "service-api-public",
+      "handle": [
+        {
+          "handler": "headers",
+          "response": {
+            "set": {
+              "X-ASD-Auth-Type": ["none"],
+              "X-ASD-Service-ID": ["api-public"],
+              "X-ASD-Service-Type": ["api-public"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-Frame-Options": ["SAMEORIGIN"]
+            }
+          }
+        },
+        {
+          "handler": "reverse_proxy",
+          "upstreams": [
+            {
+              "dial": "echo-test-2:5679"
+            }
+          ]
+        }
+      ],
+      "match": [
+        {
+          "host": ["api.localhost"],
+          "path": ["/*"]
+        }
+      ],
+      "terminal": true
+    },
+    {
+      "@id": "service-public",
+      "handle": [
+        {
+          "handler": "headers",
+          "response": {
+            "set": {
+              "X-ASD-Auth-Type": ["none"],
+              "X-ASD-Service-ID": ["public-service"],
+              "X-ASD-Service-Type": ["public"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-Frame-Options": ["SAMEORIGIN"]
+            }
+          }
+        },
+        {
+          "handler": "reverse_proxy",
+          "upstreams": [
+            {
+              "dial": "echo-test-3:5680"
+            }
+          ]
+        }
+      ],
+      "match": [
+        {
+          "host": ["public.localhost"],
+          "path": ["/*"]
+        }
+      ],
+      "terminal": true
+    },
+    {
+      "@id": "service-path-rewrite",
+      "handle": [
+        {
+          "handler": "rewrite",
+          "strip_path_prefix": "/backend-service"
+        },
+        {
+          "handler": "headers",
+          "response": {
+            "set": {
+              "X-ASD-Path-Rewrite": ["true"],
+              "X-ASD-Service-ID": ["path-rewrite-service"],
+              "X-ASD-Service-Type": ["rewrite"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-Frame-Options": ["SAMEORIGIN"]
+            }
+          }
+        },
+        {
+          "handler": "reverse_proxy",
+          "upstreams": [
+            {
+              "dial": "echo-test:5678"
+            }
+          ]
+        }
+      ],
+      "match": [
+        {
+          "host": ["rewrite.localhost"],
+          "path": ["/backend-service/*"]
+        }
+      ],
+      "terminal": true
+    },
+    {
+      "@id": "service-https-backend",
+      "handle": [
+        {
+          "handler": "headers",
+          "response": {
+            "set": {
+              "X-ASD-Backend-Protocol": ["https"],
+              "X-ASD-Service-ID": ["https-backend-service"],
+              "X-ASD-Service-Type": ["https-proxy"],
+              "X-Content-Type-Options": ["nosniff"],
+              "X-Frame-Options": ["SAMEORIGIN"]
+            }
+          }
+        },
+        {
+          "handler": "reverse_proxy",
+          "transport": {
+            "protocol": "http"
+          },
+          "upstreams": [
+            {
+              "dial": "echo-test:5678"
+            }
+          ]
+        }
+      ],
+      "match": [
+        {
+          "host": ["https-backend.localhost"],
+          "path": ["/*"]
+        }
+      ],
+      "terminal": true
+    }
+  ]
+}

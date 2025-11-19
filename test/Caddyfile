@@ -1,0 +1,12 @@
+{
+	admin 0.0.0.0:2019
+	auto_https off
+	servers {
+		protocols h1 h2 h3
+	}
+}
+
+# Initial HTTP server to enable the http app
+:80 {
+	respond "Caddy test server ready"
+}
