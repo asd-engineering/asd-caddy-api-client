@@ -186,6 +186,7 @@ export async function addDomainWithTls(options: AddDomainWithTlsOptions): Promis
         fromHost: `www.${validated.domain}`,
         toHost: validated.domain,
         permanent: true,
+        statusCode: validated.redirectStatusCode,
         id: `${validated.domain}-redirect`,
       })
     );
@@ -195,6 +196,7 @@ export async function addDomainWithTls(options: AddDomainWithTlsOptions): Promis
         fromHost: validated.domain,
         toHost: `www.${validated.domain}`,
         permanent: true,
+        statusCode: validated.redirectStatusCode,
         id: `${validated.domain}-redirect`,
       })
     );

@@ -35,6 +35,15 @@ export type FrameOptions = "DENY" | "SAMEORIGIN";
 export type RedirectMode = "none" | "www_to_domain" | "domain_to_www";
 
 /**
+ * HTTP redirect status code
+ * - 301: Moved Permanently (may change POST to GET)
+ * - 308: Permanent Redirect (preserves HTTP method) - Recommended
+ * - 302: Found (temporary, may change POST to GET)
+ * - 307: Temporary Redirect (preserves HTTP method)
+ */
+export type RedirectStatusCode = 301 | 302 | 307 | 308;
+
+/**
  * TLS issuer type
  */
 export type TlsIssuer = "letsencrypt" | "zerossl" | "acme";
@@ -305,6 +314,12 @@ export interface AddDomainWithAutoTlsOptions {
   redirectMode?: RedirectMode;
 
   /**
+   * HTTP redirect status code
+   * @default 308 (Permanent Redirect - preserves HTTP method)
+   */
+  redirectStatusCode?: RedirectStatusCode;
+
+  /**
    * Caddy Admin API URL (overrides client default)
    */
   adminUrl?: string;
@@ -332,6 +347,7 @@ export interface UpdateDomainOptions {
   frameOptions?: FrameOptions;
   enableCompression?: boolean;
   redirectMode?: RedirectMode;
+  redirectStatusCode?: RedirectStatusCode;
   adminUrl?: string;
 }
 

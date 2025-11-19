@@ -485,10 +485,14 @@ export function buildRedirectRoute(options: {
   fromHost: string;
   toHost: string;
   permanent?: boolean;
+  statusCode?: 301 | 302 | 307 | 308;
   id?: string;
 }): CaddyRoute {
-  // Use 308/307 instead of 301/302 - these preserve request method (RFC 7538)
-  const statusCode = options.permanent !== false ? 308 : 307; // Default to permanent (308)
+  // Determine status code:
+  // 1. Use explicit statusCode if provided
+  // 2. Otherwise use 308 for permanent (default), 307 for temporary
+  // 308/307 preserve request method (RFC 7538) - better than 301/302
+  const statusCode = options.statusCode ?? (options.permanent !== false ? 308 : 307); // Default to permanent (308)
 
   return {
     "@id": options.id,

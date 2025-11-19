@@ -29,7 +29,8 @@ The TypeScript implementation has achieved full feature parity with the Python c
 
 - ✅ **Parity**: Both www↔domain redirect modes
 - ✅ **Parity**: Query/path preservation
-- ⚠️ **Minor Diff**: Python uses 308, TypeScript uses 301
+- ✅ **TS Enhancement**: Configurable status codes (301, 302, 307, 308)
+- ✅ **TS Default**: Uses 308 (same as Python)
 
 ### Security Headers
 
@@ -117,10 +118,23 @@ Both approaches are valid - Python embeds PEM inline, TypeScript uses file paths
 
 ### Redirect Status Codes
 
-- **Python**: 308 (Permanent Redirect, maintains HTTP method)
-- **TypeScript**: 301 (Moved Permanently)
+**Python**: Always uses 308 (Permanent Redirect - maintains HTTP method)
 
-Recommendation: TypeScript should adopt 308 for better HTTP compliance.
+**TypeScript**: Configurable with 308 as default
+
+```typescript
+// Default: 308 (same as Python)
+addDomainWithAutoTls({ redirectMode: "www_to_domain", ... });
+
+// Custom status code for backward compatibility or specific needs
+addDomainWithAutoTls({
+  redirectMode: "www_to_domain",
+  redirectStatusCode: 301, // or 302, 307, 308
+  ...
+});
+```
+
+TypeScript provides flexibility while maintaining the same default as Python.
 
 ## References
 

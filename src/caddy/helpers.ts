@@ -497,11 +497,11 @@ export function createRewriteRoute(options: RewriteRouteOptions): CaddyRoute {
  * });
  *
  * @example
- * // Redirect example.com → www.example.com
+ * // Redirect example.com → www.example.com with custom status code
  * const route = createRedirectRoute({
  *   from: "example.com",
  *   to: "www.example.com",
- *   permanent: true, // 301 instead of 302
+ *   statusCode: 301, // Or 302, 307, 308
  * });
  */
 export function createRedirectRoute(options: {
@@ -509,8 +509,13 @@ export function createRedirectRoute(options: {
   from: string;
   to: string;
   permanent?: boolean;
+  statusCode?: 301 | 302 | 307 | 308;
 }): CaddyRoute {
-  const statusCode = options.permanent === false ? 302 : 301;
+  // Determine status code:
+  // 1. Use explicit statusCode if provided
+  // 2. Otherwise use 308 for permanent (default), 307 for temporary
+  // 308/307 preserve request method (RFC 7538) - better than 301/302
+  const statusCode = options.statusCode ?? (options.permanent === false ? 307 : 308); // Default to permanent (308)
   const id = options.id ?? `redirect-${options.from}-to-${options.to}`;
 
   return {

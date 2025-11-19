@@ -452,20 +452,37 @@ routes.push({
 
 These features don't exist in Python either, but would improve the TypeScript client:
 
-### 1. Switch to 308 Redirect Status Code (P3 - Low)
+### 1. Configurable Redirect Status Codes ✅ **IMPLEMENTED**
 
-**Current**: TypeScript uses `301` (Moved Permanently)
-**Python**: Uses `308` (Permanent Redirect)
+**Status**: ✅ **COMPLETE** - Configurable with 308 as default (matches Python)
+
+**What Was Built:**
+
+- ✅ Added `RedirectStatusCode` type (301, 302, 307, 308)
+- ✅ Added `redirectStatusCode` option to `AddDomainWithAutoTlsOptions`
+- ✅ Added `redirectStatusCode` option to `UpdateDomainOptions`
+- ✅ Updated `buildRedirectRoute()` to accept status code parameter
+- ✅ Updated `createRedirectRoute()` helper to accept status code parameter
+- ✅ Default: 308 (Permanent Redirect - preserves HTTP method, same as Python)
+- ✅ Backward compatible - users can specify 301 if needed
+- ✅ Added 5 new tests for configurable status codes
 
 **Why 308 is Better:**
 
 - Maintains HTTP method (POST stays POST)
-- Better HTTP/1.1 compliance
+- Better HTTP/1.1 compliance (RFC 7538)
 - More explicit about permanence
+- Matches Python implementation
 
-**Implementation:** Update redirect status code in `src/caddy/routes.ts`
+**Files Changed:**
 
-**Effort**: 30 minutes
+- `src/types.ts` - Added RedirectStatusCode type
+- `src/schemas.ts` - Added RedirectStatusCodeSchema validation
+- `src/caddy/routes.ts` - Updated buildRedirectRoute()
+- `src/caddy/helpers.ts` - Updated createRedirectRoute()
+- `src/caddy/domains.ts` - Pass statusCode to redirect routes
+- `src/__tests__/helpers.test.ts` - Updated tests (294 tests total)
+- `docs/python-api-parity.md` - Updated documentation
 
 ---
 
@@ -566,7 +583,7 @@ config.apps.tls.certificates.load_pem = [
 
 ### ❌ Not Implemented (Non-Critical)
 
-10. ❌ Switch to 308 redirect (P3) - 30 minutes
+10. ✅ ~~Switch to 308 redirect~~ **IMPLEMENTED** - Configurable with 308 default
 11. ❌ load_pem Support (P3) - 2-3 hours
 12. ❌ Fix ASD integration test expectation (P3) - 15 minutes
 13. ❌ Retry Logic (P3) - 4-6 hours

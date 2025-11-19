@@ -18,6 +18,7 @@ export type {
   HealthCheckRouteOptions,
   HostRouteOptions,
   PathRouteOptions,
+  RedirectStatusCode,
 } from "./types.js";
 
 // Caddy module

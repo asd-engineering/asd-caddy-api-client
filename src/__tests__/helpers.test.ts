@@ -461,7 +461,7 @@ describe("High-Level Helper Functions", () => {
       expect(route.match).toEqual([{ host: ["www.example.com"] }]);
 
       const responseHandler = route.handle?.find((h) => h.handler === "static_response");
-      expect(responseHandler?.status_code).toBe(301); // Permanent by default
+      expect(responseHandler?.status_code).toBe(308); // Permanent by default (308, not 301)
       expect(responseHandler?.headers?.Location).toEqual(["https://example.com{http.request.uri}"]);
     });
 
@@ -477,21 +477,55 @@ describe("High-Level Helper Functions", () => {
       ]);
     });
 
-    test("uses 301 for permanent redirects by default", () => {
+    test("uses 308 for permanent redirects by default", () => {
       const route = createRedirectRoute({
         from: "www.example.com",
         to: "example.com",
       });
 
       const responseHandler = route.handle?.find((h) => h.handler === "static_response");
-      expect(responseHandler?.status_code).toBe(301);
+      expect(responseHandler?.status_code).toBe(308); // 308 preserves HTTP method
     });
 
-    test("uses 302 for temporary redirects", () => {
+    test("uses 307 for temporary redirects", () => {
       const route = createRedirectRoute({
         from: "www.example.com",
         to: "example.com",
         permanent: false,
+      });
+
+      const responseHandler = route.handle?.find((h) => h.handler === "static_response");
+      expect(responseHandler?.status_code).toBe(307); // 307 preserves HTTP method
+    });
+
+    test("accepts custom status code 301", () => {
+      const route = createRedirectRoute({
+        from: "www.example.com",
+        to: "example.com",
+        statusCode: 301,
+      });
+
+      const responseHandler = route.handle?.find((h) => h.handler === "static_response");
+      expect(responseHandler?.status_code).toBe(301);
+    });
+
+    test("accepts custom status code 302", () => {
+      const route = createRedirectRoute({
+        from: "www.example.com",
+        to: "example.com",
+        statusCode: 302,
+      });
+
+      const responseHandler = route.handle?.find((h) => h.handler === "static_response");
+      expect(responseHandler?.status_code).toBe(302);
+    });
+
+    test("statusCode overrides permanent parameter", () => {
+      const route = createRedirectRoute({
+        from: "www.example.com",
+        to: "example.com",
+        permanent: true,
+        statusCode: 302, // Should use 302, not 308
       });
 
       const responseHandler = route.handle?.find((h) => h.handler === "static_response");

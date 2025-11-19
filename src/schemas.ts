@@ -49,6 +49,16 @@ export const FrameOptionsSchema = z.enum(["DENY", "SAMEORIGIN"]);
 export const RedirectModeSchema = z.enum(["none", "www_to_domain", "domain_to_www"]);
 
 /**
+ * Redirect status code schema
+ */
+export const RedirectStatusCodeSchema = z.union([
+  z.literal(301),
+  z.literal(302),
+  z.literal(307),
+  z.literal(308),
+]);
+
+/**
  * TLS issuer schema
  */
 export const TlsIssuerSchema = z.enum(["letsencrypt", "zerossl", "acme"]);
@@ -129,6 +139,7 @@ export const AddDomainWithAutoTlsOptionsSchema = z.object({
   frameOptions: FrameOptionsSchema.optional().default("DENY"),
   enableCompression: z.boolean().optional().default(true),
   redirectMode: RedirectModeSchema.optional().default("none"),
+  redirectStatusCode: RedirectStatusCodeSchema.optional().default(308),
   adminUrl: z.string().url().optional(),
 });
 
@@ -153,6 +164,7 @@ export const UpdateDomainOptionsSchema = z.object({
   frameOptions: FrameOptionsSchema.optional(),
   enableCompression: z.boolean().optional(),
   redirectMode: RedirectModeSchema.optional(),
+  redirectStatusCode: RedirectStatusCodeSchema.optional(),
   adminUrl: z.string().url().optional(),
 });
 
