@@ -399,7 +399,30 @@ try {
 
 ## Examples
 
-See the [`examples/`](./examples/) directory for complete examples:
+### Tested Examples (Always Current)
+
+Our **integration tests** serve as comprehensive, tested examples that are verified in CI:
+
+- **[caddy-mitmproxy-flow.integration.test.ts](./src/__tests__/integration/caddy-mitmproxy-flow.integration.test.ts)** - Complete MITMproxy integration patterns
+- **[asd-scenarios.integration.test.ts](./src/__tests__/integration/asd-scenarios.integration.test.ts)** - Production routing scenarios (load balancing, multi-host, path-based)
+- **[critical-modules.integration.test.ts](./src/__tests__/integration/critical-modules.integration.test.ts)** - All route builders, domain management, TLS
+
+**Run examples locally:**
+
+```bash
+# Start services
+docker compose -f docker-compose.test.yml up -d
+
+# Run all integration tests (86+ examples)
+INTEGRATION_TEST=true bun test src/__tests__/integration/
+
+# Run specific example file
+INTEGRATION_TEST=true bun test src/__tests__/integration/caddy-mitmproxy-flow.integration.test.ts
+```
+
+### Standalone Examples
+
+See the [`examples/`](./examples/) directory for standalone examples (require published package):
 
 - [`basic-usage.ts`](./examples/basic-usage.ts) - Basic route management
 - [`load-balancer.ts`](./examples/load-balancer.ts) - Load balancing with health checks
