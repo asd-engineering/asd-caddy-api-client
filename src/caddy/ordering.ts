@@ -177,7 +177,11 @@ export function sortRoutes(routes: CaddyRoute[]): CaddyRoute[] {
     return b.specificity - a.specificity;
   });
 
-  return routesWithPriority.map((item) => item.route);
+  // Strip priority field before returning (Caddy doesn't recognize it)
+  return routesWithPriority.map((item) => {
+    const { priority: _priority, ...routeWithoutPriority } = item.route;
+    return routeWithoutPriority as CaddyRoute;
+  });
 }
 
 /**
