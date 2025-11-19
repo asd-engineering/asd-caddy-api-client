@@ -27,7 +27,7 @@ import {
 } from "../../caddy/index.js";
 import type { CaddyRoute } from "../../types.js";
 import * as http from "http";
-import { DELAY_MEDIUM, DELAY_LONG } from "./constants.js";
+import { DELAY_LONG } from "./constants.js";
 
 const CADDY_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:2019";
 const INTEGRATION_TEST = process.env.INTEGRATION_TEST === "true";
@@ -112,12 +112,28 @@ describeIntegration("ASD Complex Production Scenario", () => {
   });
 
   afterAll(async () => {
-    // Clean up complex server
+    // Clean up complex server and restore https_server for other tests
     try {
-      const servers = (await client.getServers()) as Record<string, unknown>;
-      delete servers[complexServer];
-      await client.patchServer(servers);
-      await delay(DELAY_MEDIUM);
+      // First, get current servers to see what exists
+      const currentServers = (await client.getServers()) as Record<string, unknown>;
+
+      // Remove the complex test server if it exists
+      if (currentServers[complexServer]) {
+        delete currentServers[complexServer];
+      }
+
+      // Ensure https_server exists with clean state
+      currentServers.https_server = {
+        listen: [":80"],
+        routes: [],
+      };
+
+      // Apply the cleaned up server configuration
+      await client.patchServer(currentServers);
+
+      // Give extra time for server to settle before next test file
+      // Increased delay to ensure caddy-mitmproxy tests have a clean state
+      await delay(1000);
     } catch {
       // Ignore cleanup errors
     }
@@ -371,11 +387,13 @@ describeIntegration("ASD Complex Production Scenario", () => {
     const sortedRoutes = sortRoutes(routes);
 
     // Create server with sorted routes
-    const servers = (await client.getServers()) as Record<string, unknown>;
-    servers[complexServer] = {
-      listen: [":80"],
-      routes: sortedRoutes, // Using sorted routes!
-      automatic_https: { disable: true },
+    // Note: We need to use only our test server to avoid port conflicts
+    const servers: Record<string, unknown> = {
+      [complexServer]: {
+        listen: [":80"],
+        routes: sortedRoutes, // Using sorted routes!
+        automatic_https: { disable: true },
+      },
     };
 
     await client.patchServer(servers);
@@ -845,11 +863,12 @@ describeIntegration("ASD Complex Production Scenario", () => {
     });
 
     // Apply configuration FIRST TIME
-    const servers1 = (await client.getServers()) as Record<string, unknown>;
-    servers1[complexServer] = {
-      listen: [":80"],
-      routes,
-      automatic_https: { disable: true },
+    const servers1: Record<string, unknown> = {
+      [complexServer]: {
+        listen: [":80"],
+        routes,
+        automatic_https: { disable: true },
+      },
     };
 
     await client.patchServer(servers1);
@@ -860,11 +879,12 @@ describeIntegration("ASD Complex Production Scenario", () => {
     const serverStateAfterFirstApply = (await client.getServers()) as Record<string, unknown>;
 
     // Apply SAME configuration SECOND TIME
-    const servers2 = (await client.getServers()) as Record<string, unknown>;
-    servers2[complexServer] = {
-      listen: [":80"],
-      routes, // Same routes array
-      automatic_https: { disable: true },
+    const servers2: Record<string, unknown> = {
+      [complexServer]: {
+        listen: [":80"],
+        routes, // Same routes array
+        automatic_https: { disable: true },
+      },
     };
 
     await client.patchServer(servers2);
@@ -1058,11 +1078,12 @@ describeIntegration("ASD Complex Production Scenario", () => {
     });
 
     // Create server
-    const servers = (await client.getServers()) as Record<string, unknown>;
-    servers[complexServer] = {
-      listen: [":80"],
-      routes,
-      automatic_https: { disable: true },
+    const servers: Record<string, unknown> = {
+      [complexServer]: {
+        listen: [":80"],
+        routes,
+        automatic_https: { disable: true },
+      },
     };
 
     await client.patchServer(servers);

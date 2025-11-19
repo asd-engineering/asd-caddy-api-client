@@ -237,7 +237,9 @@ export function buildLoadBalancerRoute(options: LoadBalancerRouteOptions): Caddy
         },
         ...(validated.policy !== "first" && {
           load_balancing: {
-            policy: validated.policy,
+            selection_policy: {
+              policy: validated.policy,
+            },
           },
         }),
         health_checks: {
@@ -624,4 +626,151 @@ export function buildWwwRedirect(options: {
       ...(priority !== undefined && { priority }),
     };
   }
+}
+
+/**
+ * Build a route that forwards traffic through MITMproxy for inspection
+ *
+ * This is a convenience function that creates a route pointing to a MITMproxy
+ * instance running in reverse proxy mode. Use this to transparently intercept
+ * and inspect HTTP traffic for debugging without modifying client or backend code.
+ *
+ * @param options - MITMproxy route configuration
+ * @returns Caddy route configured to forward through MITMproxy
+ *
+ * @example
+ * ```typescript
+ * // Route traffic for api.example.com through MITMproxy
+ * const route = buildMitmproxyRoute({
+ *   host: "api.example.com",
+ *   mitmproxyHost: "localhost",
+ *   mitmproxyPort: 8080,
+ * });
+ * await client.addRoute("https_server", route, "api_debug");
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Route with custom backend (MITMproxy forwards to this backend)
+ * const route = buildMitmproxyRoute({
+ *   host: "api.example.com",
+ *   mitmproxyHost: "mitmproxy",
+ *   mitmproxyPort: 8080,
+ *   backendHost: "backend-service",
+ *   backendPort: 3000,
+ * });
+ * ```
+ */
+export function buildMitmproxyRoute(options: {
+  /** Host pattern to match (e.g., "api.example.com") */
+  host: string;
+  /** MITMproxy host (e.g., "localhost" or "mitmproxy-container") */
+  mitmproxyHost: string;
+  /** MITMproxy proxy port (default: 8080) */
+  mitmproxyPort?: number;
+  /** Backend host that MITMproxy should forward to (optional, for documentation) */
+  backendHost?: string;
+  /** Backend port that MITMproxy should forward to (optional, for documentation) */
+  backendPort?: number;
+  /** Route ID for Caddy (optional) */
+  id?: string;
+  /** Route priority (optional) */
+  priority?: number;
+}): CaddyRoute {
+  const port = options.mitmproxyPort ?? 8080;
+  const dial = `${options.mitmproxyHost}:${port}`;
+
+  // Build the route using buildHostRoute
+  const route = buildHostRoute({
+    host: options.host,
+    dial,
+    priority: options.priority,
+  });
+
+  // Add ID if provided
+  if (options.id) {
+    route["@id"] = options.id;
+  }
+
+  return route;
+}
+
+/**
+ * Create a hot-swappable route pair for enabling/disabling MITMproxy interception
+ *
+ * Returns both a direct route and a MITMproxy-intercepted route with the same ID.
+ * Use this to easily toggle between direct and intercepted traffic at runtime.
+ *
+ * @param options - Configuration for the route pair
+ * @returns Object with direct and proxied route configurations
+ *
+ * @example
+ * ```typescript
+ * const routes = buildMitmproxyRoutePair({
+ *   host: "api.example.com",
+ *   backendHost: "backend-service",
+ *   backendPort: 3000,
+ *   mitmproxyHost: "mitmproxy",
+ *   routeId: "api_route",
+ * });
+ *
+ * // Start with direct routing
+ * await client.addRoute("https_server", routes.direct, routes.direct["@id"]);
+ *
+ * // Hot-swap to enable interception (no downtime)
+ * await client.removeRouteById("https_server", routes.direct["@id"]);
+ * await client.addRoute("https_server", routes.proxied, routes.proxied["@id"]);
+ *
+ * // Hot-swap back to direct (disable interception)
+ * await client.removeRouteById("https_server", routes.proxied["@id"]);
+ * await client.addRoute("https_server", routes.direct, routes.direct["@id"]);
+ * ```
+ */
+export function buildMitmproxyRoutePair(options: {
+  /** Host pattern to match */
+  host: string;
+  /** Backend service host */
+  backendHost: string;
+  /** Backend service port */
+  backendPort: number;
+  /** MITMproxy host */
+  mitmproxyHost: string;
+  /** MITMproxy proxy port (default: 8080) */
+  mitmproxyPort?: number;
+  /** Route ID (used for both routes) */
+  routeId: string;
+  /** Route priority (optional) */
+  priority?: number;
+}): {
+  /** Direct route (Client → Caddy → Backend) */
+  direct: CaddyRoute;
+  /** Proxied route (Client → Caddy → MITMproxy → Backend) */
+  proxied: CaddyRoute;
+} {
+  const backendDial = `${options.backendHost}:${options.backendPort}`;
+  const mitmproxyPort = options.mitmproxyPort ?? 8080;
+
+  // Build direct route
+  const directRoute = buildHostRoute({
+    host: options.host,
+    dial: backendDial,
+    priority: options.priority,
+  });
+  directRoute["@id"] = options.routeId;
+
+  // Build proxied route
+  const proxiedRoute = buildMitmproxyRoute({
+    host: options.host,
+    mitmproxyHost: options.mitmproxyHost,
+    mitmproxyPort,
+    backendHost: options.backendHost,
+    backendPort: options.backendPort,
+    id: options.routeId,
+    priority: options.priority,
+  });
+
+  return {
+    direct: directRoute,
+    proxied: proxiedRoute,
+  };
 }

@@ -159,7 +159,7 @@ describe("buildLoadBalancerRoute", () => {
     });
 
     expect(route.handle[0].load_balancing).toBeDefined();
-    expect(route.handle[0].load_balancing.policy).toBe("round_robin");
+    expect(route.handle[0].load_balancing.selection_policy?.policy).toBe("round_robin");
   });
 
   test("uses custom health check settings", () => {

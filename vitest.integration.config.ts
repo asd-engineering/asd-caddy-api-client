@@ -9,6 +9,8 @@ export default defineConfig({
     testTimeout: 30000, // 30s for integration tests with real Caddy
     // Run test files sequentially to avoid Caddy state conflicts
     fileParallelism: false,
+    // Disable isolation to keep global state between tests
+    isolate: false,
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

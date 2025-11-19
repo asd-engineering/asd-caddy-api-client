@@ -70,7 +70,7 @@ function httpRequest(options: {
 
 describeIntegration("Critical Modules Integration Tests", () => {
   let client: CaddyClient;
-  const testServer = "critical-test.localhost";
+  const testServer = "critical_test_server";
 
   // List of all servers that may be created during tests
   const potentialServers = [
