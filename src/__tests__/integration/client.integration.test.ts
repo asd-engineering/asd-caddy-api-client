@@ -6,7 +6,7 @@
  * 2. bun test:integration
  * 3. docker compose -f docker-compose.test.yml down
  */
-import { describe, test, expect, beforeAll, beforeEach } from "vitest";
+import { describe, test, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { CaddyClient } from "../../caddy/client.js";
 import * as http from "http";
 import { DELAY_SHORT, DELAY_MEDIUM, DELAY_LONG, DELAY_SERVER_START } from "./constants.js";

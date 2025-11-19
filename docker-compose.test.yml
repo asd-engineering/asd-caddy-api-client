@@ -11,7 +11,7 @@ services:
     command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
     volumes:
       - ./test/Caddyfile:/etc/caddy/Caddyfile
-      - ./test/certs:/home/asde/ASD/asd-caddy-api-client/test/certs:ro
+      - ${PWD:-.}/test/certs:${PWD:-.}/test/certs:ro
       - caddy_test_data:/data
       - caddy_test_config:/config
 
@@ -38,6 +38,46 @@ services:
     command: ["-text=Hello from backend 3", "-listen=:5680"]
     ports:
       - "5680:5680"
+
+  # MITMproxy for traffic inspection tests
+  mitmproxy:
+    image: mitmproxy/mitmproxy:10.4.2
+    container_name: mitmproxy-test
+    ports:
+      - "8082:8080" # Proxy port (avoid conflict with Caddy HTTP)
+      - "8081:8081" # Web UI port
+    command: >
+      mitmweb
+      --mode reverse:http://backend-test:5681
+      --web-host 0.0.0.0
+      --web-port 8081
+      --listen-host 0.0.0.0
+      --listen-port 8080
+      --no-web-open-browser
+      --set keep_host_header=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # Backend service for mitmproxy tests (HTTP echo server)
+  backend-test:
+    image: mendhak/http-https-echo:latest
+    container_name: backend-test
+    environment:
+      - HTTP_PORT=5681
+      - LOG_WITHOUT_NEWLINE=true
+    ports:
+      - "5681:5681"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5681/"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
 
 volumes:
   caddy_test_data:

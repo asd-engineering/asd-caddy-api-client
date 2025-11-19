@@ -145,43 +145,134 @@ const routes = buildServiceRoutes({
 });
 ```
 
-### MITMweb Integration
+### MITMproxy Integration
+
+Transparently inspect HTTP traffic for debugging production services **without modifying client or backend code, and without service restarts.**
+
+#### Quick Start
+
+```bash
+# 1. Start MITMproxy in Docker
+docker run -d \
+  -p 8082:8080 \
+  -p 8081:8081 \
+  --name mitmproxy \
+  mitmproxy/mitmproxy:10.4.2 \
+  mitmweb \
+  --mode reverse:http://your-backend:3000 \
+  --web-host 0.0.0.0 \
+  --listen-host 0.0.0.0 \
+  --no-web-open-browser \
+  --set keep_host_header=true
+```
 
 ```typescript
-import { startMitmweb, stopMitmweb, isMitmproxyInstalled } from "@asd/caddy-api-client/mitm";
-import { CaddyClient, buildLoadBalancerRoute } from "@asd/caddy-api-client/caddy";
+// 2. Enable traffic inspection (zero downtime)
+import { CaddyClient, buildMitmproxyRoute } from "@asd/caddy-api-client/caddy";
 
-// Check if installed
-if (!(await isMitmproxyInstalled())) {
-  console.log("Please install mitmproxy: pip install mitmproxy");
-  process.exit(1);
-}
+const client = new CaddyClient({ adminUrl: "http://localhost:2019" });
 
-// Start mitmweb
-const mitm = await startMitmweb({
-  webPort: 8081,
-  proxyPort: 8080,
-  openBrowser: true,
+const route = buildMitmproxyRoute({
+  host: "api.example.com",
+  mitmproxyHost: "localhost",
+  mitmproxyPort: 8082,
 });
 
-// Create load balancer with optional mitmproxy
+await client.addRoute("https_server", route, "api_debug");
+
+// 3. View captured traffic at http://localhost:8081
+
+// 4. Disable when done (zero downtime)
+await client.removeRouteById("https_server", "api_debug");
+```
+
+#### Hot-Swapping Between Direct and Proxied Routing
+
+Use `buildMitmproxyRoutePair()` to easily toggle traffic inspection on/off:
+
+```typescript
+import { CaddyClient, buildMitmproxyRoutePair } from "@asd/caddy-api-client/caddy";
+
+const client = new CaddyClient({ adminUrl: "http://localhost:2019" });
+
+// Create both direct and proxied routes
+const routes = buildMitmproxyRoutePair({
+  host: "api.example.com",
+  backendHost: "api-service",
+  backendPort: 3000,
+  mitmproxyHost: "localhost",
+  mitmproxyPort: 8082,
+  routeId: "api_route",
+});
+
+// Start with direct routing (no inspection)
+await client.addRoute("https_server", routes.direct, routes.direct["@id"]);
+
+// Hot-swap to enable inspection (zero downtime)
+await client.removeRouteById("https_server", routes.direct["@id"]);
+await client.addRoute("https_server", routes.proxied, routes.proxied["@id"]);
+
+// Hot-swap back to disable inspection
+await client.removeRouteById("https_server", routes.proxied["@id"]);
+await client.addRoute("https_server", routes.direct, routes.direct["@id"]);
+```
+
+#### Load Balancing with MITMproxy
+
+Route some traffic through MITMproxy while keeping the rest direct:
+
+```typescript
+import { CaddyClient, buildLoadBalancerRoute } from "@asd/caddy-api-client/caddy";
+
 const client = new CaddyClient();
 const lbRoute = buildLoadBalancerRoute({
-  host: "service.localhost",
+  host: "api.localhost",
   upstreams: [
-    "127.0.0.1:8080", // MITMproxy (optional)
-    "127.0.0.1:3000", // Service (always available)
+    "localhost:8082", // MITMproxy (captures traffic)
+    "localhost:3000", // Direct to backend
   ],
-  policy: "first", // Try mitmproxy first, fallback to service
+  policy: "round_robin",
 });
 
 await client.addRoute("https_server", lbRoute);
-
-// Inspect traffic at http://127.0.0.1:8081
-
-// Stop when done
-await stopMitmweb();
 ```
+
+#### Docker Compose Setup
+
+```yaml
+services:
+  mitmproxy:
+    image: mitmproxy/mitmproxy:10.4.2
+    ports:
+      - "8082:8080" # Proxy port
+      - "8081:8081" # Web UI
+    command: >
+      mitmweb
+      --mode reverse:http://backend:3000
+      --web-host 0.0.0.0
+      --web-port 8081
+      --listen-host 0.0.0.0
+      --listen-port 8080
+      --no-web-open-browser
+      --set keep_host_header=true
+    restart: unless-stopped
+
+  backend:
+    image: your-backend-image
+    ports:
+      - "3000:3000"
+```
+
+**Features:**
+
+- ✅ Zero client/backend code changes
+- ✅ Zero service restarts required
+- ✅ Hot-swappable at runtime
+- ✅ Complete request/response inspection
+- ✅ Web UI for viewing captured traffic
+- ✅ Production-safe (tested with concurrent requests)
+
+**Troubleshooting:** See [docs/mitmproxy-troubleshooting.md](docs/mitmproxy-troubleshooting.md) for common issues and solutions.
 
 ### Domain Management
 
@@ -239,6 +330,10 @@ buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRoute;
 buildHostRoute(options: HostRouteOptions): CaddyRoute;
 buildPathRoute(options: PathRouteOptions): CaddyRoute;
 buildLoadBalancerRoute(options: LoadBalancerRouteOptions): CaddyRoute;
+
+// MITMproxy integration
+buildMitmproxyRoute(options: MitmproxyRouteOptions): CaddyRoute;
+buildMitmproxyRoutePair(options: MitmproxyRoutePairOptions): { direct: CaddyRoute; proxied: CaddyRoute };
 
 // Handlers
 buildReverseProxyHandler(dial: DialAddress): CaddyRouteHandler;
@@ -304,16 +399,40 @@ try {
 
 ## Examples
 
-See the [`examples/`](./examples/) directory for complete examples:
+### Tested Examples (Always Current)
+
+Our **integration tests** serve as comprehensive, tested examples that are verified in CI:
+
+- **[caddy-mitmproxy-flow.integration.test.ts](./src/__tests__/integration/caddy-mitmproxy-flow.integration.test.ts)** - Complete MITMproxy integration patterns
+- **[asd-scenarios.integration.test.ts](./src/__tests__/integration/asd-scenarios.integration.test.ts)** - Production routing scenarios (load balancing, multi-host, path-based)
+- **[critical-modules.integration.test.ts](./src/__tests__/integration/critical-modules.integration.test.ts)** - All route builders, domain management, TLS
+
+**Run examples locally:**
+
+```bash
+# Start services
+docker compose -f docker-compose.test.yml up -d
+
+# Run all integration tests (86+ examples)
+INTEGRATION_TEST=true bun test src/__tests__/integration/
+
+# Run specific example file
+INTEGRATION_TEST=true bun test src/__tests__/integration/caddy-mitmproxy-flow.integration.test.ts
+```
+
+### Standalone Examples
+
+See the [`examples/`](./examples/) directory for standalone examples (require published package):
 
 - [`basic-usage.ts`](./examples/basic-usage.ts) - Basic route management
 - [`load-balancer.ts`](./examples/load-balancer.ts) - Load balancing with health checks
-- [`mitmweb-integration.ts`](./examples/mitmweb-integration.ts) - Traffic inspection
+- [`mitmproxy-integration.ts`](./examples/mitmproxy-integration.ts) - Traffic inspection with MITMproxy
 
 ## Documentation
 
 📚 See **[docs/](docs/)** for:
 
+- **[mitmproxy-troubleshooting.md](docs/mitmproxy-troubleshooting.md)** - MITMproxy troubleshooting guide
 - **[POST_PARITY_ROADMAP.md](docs/project/POST_PARITY_ROADMAP.md)** - Roadmap for npm package and .asd CLI integration
 - **[python-api-parity.md](docs/project/python-api-parity.md)** - Feature comparison with Python client
 
