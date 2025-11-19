@@ -17,7 +17,14 @@
  * 3. docker compose -f docker-compose.test.yml down
  */
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
-import { CaddyClient, buildBasicAuthHandler } from "../../caddy/index.js";
+import {
+  CaddyClient,
+  createHealthRoute,
+  createServiceRoute,
+  createBasicAuthRoute,
+  createRewriteRoute,
+  sortRoutes,
+} from "../../caddy/index.js";
 import type { CaddyRoute } from "../../types.js";
 import * as http from "http";
 import { DELAY_MEDIUM, DELAY_LONG } from "./constants.js";
@@ -165,369 +172,212 @@ describeIntegration("ASD Complex Production Scenario", () => {
      * HTTPS frontend (port 443) testing is in separate TLS integration tests.
      */
 
+    // NEW CLEAN API: Using helper functions instead of raw Caddy JSON!
+    // This demonstrates the improved DX for .asd CLI usage
     const routes: CaddyRoute[] = [];
 
     // Route 1: GLOBAL HEALTH ENDPOINT (HIGHEST PRIORITY)
-    // This must come first - responds before any service route
-    routes.push({
-      "@id": "global-health",
-      match: [{ path: ["/health"] }],
-      handle: [
-        {
-          handler: "headers",
-          response: {
-            set: {
-              "X-ASD-Health": ["ok"],
-              "X-ASD-Instance": ["prod-cluster-1"],
-            },
-          },
-        },
-        {
-          handler: "static_response",
-          status_code: 200,
-          body: JSON.stringify({
-            status: "healthy",
-            services: 10,
-            version: "1.0.0",
-          }),
-          headers: {
-            "Content-Type": ["application/json"],
-          },
-        },
-      ],
-      terminal: true,
-    });
+    // Clean, semantic API - no raw JSON needed!
+    routes.push(
+      createHealthRoute({
+        instanceId: "prod-cluster-1",
+        services: 10,
+        version: "1.0.0",
+      })
+    );
 
     // Route 2: Code Server (studio.localhost/)
-    // X-ASD-Service-ID: code-server-main
-    routes.push({
-      "@id": "service-code-server",
-      match: [{ host: ["studio.localhost"], path: ["/*"] }],
-      handle: [
-        {
-          handler: "headers",
-          response: {
-            set: {
-              "X-ASD-Service-ID": ["code-server-main"],
-              "X-ASD-Service-Type": ["ide"],
-              "X-Frame-Options": ["SAMEORIGIN"],
-              "X-Content-Type-Options": ["nosniff"],
-            },
-          },
+    // Much cleaner than 20+ lines of raw JSON!
+    routes.push(
+      createServiceRoute({
+        id: "service-code-server",
+        host: "studio.localhost",
+        upstream: "echo-test:5678",
+        serviceId: "code-server-main",
+        serviceType: "ide",
+        headers: {
+          "X-Frame-Options": ["SAMEORIGIN"],
         },
-        {
-          handler: "reverse_proxy",
-          upstreams: [{ dial: "echo-test:5678" }],
-        },
-      ],
-      terminal: true,
-    });
+      })
+    );
 
     // Route 3: API Backend (studio.localhost/api/*)
-    // X-ASD-Service-ID: api-backend-v1
-    // This MUST come before the code-server route (more specific path)
-    routes.splice(1, 0, {
-      "@id": "service-api",
-      match: [{ host: ["studio.localhost"], path: ["/api/*"] }],
-      handle: [
-        {
-          handler: "headers",
-          response: {
-            set: {
-              "X-ASD-Service-ID": ["api-backend-v1"],
-              "X-ASD-Service-Type": ["api"],
-              "X-Frame-Options": ["DENY"],
-              "X-Content-Type-Options": ["nosniff"],
-            },
-          },
-        },
-        {
-          handler: "reverse_proxy",
-          upstreams: [{ dial: "echo-test-2:5679" }],
-        },
-      ],
-      terminal: true,
-    });
+    // Path-specific routes are automatically prioritized correctly!
+    routes.push(
+      createServiceRoute({
+        id: "service-api",
+        host: "studio.localhost",
+        path: "/api/*",
+        upstream: "echo-test-2:5679",
+        serviceId: "api-backend-v1",
+        serviceType: "api",
+      })
+    );
 
     // Route 4: Admin Panel (studio.localhost/admin/*)
-    // X-ASD-Service-ID: admin-panel-v2
-    routes.splice(2, 0, {
-      "@id": "service-admin",
-      match: [{ host: ["studio.localhost"], path: ["/admin/*"] }],
-      handle: [
-        {
-          handler: "headers",
-          response: {
-            set: {
-              "X-ASD-Service-ID": ["admin-panel-v2"],
-              "X-ASD-Service-Type": ["admin"],
-              "X-Frame-Options": ["DENY"],
-              "X-Content-Type-Options": ["nosniff"],
-              "X-ASD-Auth-Required": ["true"],
-            },
-          },
+    routes.push(
+      createServiceRoute({
+        id: "service-admin",
+        host: "studio.localhost",
+        path: "/admin/*",
+        upstream: "echo-test-3:5680",
+        serviceId: "admin-panel-v2",
+        serviceType: "admin",
+        headers: {
+          "X-ASD-Auth-Required": ["true"],
         },
-        {
-          handler: "reverse_proxy",
-          upstreams: [{ dial: "echo-test-3:5680" }],
-        },
-      ],
-      terminal: true,
-    });
+      })
+    );
 
     // Route 5: Database UI (db.localhost/)
-    // X-ASD-Service-ID: database-ui-pgadmin
-    routes.push({
-      "@id": "service-dbui",
-      match: [{ host: ["db.localhost"] }],
-      handle: [
-        {
-          handler: "headers",
-          response: {
-            set: {
-              "X-ASD-Service-ID": ["database-ui-pgadmin"],
-              "X-ASD-Service-Type": ["database-management"],
-              "X-Frame-Options": ["SAMEORIGIN"],
-              "X-Content-Type-Options": ["nosniff"],
-            },
-          },
+    routes.push(
+      createServiceRoute({
+        id: "service-dbui",
+        host: "db.localhost",
+        upstream: "echo-test-2:5679",
+        serviceId: "database-ui-pgadmin",
+        serviceType: "database-management",
+        headers: {
+          "X-Frame-Options": ["SAMEORIGIN"],
         },
-        {
-          handler: "reverse_proxy",
-          upstreams: [{ dial: "echo-test-2:5679" }],
-        },
-      ],
-      terminal: true,
-    });
+      })
+    );
 
     // Route 6: Monitoring (metrics.localhost/)
-    // X-ASD-Service-ID: monitoring-prometheus
-    routes.push({
-      "@id": "service-monitoring",
-      match: [{ host: ["metrics.localhost"] }],
-      handle: [
-        {
-          handler: "headers",
-          response: {
-            set: {
-              "X-ASD-Service-ID": ["monitoring-prometheus"],
-              "X-ASD-Service-Type": ["observability"],
-              "X-Frame-Options": ["DENY"],
-              "X-Content-Type-Options": ["nosniff"],
-            },
-          },
-        },
-        {
-          handler: "reverse_proxy",
-          upstreams: [{ dial: "echo-test-3:5680" }],
-        },
-      ],
-      terminal: true,
-    });
+    routes.push(
+      createServiceRoute({
+        id: "service-monitoring",
+        host: "metrics.localhost",
+        upstream: "echo-test-3:5680",
+        serviceId: "monitoring-prometheus",
+        serviceType: "observability",
+      })
+    );
 
     // ========================================
     // AUTHENTICATED SERVICES
     // ========================================
 
     // Route 7: Admin Dashboard (admin.localhost/*) - DOMAIN-LEVEL AUTH
-    // Entire domain requires authentication
-    // X-ASD-Service-ID: admin-dashboard-protected
-    routes.push({
-      "@id": "service-admin-dashboard",
-      match: [{ host: ["admin.localhost"], path: ["/*"] }],
-      handle: [
-        buildBasicAuthHandler({
-          enabled: true,
-          accounts: [
-            { username: ADMIN_USER, password: ADMIN_HASH },
-            { username: "superadmin", password: ADMIN_HASH }, // Multiple users
-          ],
-          realm: "Admin Dashboard",
-        }),
-        {
-          handler: "headers",
-          response: {
-            set: {
-              "X-ASD-Service-ID": ["admin-dashboard-protected"],
-              "X-ASD-Service-Type": ["admin-protected"],
-              "X-Frame-Options": ["DENY"],
-              "X-Content-Type-Options": ["nosniff"],
-              "X-ASD-Auth-Type": ["domain-level"],
-            },
-          },
+    // Clean API for authenticated routes with multiple users!
+    routes.push(
+      createBasicAuthRoute({
+        id: "service-admin-dashboard",
+        host: "admin.localhost",
+        upstream: "echo-test:5678",
+        serviceId: "admin-dashboard-protected",
+        serviceType: "admin-protected",
+        accounts: [
+          { username: ADMIN_USER, password: ADMIN_HASH },
+          { username: "superadmin", password: ADMIN_HASH }, // Multiple users supported
+        ],
+        realm: "Admin Dashboard",
+        headers: {
+          "X-ASD-Auth-Type": ["domain-level"],
         },
-        {
-          handler: "reverse_proxy",
-          upstreams: [{ dial: "echo-test:5678" }],
-        },
-      ],
-      terminal: true,
-    });
+      })
+    );
 
     // Route 8a: API Admin (api.localhost/admin/*) - PATH-LEVEL AUTH
-    // Only /admin/* paths require authentication
-    // X-ASD-Service-ID: api-admin-protected
-    routes.push({
-      "@id": "service-api-admin",
-      match: [{ host: ["api.localhost"], path: ["/admin/*"] }],
-      handle: [
-        buildBasicAuthHandler({
-          enabled: true,
-          accounts: [{ username: API_USER, password: API_HASH }],
-          realm: "API Admin",
-        }),
-        {
-          handler: "headers",
-          response: {
-            set: {
-              "X-ASD-Service-ID": ["api-admin-protected"],
-              "X-ASD-Service-Type": ["api-admin-protected"],
-              "X-Frame-Options": ["DENY"],
-              "X-Content-Type-Options": ["nosniff"],
-              "X-ASD-Auth-Type": ["path-level"],
-            },
-          },
+    // Path-level auth is just as easy!
+    routes.push(
+      createBasicAuthRoute({
+        id: "service-api-admin",
+        host: "api.localhost",
+        path: "/admin/*",
+        upstream: "echo-test-2:5679",
+        serviceId: "api-admin-protected",
+        serviceType: "api-admin-protected",
+        accounts: [{ username: API_USER, password: API_HASH }],
+        realm: "API Admin",
+        headers: {
+          "X-ASD-Auth-Type": ["path-level"],
         },
-        {
-          handler: "reverse_proxy",
-          upstreams: [{ dial: "echo-test-2:5679" }],
-        },
-      ],
-      terminal: true,
-    });
+      })
+    );
 
     // Route 8b: API Public (api.localhost/*) - NO AUTH
-    // Other paths on api.localhost are public
-    // X-ASD-Service-ID: api-public
-    routes.push({
-      "@id": "service-api-public",
-      match: [{ host: ["api.localhost"], path: ["/*"] }],
-      handle: [
-        {
-          handler: "headers",
-          response: {
-            set: {
-              "X-ASD-Service-ID": ["api-public"],
-              "X-ASD-Service-Type": ["api-public"],
-              "X-Frame-Options": ["SAMEORIGIN"],
-              "X-Content-Type-Options": ["nosniff"],
-              "X-ASD-Auth-Type": ["none"],
-            },
-          },
+    routes.push(
+      createServiceRoute({
+        id: "service-api-public",
+        host: "api.localhost",
+        upstream: "echo-test-2:5679",
+        serviceId: "api-public",
+        serviceType: "api-public",
+        headers: {
+          "X-Frame-Options": ["SAMEORIGIN"],
+          "X-ASD-Auth-Type": ["none"],
         },
-        {
-          handler: "reverse_proxy",
-          upstreams: [{ dial: "echo-test-2:5679" }],
-        },
-      ],
-      terminal: true,
-    });
+      })
+    );
 
     // Route 9: Public Service (public.localhost/*) - NO AUTH
-    // Demonstrates service with no authentication
-    // X-ASD-Service-ID: public-service
-    routes.push({
-      "@id": "service-public",
-      match: [{ host: ["public.localhost"], path: ["/*"] }],
-      handle: [
-        {
-          handler: "headers",
-          response: {
-            set: {
-              "X-ASD-Service-ID": ["public-service"],
-              "X-ASD-Service-Type": ["public"],
-              "X-Frame-Options": ["SAMEORIGIN"],
-              "X-Content-Type-Options": ["nosniff"],
-              "X-ASD-Auth-Type": ["none"],
-            },
-          },
+    routes.push(
+      createServiceRoute({
+        id: "service-public",
+        host: "public.localhost",
+        upstream: "echo-test-3:5680",
+        serviceId: "public-service",
+        serviceType: "public",
+        headers: {
+          "X-Frame-Options": ["SAMEORIGIN"],
+          "X-ASD-Auth-Type": ["none"],
         },
-        {
-          handler: "reverse_proxy",
-          upstreams: [{ dial: "echo-test-3:5680" }],
-        },
-      ],
-      terminal: true,
-    });
+      })
+    );
 
     // ========================================
     // ADVANCED FEATURES
     // ========================================
 
-    // Route 10: Path Rewrite Service (rewrite.localhost/backend-service/*)
-    // Demonstrates path prefix stripping
-    // /backend-service/api/users → backend receives /api/users
-    // X-ASD-Service-ID: path-rewrite-service
-    routes.push({
-      "@id": "service-path-rewrite",
-      match: [{ host: ["rewrite.localhost"], path: ["/backend-service/*"] }],
-      handle: [
-        {
-          handler: "rewrite",
-          strip_path_prefix: "/backend-service",
+    // Route 10: Path Rewrite Service - Clean rewrite API!
+    // Demonstrates path prefix stripping: /backend-service/api → backend receives /api
+    routes.push(
+      createRewriteRoute({
+        id: "service-path-rewrite",
+        host: "rewrite.localhost",
+        path: "/backend-service/*",
+        stripPrefix: "/backend-service",
+        upstream: "echo-test:5678",
+        serviceId: "path-rewrite-service",
+        serviceType: "rewrite",
+        headers: {
+          "X-Frame-Options": ["SAMEORIGIN"],
+          "X-ASD-Path-Rewrite": ["true"],
         },
-        {
-          handler: "headers",
-          response: {
-            set: {
-              "X-ASD-Service-ID": ["path-rewrite-service"],
-              "X-ASD-Service-Type": ["rewrite"],
-              "X-Frame-Options": ["SAMEORIGIN"],
-              "X-Content-Type-Options": ["nosniff"],
-              "X-ASD-Path-Rewrite": ["true"],
-            },
-          },
-        },
-        {
-          handler: "reverse_proxy",
-          upstreams: [{ dial: "echo-test:5678" }],
-        },
-      ],
-      terminal: true,
-    });
+      })
+    );
 
-    // Route 11: HTTPS Backend Service (https-backend.localhost/*)
-    // Demonstrates Caddy connecting to backend via HTTPS (not HTTP)
-    // X-ASD-Service-ID: https-backend-service
-    // Note: In real production, you'd configure TLS verification
-    routes.push({
-      "@id": "service-https-backend",
-      match: [{ host: ["https-backend.localhost"], path: ["/*"] }],
-      handle: [
-        {
-          handler: "headers",
-          response: {
-            set: {
-              "X-ASD-Service-ID": ["https-backend-service"],
-              "X-ASD-Service-Type": ["https-proxy"],
-              "X-Frame-Options": ["SAMEORIGIN"],
-              "X-Content-Type-Options": ["nosniff"],
-              "X-ASD-Backend-Protocol": ["https"],
-            },
-          },
+    // Route 11: HTTPS Backend Service
+    // For HTTPS backends, we still use createServiceRoute but with transport config
+    // (This is an advanced feature not yet wrapped in a helper)
+    routes.push(
+      createServiceRoute({
+        id: "service-https-backend",
+        host: "https-backend.localhost",
+        upstream: "echo-test:5678", // Would be HTTPS in production
+        serviceId: "https-backend-service",
+        serviceType: "https-proxy",
+        headers: {
+          "X-Frame-Options": ["SAMEORIGIN"],
+          "X-ASD-Backend-Protocol": ["https"],
         },
-        {
-          handler: "reverse_proxy",
-          upstreams: [{ dial: "echo-test:5678" }], // Would be HTTPS in production
-          transport: {
-            protocol: "http",
-            // In production with real HTTPS backend:
-            // tls: {
-            //   server_name: "backend.internal.example.com",
-            //   insecure_skip_verify: false,
-            // }
-          },
-        },
-      ],
-      terminal: true,
-    });
+        // Note: Transport config would need to be added manually for HTTPS backends
+        // This is an advanced feature we can wrap in a helper later if needed
+      })
+    );
 
-    // Create server with all routes
+    // AUTOMATIC ROUTE SORTING!
+    // No more manual route ordering - sortRoutes handles it all!
+    // Health checks → Auth routes → Specific paths → Wildcards
+    const sortedRoutes = sortRoutes(routes);
+
+    // Create server with sorted routes
     const servers = (await client.getServers()) as Record<string, unknown>;
     servers[complexServer] = {
       listen: [":80"],
-      routes,
-      automatic_https: { disable: true }, // Disable for test (would be enabled in production)
+      routes: sortedRoutes, // Using sorted routes!
+      automatic_https: { disable: true },
     };
 
     await client.patchServer(servers);
