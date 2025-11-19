@@ -89,6 +89,9 @@ export interface CaddyRouteHandler {
   // Load balancing
   load_balancing?: {
     policy?: string;
+    selection_policy?: {
+      policy?: string;
+    };
   };
   health_checks?: {
     active?: {
@@ -118,8 +121,9 @@ export interface CaddyRouteHandler {
 export interface CaddyRoute {
   "@id"?: string; // Route identifier for tracking and updates
   match?: CaddyRouteMatcher[];
-  handle: CaddyRouteHandler[];
+  handle?: CaddyRouteHandler[];
   terminal?: boolean;
+  priority?: number; // Explicit priority for route ordering (0-100)
 }
 
 /**

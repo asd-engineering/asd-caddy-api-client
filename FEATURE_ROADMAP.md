@@ -254,6 +254,200 @@ const removed = await client.removeRouteById(server, "example.com-redirect");
 
 ---
 
+### 6. HTTP Basic Authentication (P1 - High) ✅ **IMPLEMENTED**
+
+**Status**: ✅ **COMPLETE** - Full authentication support with bcrypt
+
+#### Implementation Summary
+
+**What We Built:**
+
+- ✅ Created `src/utils/auth.ts` with comprehensive authentication utilities
+- ✅ Enhanced `buildBasicAuthHandler()` to support multiple accounts
+- ✅ Added bcrypt password hashing (optional dependency)
+- ✅ Support for both npm bcrypt and Caddy CLI hash generation
+- ✅ Backward compatible with single-account legacy API
+
+**New Functions:**
+
+```typescript
+// Hash passwords with bcrypt
+const hash = await hashPassword("my-password", 10); // cost: 10
+
+// Verify passwords
+const isValid = await verifyPassword("my-password", hash);
+
+// Use Caddy CLI for hashing (no bcrypt dependency needed)
+const hash = await hashPasswordWithCaddy("my-password");
+
+// Create single account
+const account = await createBasicAuthAccount("admin", "secret123");
+// Returns: { username: "admin", password: "$2a$10$..." }
+
+// Create multiple accounts
+const accounts = await createBasicAuthAccounts([
+  { username: "admin", password: "admin-pass" },
+  { username: "user", password: "user-pass" },
+]);
+```
+
+**Enhanced buildBasicAuthHandler:**
+
+```typescript
+// Single account (legacy, backward compatible)
+buildBasicAuthHandler({
+  enabled: true,
+  username: "admin",
+  passwordHash: "$2a$10$...",
+  realm: "Admin Area",
+});
+
+// Multiple accounts (recommended)
+buildBasicAuthHandler({
+  enabled: true,
+  accounts: [
+    { username: "admin", password: "$2a$10$..." },
+    { username: "user", password: "$2a$10$..." },
+  ],
+  realm: "Protected Area",
+});
+```
+
+**Features:**
+
+- ✅ Domain-level authentication (entire domain protected)
+- ✅ Path-level authentication (specific paths protected)
+- ✅ Multiple users per service
+- ✅ Bcrypt password hashing (cost configurable)
+- ✅ Custom authentication realms
+- ✅ Service isolation (credentials scoped per service)
+- ✅ Automatic bcrypt detection from hash format
+- ✅ Optional bcrypt dependency (graceful fallback to Caddy CLI)
+
+**Authentication Patterns Supported:**
+
+1. **Domain-level**: `admin.localhost/*` - entire domain requires auth
+2. **Path-level**: `api.localhost/admin/*` - only specific paths require auth
+3. **Mixed**: Some services auth, some public, all in one config
+
+**Tests**: 31 authentication tests in complex scenario integration test
+
+**Files Changed:**
+
+- `src/utils/auth.ts` (new - authentication utilities)
+- `src/types.ts` (added BasicAuthAccount interface, enhanced BasicAuthOptions)
+- `src/caddy/routes.ts` (enhanced buildBasicAuthHandler for multiple accounts)
+- `src/caddy/index.ts` (exported auth utilities)
+- `src/__tests__/integration/asd-complex-scenario.integration.test.ts` (added auth tests)
+- `package.json` (added bcrypt as optional peer dependency)
+
+**Integration Test Coverage:**
+
+The complex scenario integration test demonstrates:
+
+- ✅ Domain-level authentication (admin.localhost)
+- ✅ Path-level authentication (api.localhost/admin/\*)
+- ✅ Public services (no authentication)
+- ✅ Multiple users per service (admin, superadmin)
+- ✅ Service isolation (admin creds don't work on API service)
+- ✅ Wrong credentials rejection (401 responses)
+- ✅ WWW-Authenticate header verification
+- ✅ Mixed authentication patterns in production setup
+
+---
+
+### 7. Path Prefix Rewriting (P2 - Medium) ✅ **IMPLEMENTED**
+
+**Status**: ✅ **COMPLETE** - Full URL rewriting support
+
+#### Implementation Summary
+
+**What We Built:**
+
+- ✅ `buildRewriteHandler()` function for path prefix stripping
+- ✅ Integrated into complex scenario test
+- ✅ Demonstrates `/backend-service/api/users` → backend receives `/api/users`
+
+**Features:**
+
+- ✅ Path prefix stripping with `strip_path_prefix`
+- ✅ Handler placed before reverse_proxy in chain
+- ✅ Clean URL rewriting for backend services
+
+**Example:**
+
+```typescript
+routes.push({
+  "@id": "service-with-rewrite",
+  match: [{ host: ["app.localhost"], path: ["/api/v1/*"] }],
+  handle: [
+    {
+      handler: "rewrite",
+      strip_path_prefix: "/api/v1", // Strip this prefix
+    },
+    {
+      handler: "reverse_proxy",
+      upstreams: [{ dial: "backend:3000" }],
+    },
+  ],
+});
+// Request to /api/v1/users → backend receives /users
+```
+
+**Tests**: 2 tests for path rewriting in complex scenario
+
+**Files Changed:**
+
+- `src/caddy/routes.ts` (buildRewriteHandler already existed)
+- `src/__tests__/integration/asd-complex-scenario.integration.test.ts` (added rewrite service)
+
+---
+
+### 8. HTTPS Backend Connections (P2 - Medium) ✅ **IMPLEMENTED**
+
+**Status**: ✅ **COMPLETE** - Full HTTPS backend support
+
+#### Implementation Summary
+
+**What We Built:**
+
+- ✅ HTTPS backend service in complex scenario test
+- ✅ TLS transport configuration for backend connections
+- ✅ Documentation for production TLS verification
+
+**Features:**
+
+- ✅ Caddy → Backend HTTPS connections (not just client → Caddy HTTPS)
+- ✅ TLS transport configuration
+- ✅ Server name verification (SNI)
+- ✅ CA certificate configuration
+- ✅ Insecure skip verify option (for testing)
+
+**Example:**
+
+```typescript
+{
+  handler: "reverse_proxy",
+  upstreams: [{ dial: "internal-service:443" }],
+  transport: {
+    protocol: "http",
+    tls: {
+      server_name: "internal.example.com",
+      insecure_skip_verify: false, // Verify in production
+      ca: "/path/to/ca.crt" // Optional CA bundle
+    }
+  }
+}
+```
+
+**Tests**: 1 test for HTTPS backend in complex scenario
+
+**Files Changed:**
+
+- `src/__tests__/integration/asd-complex-scenario.integration.test.ts` (added HTTPS backend service)
+
+---
+
 ## 📋 Future Enhancements (P3 - Low)
 
 These features don't exist in Python either, but would improve the TypeScript client:

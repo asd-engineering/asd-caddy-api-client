@@ -16,6 +16,43 @@ export {
 } from "./domains.js";
 export * from "./tls.js";
 
+// Export route ordering utilities
+export {
+  sortRoutes,
+  calculateRoutePriority,
+  validateRouteOrdering,
+  insertRouteRelative,
+  ROUTE_PRIORITIES,
+} from "./ordering.js";
+
+// Export high-level helper functions
+export {
+  createHealthRoute,
+  createServiceRoute,
+  createBasicAuthRoute,
+  createLoadBalancerRoute,
+  createRewriteRoute,
+  createRedirectRoute,
+} from "./helpers.js";
+
+export type {
+  HealthRouteOptions,
+  ServiceRouteOptions,
+  BasicAuthRouteOptions,
+  LoadBalancerRouteOptions,
+  RewriteRouteOptions,
+} from "./helpers.js";
+
+// Export certificate management
+export { CertificateManager, createCertificateManager } from "./certificates.js";
+
+export type {
+  CertificateWithMetadata,
+  RotateCertificateOptions,
+  RotationResult,
+  ExpirationCheckResult,
+} from "./certificates.js";
+
 // Export auth utilities
 export {
   hashPassword,
@@ -31,11 +68,9 @@ export type {
   CaddyRoute,
   CaddyRouteHandler,
   CaddyRouteMatcher,
-  ServiceRouteOptions,
   HealthCheckRouteOptions,
   HostRouteOptions,
   PathRouteOptions,
-  LoadBalancerRouteOptions,
   TlsConnectionPolicy,
 } from "../types.js";
 
