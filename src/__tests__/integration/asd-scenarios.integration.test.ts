@@ -65,7 +65,7 @@ function httpRequest(options: {
 
 describeIntegration("ASD Production Routing Scenarios", () => {
   let client: CaddyClient;
-  const testServer = "asd-scenarios.localhost";
+  const testServer = "asd_scenarios_server";
 
   beforeAll(async () => {
     client = new CaddyClient({ adminUrl: CADDY_URL });

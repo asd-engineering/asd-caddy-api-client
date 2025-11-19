@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, develop]
 
+# Prevent duplicate runs for push and PR from the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint
