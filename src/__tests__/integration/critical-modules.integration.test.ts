@@ -468,10 +468,17 @@ describeIntegration("Critical Modules Integration Tests", () => {
       const certPem = fs.readFileSync(certPath, "utf-8");
 
       const days = getDaysUntilExpiration(certPem);
+      const metadata = parseCertificate(certPem);
 
-      // Certificate is valid for 365 days, should be ~365 days (accounting for test execution time)
-      expect(days).toBeGreaterThan(360);
-      expect(days).toBeLessThan(370);
+      // Calculate expected days from certificate metadata
+      const now = new Date();
+      const expectedDays = Math.floor(
+        (metadata.notAfter.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Allow 1 day tolerance for timing edge cases
+      expect(days).toBeGreaterThanOrEqual(expectedDays - 1);
+      expect(days).toBeLessThanOrEqual(expectedDays + 1);
     });
 
     test("isCertificateExpiringSoon detects non-expiring certificate", async () => {
