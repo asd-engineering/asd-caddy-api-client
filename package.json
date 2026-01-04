@@ -1,5 +1,5 @@
 {
-  "name": "@asd/caddy-api-client",
+  "name": "@accelerated-software-development/caddy-api-client",
   "version": "0.1.0",
   "description": "TypeScript client for Caddy Admin API with MITMproxy integration",
   "type": "module",
@@ -41,6 +41,16 @@
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "docs:build": "typedoc",
+    "docs:serve": "typedoc && npx http-server docs/api -o",
+    "release": "standard-version",
+    "release:minor": "standard-version --release-as minor",
+    "release:major": "standard-version --release-as major",
+    "release:dry": "standard-version --dry-run",
+    "release:first": "standard-version --first-release",
+    "prerelease": "bun run build && bun run test && bun run typecheck && bun run lint",
+    "verify:pack": "npm pack --dry-run",
+    "verify:publish": "npm publish --dry-run",
     "prepare": "husky",
     "prepublishOnly": "bun run build && bun run test && bun run typecheck && bun run lint"
   },
@@ -56,12 +66,17 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/asd/caddy-api-client.git"
+    "url": "https://github.com/asd-engineering/asd-caddy-api-client.git"
   },
   "bugs": {
-    "url": "https://github.com/asd/caddy-api-client/issues"
+    "url": "https://github.com/asd-engineering/asd-caddy-api-client/issues"
   },
-  "homepage": "https://github.com/asd/caddy-api-client#readme",
+  "homepage": "https://asd-engineering.github.io/asd-caddy-api-client",
+  "documentation": "https://asd-engineering.github.io/asd-caddy-api-client",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "peerDependencies": {
     "zod": "^3.22.0"
   },
@@ -78,7 +93,9 @@
     "globals": "^15.12.0",
     "husky": "^9.1.6",
     "prettier": "^3.6.2",
+    "standard-version": "^9.5.0",
     "tsup": "^8.0.1",
+    "typedoc": "^0.28.14",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.0.0",
     "vitest": "^1.0.0",

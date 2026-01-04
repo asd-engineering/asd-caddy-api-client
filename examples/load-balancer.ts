@@ -1,7 +1,10 @@
 /**
  * Load balancer example with health checks
  */
-import { CaddyClient, buildLoadBalancerRoute } from "@asd/caddy-api-client/caddy";
+import {
+  CaddyClient,
+  buildLoadBalancerRoute,
+} from "@accelerated-software-development/caddy-api-client/caddy";
 
 async function main() {
   const client = new CaddyClient();

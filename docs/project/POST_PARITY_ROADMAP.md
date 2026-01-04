@@ -18,7 +18,7 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
 **Tasks**:
 
 - [ ] Finalize package.json metadata
-  - Package name: `@asd/caddy-api-client`
+  - Package name: `@accelerated-software-development/caddy-api-client`
   - Description, keywords, repository links
   - License verification (MIT)
 - [ ] Set up npm publishing workflow

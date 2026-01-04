@@ -1,4 +1,4 @@
-# Justfile for @asd/caddy-api-client
+# Justfile for @accelerated-software-development/caddy-api-client
 
 # ASD@latest
 import? ".asd/cli.just"
@@ -39,6 +39,9 @@ install:
 # Build the package
 build:
     bun run build
+
+# Start, run, stop entire test suite
+test-all: test-infra-up test test-integration test-infra-down
 
 # Run tests
 test:
@@ -143,15 +146,87 @@ link:
     echo "🔗 Linking package globally..."
     bun link
     echo ""
-    echo "✅ Package linked! Use 'bun link @asd/caddy-api-client' in other projects."
+    echo "✅ Package linked! Use 'bun link @accelerated-software-development/caddy-api-client' in other projects."
     echo ""
     echo "To test in .asd project:"
     echo "  cd .asd"
-    echo "  bun link @asd/caddy-api-client"
+    echo "  bun link @accelerated-software-development/caddy-api-client"
 
 # Unlink package
 unlink:
     bun unlink
+
+# Preview next release (dry-run)
+release-dry:
+    #!/usr/bin/env bash
+    set -e
+    echo "🔍 Preview of next release (dry-run)..."
+    echo ""
+    bun run release:dry
+    echo ""
+    echo "✅ Preview completed. No changes made."
+
+# Create a new release (patch version)
+release:
+    #!/usr/bin/env bash
+    set -e
+    echo "📦 Creating new release (patch)..."
+    echo ""
+    echo "This will:"
+    echo "  1. Run all checks (lint, typecheck, tests)"
+    echo "  2. Bump version in package.json"
+    echo "  3. Generate CHANGELOG.md"
+    echo "  4. Create git commit and tag"
+    echo ""
+    read -p "Continue? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "❌ Release cancelled"
+        exit 1
+    fi
+    echo ""
+    bun run release
+    echo ""
+    echo "✅ Release created!"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Review the changes: git show HEAD"
+    echo "  2. Push to GitHub: git push --follow-tags origin main"
+    echo "  3. GitHub Actions will auto-publish to npm"
+
+# Create minor version release
+release-minor:
+    #!/usr/bin/env bash
+    set -e
+    echo "📦 Creating minor version release..."
+    bun run release:minor
+
+# Create major version release
+release-major:
+    #!/usr/bin/env bash
+    set -e
+    echo "📦 Creating major version release..."
+    bun run release:major
+
+# First release (initializes CHANGELOG without bumping from 0.1.0)
+release-first:
+    #!/usr/bin/env bash
+    set -e
+    echo "📦 Creating first release..."
+    bun run release:first
+
+# Verify package contents before publishing
+verify-package:
+    #!/usr/bin/env bash
+    set -e
+    echo "🔍 Verifying package contents..."
+    echo ""
+    bun run build
+    echo ""
+    echo "📦 Package contents (npm pack --dry-run):"
+    bun run verify:pack
+    echo ""
+    echo "✅ Verification complete!"
 
 # Publish to NPM (dry-run by default)
 publish-dry:
@@ -210,7 +285,7 @@ example script:
 # Show package info
 info:
     #!/usr/bin/env bash
-    echo "Package: @asd/caddy-api-client"
+    echo "Package: @accelerated-software-development/caddy-api-client"
     echo "Version: $(cat package.json | grep '"version"' | cut -d'"' -f4)"
     echo ""
     echo "Build outputs:"

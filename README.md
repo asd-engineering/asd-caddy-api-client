@@ -1,4 +1,4 @@
-# @asd/caddy-api-client
+# @accelerated-software-development/caddy-api-client
 
 TypeScript client for Caddy Admin API with MITMproxy integration.
 
@@ -14,15 +14,18 @@ TypeScript client for Caddy Admin API with MITMproxy integration.
 ## Installation
 
 ```bash
-npm install @asd/caddy-api-client zod
+npm install @accelerated-software-development/caddy-api-client zod
 # or
-bun add @asd/caddy-api-client zod
+bun add @accelerated-software-development/caddy-api-client zod
 ```
 
 ## Quick Start
 
 ```typescript
-import { CaddyClient, buildServiceRoutes } from "@asd/caddy-api-client/caddy";
+import {
+  CaddyClient,
+  buildServiceRoutes,
+} from "@accelerated-software-development/caddy-api-client/caddy";
 
 // Create client
 const client = new CaddyClient({
@@ -57,7 +60,10 @@ await client.addRoutes("https_server", routes);
 ### Basic Route Management
 
 ```typescript
-import { CaddyClient, buildServiceRoutes } from "@asd/caddy-api-client/caddy";
+import {
+  CaddyClient,
+  buildServiceRoutes,
+} from "@accelerated-software-development/caddy-api-client/caddy";
 
 const client = new CaddyClient();
 
@@ -83,7 +89,7 @@ const removed = await client.removeRoutesByHost("old-api.localhost");
 ### Path-based Routes
 
 ```typescript
-import { buildServiceRoutes } from "@asd/caddy-api-client/caddy";
+import { buildServiceRoutes } from "@accelerated-software-development/caddy-api-client/caddy";
 
 const routes = buildServiceRoutes({
   path: "/api",
@@ -96,7 +102,10 @@ const routes = buildServiceRoutes({
 ### Load Balancing
 
 ```typescript
-import { CaddyClient, buildLoadBalancerRoute } from "@asd/caddy-api-client/caddy";
+import {
+  CaddyClient,
+  buildLoadBalancerRoute,
+} from "@accelerated-software-development/caddy-api-client/caddy";
 
 const client = new CaddyClient();
 
@@ -114,7 +123,7 @@ await client.addRoute("https_server", lbRoute);
 ### Security Headers
 
 ```typescript
-import { buildServiceRoutes } from "@asd/caddy-api-client/caddy";
+import { buildServiceRoutes } from "@accelerated-software-development/caddy-api-client/caddy";
 
 const routes = buildServiceRoutes({
   host: "secure.localhost",
@@ -131,7 +140,7 @@ const routes = buildServiceRoutes({
 ### Basic Authentication
 
 ```typescript
-import { buildServiceRoutes } from "@asd/caddy-api-client/caddy";
+import { buildServiceRoutes } from "@accelerated-software-development/caddy-api-client/caddy";
 
 const routes = buildServiceRoutes({
   host: "admin.localhost",
@@ -168,7 +177,10 @@ docker run -d \
 
 ```typescript
 // 2. Enable traffic inspection (zero downtime)
-import { CaddyClient, buildMitmproxyRoute } from "@asd/caddy-api-client/caddy";
+import {
+  CaddyClient,
+  buildMitmproxyRoute,
+} from "@accelerated-software-development/caddy-api-client/caddy";
 
 const client = new CaddyClient({ adminUrl: "http://localhost:2019" });
 
@@ -191,7 +203,10 @@ await client.removeRouteById("https_server", "api_debug");
 Use `buildMitmproxyRoutePair()` to easily toggle traffic inspection on/off:
 
 ```typescript
-import { CaddyClient, buildMitmproxyRoutePair } from "@asd/caddy-api-client/caddy";
+import {
+  CaddyClient,
+  buildMitmproxyRoutePair,
+} from "@accelerated-software-development/caddy-api-client/caddy";
 
 const client = new CaddyClient({ adminUrl: "http://localhost:2019" });
 
@@ -222,7 +237,10 @@ await client.addRoute("https_server", routes.direct, routes.direct["@id"]);
 Route some traffic through MITMproxy while keeping the rest direct:
 
 ```typescript
-import { CaddyClient, buildLoadBalancerRoute } from "@asd/caddy-api-client/caddy";
+import {
+  CaddyClient,
+  buildLoadBalancerRoute,
+} from "@accelerated-software-development/caddy-api-client/caddy";
 
 const client = new CaddyClient();
 const lbRoute = buildLoadBalancerRoute({
@@ -277,7 +295,10 @@ services:
 ### Domain Management
 
 ```typescript
-import { addDomainWithAutoTls, deleteDomain } from "@asd/caddy-api-client/caddy";
+import {
+  addDomainWithAutoTls,
+  deleteDomain,
+} from "@accelerated-software-development/caddy-api-client/caddy";
 
 // Add domain with automatic TLS (Let's Encrypt)
 const domain = await addDomainWithAutoTls({
@@ -380,7 +401,7 @@ import {
   TimeoutError,
   DomainNotFoundError,
   MitmproxyNotInstalledError,
-} from "@asd/caddy-api-client";
+} from "@accelerated-software-development/caddy-api-client";
 
 try {
   await client.addRoute("https_server", route);
@@ -427,6 +448,19 @@ See the [`examples/`](./examples/) directory for standalone examples (require pu
 - [`basic-usage.ts`](./examples/basic-usage.ts) - Basic route management
 - [`load-balancer.ts`](./examples/load-balancer.ts) - Load balancing with health checks
 - [`mitmproxy-integration.ts`](./examples/mitmproxy-integration.ts) - Traffic inspection with MITMproxy
+
+## API Documentation
+
+📚 **[View Full API Documentation](https://asd-engineering.github.io/asd-caddy-api-client/)** ← Auto-generated from source code
+
+Full API documentation is generated using TypeDoc and hosted on GitHub Pages. It includes detailed information for all exported functions, classes, and types with examples.
+
+**Generate locally:**
+
+```bash
+bun run docs:build      # Generate docs
+bun run docs:serve      # Generate and open in browser
+```
 
 ## Documentation
 

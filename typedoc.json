@@ -1,0 +1,13 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "out": "docs/api",
+  "name": "@accelerated-software-development/caddy-api-client",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "includeVersion": true,
+  "readme": "README.md",
+  "navigationLinks": {
+    "GitHub": "https://github.com/asd-engineering/asd-caddy-api-client",
+    "Integration Tests": "https://github.com/asd-engineering/asd-caddy-api-client/tree/main/src/__tests__/integration"
+  }
+}
