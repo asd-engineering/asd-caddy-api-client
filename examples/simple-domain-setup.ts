@@ -11,7 +11,7 @@ import {
   listDomains,
   deleteDomain,
   buildWwwRedirect,
-} from "@asd/caddy-api-client/caddy";
+} from "@accelerated-software-development/caddy-api-client/caddy";
 
 async function main() {
   const client = new CaddyClient({

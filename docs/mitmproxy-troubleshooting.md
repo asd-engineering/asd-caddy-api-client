@@ -1,6 +1,6 @@
 # MITMproxy Troubleshooting Guide
 
-Common issues and solutions when using MITMproxy integration with @asd/caddy-api-client.
+Common issues and solutions when using MITMproxy integration with @accelerated-software-development/caddy-api-client.
 
 ## Table of Contents
 

@@ -1,4 +1,4 @@
-# Justfile for @asd/caddy-api-client
+# Justfile for @accelerated-software-development/caddy-api-client
 
 # ASD@latest
 import? ".asd/cli.just"
@@ -146,11 +146,11 @@ link:
     echo "🔗 Linking package globally..."
     bun link
     echo ""
-    echo "✅ Package linked! Use 'bun link @asd/caddy-api-client' in other projects."
+    echo "✅ Package linked! Use 'bun link @accelerated-software-development/caddy-api-client' in other projects."
     echo ""
     echo "To test in .asd project:"
     echo "  cd .asd"
-    echo "  bun link @asd/caddy-api-client"
+    echo "  bun link @accelerated-software-development/caddy-api-client"
 
 # Unlink package
 unlink:
@@ -285,7 +285,7 @@ example script:
 # Show package info
 info:
     #!/usr/bin/env bash
-    echo "Package: @asd/caddy-api-client"
+    echo "Package: @accelerated-software-development/caddy-api-client"
     echo "Version: $(cat package.json | grep '"version"' | cut -d'"' -f4)"
     echo ""
     echo "Build outputs:"

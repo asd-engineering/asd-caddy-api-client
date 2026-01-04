@@ -46,13 +46,16 @@ jobs:
       - name: Setup Node.js for npm publishing
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Publish to npm
+      # Trusted publishing uses OIDC - no NPM_TOKEN needed
+      # Configure at: npmjs.com → Package Settings → Trusted Publishers
+      - name: Update npm for trusted publishing
+        run: npm install -g npm@latest
+
+      - name: Publish to npm (Trusted Publishing via OIDC)
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1

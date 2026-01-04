@@ -1,6 +1,6 @@
 # Versioning & Release Guide
 
-This document describes the versioning and release process for `@asd/caddy-api-client`.
+This document describes the versioning and release process for `@accelerated-software-development/caddy-api-client`.
 
 ## Overview
 
@@ -191,7 +191,7 @@ git tag -d v0.2.0
 
 ```bash
 # Unpublish specific version (only works within 24h)
-npm unpublish @asd/caddy-api-client@0.2.0
+npm unpublish @accelerated-software-development/caddy-api-client@0.2.0
 ```
 
 **After 24 hours:**
@@ -289,7 +289,7 @@ git push --follow-tags origin main  # Push and trigger npm publish
 
 ### npm Package Scopes
 
-- Package name: `@asd/caddy-api-client`
+- Package name: `@accelerated-software-development/caddy-api-client`
 - Registry: `https://registry.npmjs.org/`
 - Access: **public** (configured in `package.json`)
 - Provenance: Enabled (cryptographic build attestation via GitHub Actions)

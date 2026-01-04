@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial release of @asd/caddy-api-client
+- Initial release of @accelerated-software-development/caddy-api-client
 - **CaddyClient class** - Full TypeScript client for Caddy Admin API
   - Configuration management (getConfig, reload)
   - Route management (getRoutes, addRoute, patchRoutes, removeRoutesByHost)

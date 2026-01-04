@@ -140,4 +140,4 @@ TypeScript provides flexibility while maintaining the same default as Python.
 
 - **Python Package**: [caddy-api-client on PyPI](https://pypi.org/project/caddy-api-client/)
 - **Python Repository**: [migetapp/caddy-api-client](https://github.com/migetapp/caddy-api-client)
-- **TypeScript Package**: `@asd/caddy-api-client` (this package)
+- **TypeScript Package**: `@accelerated-software-development/caddy-api-client` (this package)

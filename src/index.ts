@@ -1,5 +1,5 @@
 /**
- * @asd/caddy-api-client
+ * @accelerated-software-development/caddy-api-client
  * TypeScript client for Caddy Admin API with MITMproxy integration
  */
 

@@ -7,8 +7,11 @@ import {
   getMitmwebStatus,
   isMitmproxyInstalled,
   autoInstallMitmproxy,
-} from "@asd/caddy-api-client/mitm";
-import { CaddyClient, buildLoadBalancerRoute } from "@asd/caddy-api-client/caddy";
+} from "@accelerated-software-development/caddy-api-client/mitm";
+import {
+  CaddyClient,
+  buildLoadBalancerRoute,
+} from "@accelerated-software-development/caddy-api-client/caddy";
 
 async function main() {
   // Check if mitmproxy is installed
