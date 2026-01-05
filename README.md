@@ -290,7 +290,7 @@ services:
 - ✅ Web UI for viewing captured traffic
 - ✅ Production-safe (tested with concurrent requests)
 
-**Troubleshooting:** See [docs/mitmproxy-troubleshooting.md](docs/mitmproxy-troubleshooting.md) for common issues and solutions.
+**Troubleshooting:** See the [MITMproxy Troubleshooting Guide](https://github.com/asd-engineering/asd-caddy-api-client/blob/main/docs/mitmproxy-troubleshooting.md) for common issues and solutions.
 
 ### Domain Management
 
@@ -461,14 +461,6 @@ Full API documentation is generated using TypeDoc and hosted on GitHub Pages. It
 bun run docs:build      # Generate docs
 bun run docs:serve      # Generate and open in browser
 ```
-
-## Documentation
-
-📚 See **[docs/](docs/)** for:
-
-- **[mitmproxy-troubleshooting.md](docs/mitmproxy-troubleshooting.md)** - MITMproxy troubleshooting guide
-- **[POST_PARITY_ROADMAP.md](docs/project/POST_PARITY_ROADMAP.md)** - Roadmap for npm package and .asd CLI integration
-- **[python-api-parity.md](docs/project/python-api-parity.md)** - Feature comparison with Python client
 
 ## Development
 
