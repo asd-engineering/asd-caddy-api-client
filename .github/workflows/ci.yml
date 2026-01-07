@@ -112,7 +112,7 @@ jobs:
           echo "All services ready!"
 
       - name: Run integration tests
-        run: bun run test:integration
+        run: INTEGRATION_TEST=true bun test src/__tests__/integration/
         env:
           INTEGRATION_TEST: true
 
