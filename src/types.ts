@@ -569,3 +569,21 @@ export interface MitmwebStatus {
   webUrl?: string;
   proxyUrl?: string;
 }
+
+// ============================================================================
+// Caddy Admin API Response Types
+// ============================================================================
+
+/**
+ * Upstream server status from /reverse_proxy/upstreams endpoint
+ */
+export interface UpstreamStatus {
+  /** Upstream address (host:port) */
+  address: string;
+  /** Number of active requests */
+  num_requests: number;
+  /** Number of failed health checks */
+  fails: number;
+  /** Whether the upstream is currently healthy */
+  healthy: boolean;
+}

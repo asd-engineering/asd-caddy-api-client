@@ -19,6 +19,7 @@ export type {
   HostRouteOptions,
   PathRouteOptions,
   RedirectStatusCode,
+  UpstreamStatus,
 } from "./types.js";
 
 // Caddy module

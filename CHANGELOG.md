@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **New CaddyClient API methods**:
+  - `stop()` - Gracefully stop the Caddy server
+  - `getUpstreams()` - Get reverse proxy upstream server status (health, request counts)
+  - `adapt()` - Convert Caddyfile or other formats to JSON configuration
+- **UpstreamStatus type** - Type definition for upstream server status
 - **GitHub Pages API documentation** - Auto-generated TypeDoc at [asd-engineering.github.io/asd-caddy-api-client](https://asd-engineering.github.io/asd-caddy-api-client)
 - **Automated npm publishing** - GitHub Actions workflow with provenance attestation
 - **VERSIONING.md** - Comprehensive versioning and release guide
