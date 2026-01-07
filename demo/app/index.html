@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ES Search Demo - MITMproxy Traffic Inspection</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Product Search</h1>
+        <p class="subtitle">Elasticsearch with Dynamic MITMproxy Monitoring</p>
+      </header>
+
+      <div class="monitoring-control">
+        <div class="status">
+          <span class="status-indicator" id="statusIndicator"></span>
+          <span id="statusText">Checking...</span>
+        </div>
+        <button id="toggleBtn" class="btn" disabled>Loading...</button>
+      </div>
+
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search products..." autocomplete="off" />
+        <button id="searchBtn" class="btn btn-primary">Search</button>
+      </div>
+
+      <div class="info-box" id="infoBox">
+        <strong>How it works:</strong>
+        <ol>
+          <li>Search queries go through <code>Caddy -> Elasticsearch</code> (direct)</li>
+          <li>Click <strong>"Enable Monitoring"</strong> to insert MITMproxy</li>
+          <li>Traffic now flows: <code>Caddy -> MITMproxy -> Elasticsearch</code></li>
+          <li>Watch requests appear in the MITMproxy panel on the right!</li>
+        </ol>
+      </div>
+
+      <div class="results" id="results">
+        <p class="placeholder">Enter a search term to find products</p>
+      </div>
+
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <script src="main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MITMproxy Traffic Inspection Demo</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #1a1a2e;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        background: #16213e;
+        padding: 0.75rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #0f3460;
+      }
+      h1 {
+        color: #e94560;
+        font-size: 1.25rem;
+      }
+      .subtitle {
+        color: #94a3b8;
+        font-size: 0.875rem;
+      }
+      .container {
+        display: flex;
+        flex: 1;
+        gap: 4px;
+        padding: 4px;
+      }
+      .pane {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #16213e;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .pane-header {
+        padding: 0.5rem 1rem;
+        background: #0f3460;
+        color: #e2e8f0;
+        font-weight: 600;
+        font-size: 0.875rem;
+      }
+      iframe {
+        flex: 1;
+        border: none;
+        background: #0f172a;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>MITMproxy Traffic Inspection Demo</h1>
+        <span class="subtitle">Dynamic route switching via Caddy Admin API</span>
+      </div>
+    </header>
+    <div class="container">
+      <div class="pane">
+        <div class="pane-header">Product Search</div>
+        <iframe src="http://localhost:9080/app/"></iframe>
+      </div>
+      <div class="pane">
+        <div class="pane-header">MITMproxy Web UI</div>
+        <iframe src="http://localhost:9080/mitmproxy/"></iframe>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,109 @@
+# MITMproxy Traffic Inspection Demo
+# Shows dynamic route switching via Caddy Admin API
+
+services:
+  # Caddy reverse proxy with Admin API
+  caddy:
+    image: caddy:2.7-alpine
+    container_name: demo-caddy
+    ports:
+      - "9080:80" # HTTP (external 9080 -> internal 80)
+      - "9019:2019" # Admin API (external 9019 -> internal 2019)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      - demo-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:2019/config/"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Elasticsearch backend
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: demo-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    networks:
+      - demo-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # MITMproxy in reverse mode (forwards to Elasticsearch)
+  mitmproxy:
+    image: mitmproxy/mitmproxy:10.4.2
+    container_name: demo-mitmproxy
+    command: >
+      mitmweb
+      --mode reverse:http://elasticsearch:9200
+      --web-host 0.0.0.0
+      --web-port 8081
+      --listen-host 0.0.0.0
+      --listen-port 8080
+      --no-web-open-browser
+      --set keep_host_header=true
+    ports:
+      - "9082:8080" # Proxy port (external 9082 -> internal 8080)
+      - "9081:8081" # Web UI (external 9081 -> internal 8081)
+    networks:
+      - demo-net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python3 -c "import urllib.request; urllib.request.urlopen(''http://localhost:8081/'')"',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Demo API server (Bun + caddy-api-client library)
+  demo-api:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile.api
+    container_name: demo-api
+    ports:
+      - "3000:3000"
+    environment:
+      - CADDY_ADMIN_URL=http://caddy:2019
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    networks:
+      - demo-net
+    depends_on:
+      caddy:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      mitmproxy:
+        condition: service_healthy
+
+  # Seed sample data into Elasticsearch
+  seed:
+    image: curlimages/curl:latest
+    container_name: demo-seed
+    volumes:
+      - ./data:/data:ro
+      - ./seed/seed.sh:/seed.sh:ro
+    networks:
+      - demo-net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    entrypoint: ["sh", "/seed.sh"]
+
+networks:
+  demo-net:
+    driver: bridge

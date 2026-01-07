@@ -1,0 +1,302 @@
+[
+  {
+    "name": "Wireless Bluetooth Headphones",
+    "category": "Electronics",
+    "description": "Premium noise-canceling headphones with 30-hour battery life",
+    "price": 199.99
+  },
+  {
+    "name": "Mechanical Keyboard",
+    "category": "Electronics",
+    "description": "RGB backlit mechanical keyboard with Cherry MX switches",
+    "price": 149.99
+  },
+  {
+    "name": "USB-C Hub",
+    "category": "Electronics",
+    "description": "7-in-1 USB-C hub with HDMI, USB 3.0, and SD card reader",
+    "price": 49.99
+  },
+  {
+    "name": "Wireless Mouse",
+    "category": "Electronics",
+    "description": "Ergonomic wireless mouse with adjustable DPI",
+    "price": 39.99
+  },
+  {
+    "name": "Laptop Stand",
+    "category": "Electronics",
+    "description": "Adjustable aluminum laptop stand for better ergonomics",
+    "price": 59.99
+  },
+  {
+    "name": "Webcam HD",
+    "category": "Electronics",
+    "description": "1080p HD webcam with built-in microphone",
+    "price": 79.99
+  },
+  {
+    "name": "Smart Watch",
+    "category": "Electronics",
+    "description": "Fitness tracker with heart rate monitor and GPS",
+    "price": 249.99
+  },
+  {
+    "name": "Portable SSD",
+    "category": "Electronics",
+    "description": "1TB portable SSD with USB 3.2 for fast transfers",
+    "price": 129.99
+  },
+  {
+    "name": "Running Shoes",
+    "category": "Sports",
+    "description": "Lightweight running shoes with breathable mesh",
+    "price": 89.99
+  },
+  {
+    "name": "Yoga Mat",
+    "category": "Sports",
+    "description": "Non-slip yoga mat with carrying strap",
+    "price": 29.99
+  },
+  {
+    "name": "Dumbbell Set",
+    "category": "Sports",
+    "description": "Adjustable dumbbell set 5-50 lbs",
+    "price": 299.99
+  },
+  {
+    "name": "Tennis Racket",
+    "category": "Sports",
+    "description": "Professional tennis racket with carbon fiber frame",
+    "price": 159.99
+  },
+  {
+    "name": "Basketball",
+    "category": "Sports",
+    "description": "Official size indoor/outdoor basketball",
+    "price": 34.99
+  },
+  {
+    "name": "Cycling Helmet",
+    "category": "Sports",
+    "description": "Lightweight cycling helmet with ventilation",
+    "price": 69.99
+  },
+  {
+    "name": "Resistance Bands",
+    "category": "Sports",
+    "description": "Set of 5 resistance bands with different strengths",
+    "price": 24.99
+  },
+  {
+    "name": "Coffee Maker",
+    "category": "Kitchen",
+    "description": "12-cup programmable coffee maker with thermal carafe",
+    "price": 79.99
+  },
+  {
+    "name": "Air Fryer",
+    "category": "Kitchen",
+    "description": "5.8 quart air fryer with digital display",
+    "price": 99.99
+  },
+  {
+    "name": "Blender",
+    "category": "Kitchen",
+    "description": "High-powered blender for smoothies and soups",
+    "price": 69.99
+  },
+  {
+    "name": "Cast Iron Skillet",
+    "category": "Kitchen",
+    "description": "Pre-seasoned 12-inch cast iron skillet",
+    "price": 44.99
+  },
+  {
+    "name": "Knife Set",
+    "category": "Kitchen",
+    "description": "15-piece stainless steel knife set with block",
+    "price": 129.99
+  },
+  {
+    "name": "Instant Pot",
+    "category": "Kitchen",
+    "description": "6-quart multi-cooker with 7 cooking functions",
+    "price": 89.99
+  },
+  {
+    "name": "Electric Kettle",
+    "category": "Kitchen",
+    "description": "1.7L stainless steel electric kettle",
+    "price": 39.99
+  },
+  {
+    "name": "Toaster Oven",
+    "category": "Kitchen",
+    "description": "Convection toaster oven with air fry function",
+    "price": 149.99
+  },
+  {
+    "name": "Desk Lamp",
+    "category": "Home",
+    "description": "LED desk lamp with adjustable brightness and color temperature",
+    "price": 34.99
+  },
+  {
+    "name": "Throw Blanket",
+    "category": "Home",
+    "description": "Soft fleece throw blanket 50x60 inches",
+    "price": 29.99
+  },
+  {
+    "name": "Picture Frame Set",
+    "category": "Home",
+    "description": "Set of 6 black picture frames various sizes",
+    "price": 39.99
+  },
+  {
+    "name": "Indoor Plant Pot",
+    "category": "Home",
+    "description": "Ceramic plant pot with drainage hole",
+    "price": 19.99
+  },
+  {
+    "name": "Wall Clock",
+    "category": "Home",
+    "description": "Modern minimalist wall clock 12 inches",
+    "price": 24.99
+  },
+  {
+    "name": "Bookshelf",
+    "category": "Home",
+    "description": "5-tier wooden bookshelf with industrial design",
+    "price": 89.99
+  },
+  {
+    "name": "Candle Set",
+    "category": "Home",
+    "description": "Set of 3 scented soy candles",
+    "price": 34.99
+  },
+  {
+    "name": "Backpack",
+    "category": "Bags",
+    "description": "Water-resistant laptop backpack with USB port",
+    "price": 49.99
+  },
+  {
+    "name": "Messenger Bag",
+    "category": "Bags",
+    "description": "Canvas messenger bag with leather trim",
+    "price": 59.99
+  },
+  {
+    "name": "Duffel Bag",
+    "category": "Bags",
+    "description": "Large gym duffel bag with shoe compartment",
+    "price": 44.99
+  },
+  {
+    "name": "Travel Organizer",
+    "category": "Bags",
+    "description": "Set of 6 packing cubes for luggage",
+    "price": 24.99
+  },
+  {
+    "name": "Wallet",
+    "category": "Bags",
+    "description": "Genuine leather bifold wallet with RFID blocking",
+    "price": 39.99
+  },
+  {
+    "name": "Programming Book",
+    "category": "Books",
+    "description": "Clean Code: A Handbook of Agile Software Craftsmanship",
+    "price": 44.99
+  },
+  {
+    "name": "Science Fiction Novel",
+    "category": "Books",
+    "description": "Dune by Frank Herbert - Classic sci-fi epic",
+    "price": 16.99
+  },
+  {
+    "name": "Cookbook",
+    "category": "Books",
+    "description": "The Food Lab: Better Home Cooking Through Science",
+    "price": 39.99
+  },
+  {
+    "name": "Self-Help Book",
+    "category": "Books",
+    "description": "Atomic Habits by James Clear",
+    "price": 19.99
+  },
+  {
+    "name": "History Book",
+    "category": "Books",
+    "description": "Sapiens: A Brief History of Humankind",
+    "price": 24.99
+  },
+  {
+    "name": "Sunglasses",
+    "category": "Accessories",
+    "description": "Polarized sunglasses with UV protection",
+    "price": 79.99
+  },
+  {
+    "name": "Watch",
+    "category": "Accessories",
+    "description": "Minimalist analog watch with leather strap",
+    "price": 129.99
+  },
+  {
+    "name": "Phone Case",
+    "category": "Accessories",
+    "description": "Shockproof phone case with card holder",
+    "price": 24.99
+  },
+  {
+    "name": "Belt",
+    "category": "Accessories",
+    "description": "Reversible leather belt black/brown",
+    "price": 34.99
+  },
+  {
+    "name": "Scarf",
+    "category": "Accessories",
+    "description": "Cashmere blend winter scarf",
+    "price": 49.99
+  },
+  {
+    "name": "Board Game",
+    "category": "Games",
+    "description": "Catan - Strategy board game for 3-4 players",
+    "price": 44.99
+  },
+  {
+    "name": "Puzzle",
+    "category": "Games",
+    "description": "1000-piece jigsaw puzzle landscape scene",
+    "price": 19.99
+  },
+  {
+    "name": "Card Game",
+    "category": "Games",
+    "description": "Premium playing cards set of 2 decks",
+    "price": 14.99
+  },
+  {
+    "name": "Chess Set",
+    "category": "Games",
+    "description": "Wooden chess set with folding board",
+    "price": 39.99
+  },
+  {
+    "name": "Video Game",
+    "category": "Games",
+    "description": "The Legend of Zelda: Tears of the Kingdom",
+    "price": 59.99
+  }
+]

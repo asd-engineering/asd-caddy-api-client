@@ -13,6 +13,7 @@ export default tseslint.config(
       "coverage/**",
       "local/**",
       ".asd/**",
+      "demo/**", // Demo files are standalone
       "docs/api/**", // Generated TypeDoc documentation
       "*.config.ts",
       "*.config.js",
