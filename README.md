@@ -498,6 +498,23 @@ bun run lint
 bun run format
 ```
 
+## Contributing
+
+Contributions are welcome! Please [open an issue](https://github.com/asd-engineering/asd-caddy-api-client/issues) or submit a pull request if you have any improvements or fixes.
+
+1. Fork the repository
+2. Create a new branch (`git checkout -b my-feature-branch`)
+3. Make your changes
+4. Commit your changes (`git commit -am 'Add new feature'`)
+5. Push to the branch (`git push origin my-feature-branch`)
+6. Create a new Pull Request
+
 ## License
 
-MIT
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+
+This project is not affiliated with or endorsed by the Caddy project. It is an independent project created to improve the developer experience when working with Caddy JSON configurations in TypeScript.
+
+For more information on Caddy and its configuration options, please visit the [official Caddy documentation](https://caddyserver.com/docs/).
