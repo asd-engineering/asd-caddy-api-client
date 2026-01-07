@@ -216,3 +216,280 @@ describe("validate helper", () => {
     expect(() => validate(DomainSchema, "")).toThrow("Validation failed");
   });
 });
+
+// ============================================================================
+// Advanced Caddy Schemas Tests
+// ============================================================================
+
+import {
+  CaddyDurationSchema,
+  ActiveHealthChecksSchema,
+  PassiveHealthChecksSchema,
+  HealthChecksSchema,
+  LoadBalancingSchema,
+  UpstreamSchema,
+  ExtendedRouteMatcherSchema,
+  ReverseProxyHandlerSchema,
+} from "../schemas.js";
+
+describe("CaddyDurationSchema", () => {
+  test("validates integer nanoseconds", () => {
+    expect(() => CaddyDurationSchema.parse(5000000000)).not.toThrow();
+    expect(() => CaddyDurationSchema.parse(0)).not.toThrow();
+  });
+
+  test("validates Go duration strings", () => {
+    expect(() => CaddyDurationSchema.parse("10s")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1m")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("2h")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("500ms")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1.5s")).not.toThrow();
+  });
+
+  test("rejects invalid duration strings", () => {
+    expect(() => CaddyDurationSchema.parse("invalid")).toThrow();
+    expect(() => CaddyDurationSchema.parse("10")).toThrow();
+    expect(() => CaddyDurationSchema.parse("10x")).toThrow();
+  });
+});
+
+describe("ActiveHealthChecksSchema", () => {
+  test("validates minimal config", () => {
+    const result = ActiveHealthChecksSchema.parse({});
+    expect(result).toEqual({});
+  });
+
+  test("validates full config", () => {
+    const result = ActiveHealthChecksSchema.parse({
+      uri: "/health?ready=true",
+      port: 8080,
+      headers: { "X-Health-Check": ["true"] },
+      follow_redirects: true,
+      interval: "30s",
+      timeout: "5s",
+      passes: 2,
+      fails: 3,
+      max_size: 1024,
+      expect_status: 200,
+      expect_body: "healthy",
+    });
+
+    expect(result.uri).toBe("/health?ready=true");
+    expect(result.port).toBe(8080);
+    expect(result.interval).toBe("30s");
+    expect(result.expect_status).toBe(200);
+  });
+
+  test("rejects invalid port", () => {
+    expect(() => ActiveHealthChecksSchema.parse({ port: 70000 })).toThrow();
+  });
+
+  test("rejects invalid status code", () => {
+    expect(() => ActiveHealthChecksSchema.parse({ expect_status: 999 })).toThrow();
+  });
+});
+
+describe("PassiveHealthChecksSchema", () => {
+  test("validates full config", () => {
+    const result = PassiveHealthChecksSchema.parse({
+      fail_duration: "30s",
+      max_fails: 3,
+      unhealthy_request_count: 100,
+      unhealthy_status: [500, 502, 503],
+      unhealthy_latency: "10s",
+    });
+
+    expect(result.fail_duration).toBe("30s");
+    expect(result.max_fails).toBe(3);
+    expect(result.unhealthy_status).toEqual([500, 502, 503]);
+  });
+});
+
+describe("HealthChecksSchema", () => {
+  test("validates combined health checks", () => {
+    const result = HealthChecksSchema.parse({
+      active: {
+        uri: "/health",
+        interval: "10s",
+        timeout: "5s",
+      },
+      passive: {
+        fail_duration: "30s",
+        max_fails: 3,
+      },
+    });
+
+    expect(result.active?.uri).toBe("/health");
+    expect(result.passive?.max_fails).toBe(3);
+  });
+});
+
+describe("LoadBalancingSchema", () => {
+  test("validates selection policies", () => {
+    const result = LoadBalancingSchema.parse({
+      selection_policy: { policy: "round_robin" },
+      retries: 3,
+      try_duration: "30s",
+      try_interval: "250ms",
+    });
+
+    expect(result.selection_policy?.policy).toBe("round_robin");
+    expect(result.retries).toBe(3);
+  });
+
+  test("validates all policy types", () => {
+    const policies = [
+      "first",
+      "random",
+      "least_conn",
+      "round_robin",
+      "ip_hash",
+      "uri_hash",
+      "header",
+      "cookie",
+    ];
+    for (const policy of policies) {
+      expect(() =>
+        LoadBalancingSchema.parse({
+          selection_policy: { policy },
+        })
+      ).not.toThrow();
+    }
+  });
+});
+
+describe("UpstreamSchema", () => {
+  test("validates upstream with max_requests", () => {
+    const result = UpstreamSchema.parse({
+      dial: "localhost:3000",
+      max_requests: 100,
+    });
+
+    expect(result.dial).toBe("localhost:3000");
+    expect(result.max_requests).toBe(100);
+  });
+
+  test("rejects empty dial", () => {
+    expect(() => UpstreamSchema.parse({ dial: "" })).toThrow();
+  });
+});
+
+describe("ExtendedRouteMatcherSchema", () => {
+  test("validates basic matchers", () => {
+    const result = ExtendedRouteMatcherSchema.parse({
+      host: ["example.com"],
+      path: ["/api/*"],
+      method: ["GET", "POST"],
+    });
+
+    expect(result.host).toEqual(["example.com"]);
+    expect(result.path).toEqual(["/api/*"]);
+  });
+
+  test("validates IP-based matchers", () => {
+    const result = ExtendedRouteMatcherSchema.parse({
+      client_ip: { ranges: ["192.168.0.0/16", "10.0.0.0/8"] },
+      remote_ip: { ranges: ["1.2.3.4/32"] },
+    });
+
+    expect(result.client_ip?.ranges).toHaveLength(2);
+    expect(result.remote_ip?.ranges).toEqual(["1.2.3.4/32"]);
+  });
+
+  test("validates regex matchers", () => {
+    const result = ExtendedRouteMatcherSchema.parse({
+      path_regexp: { name: "api_version", pattern: "^/api/v[0-9]+/" },
+      header_regexp: {
+        "Content-Type": { pattern: "^application/json" },
+      },
+    });
+
+    expect(result.path_regexp?.pattern).toBe("^/api/v[0-9]+/");
+  });
+
+  test("validates protocol matcher", () => {
+    const result = ExtendedRouteMatcherSchema.parse({
+      protocol: "https",
+    });
+
+    expect(result.protocol).toBe("https");
+  });
+
+  test("validates CEL expression matcher", () => {
+    const result = ExtendedRouteMatcherSchema.parse({
+      expression: "{http.request.uri.path}.startsWith('/api')",
+    });
+
+    expect(result.expression).toContain("startsWith");
+  });
+
+  test("validates negation matcher", () => {
+    const result = ExtendedRouteMatcherSchema.parse({
+      not: [{ path: ["/health", "/metrics"] }],
+    });
+
+    expect(result.not).toHaveLength(1);
+    expect(result.not?.[0].path).toEqual(["/health", "/metrics"]);
+  });
+});
+
+describe("ReverseProxyHandlerSchema", () => {
+  test("validates minimal config", () => {
+    const result = ReverseProxyHandlerSchema.parse({
+      handler: "reverse_proxy",
+      upstreams: [{ dial: "localhost:3000" }],
+    });
+
+    expect(result.handler).toBe("reverse_proxy");
+    expect(result.upstreams?.[0].dial).toBe("localhost:3000");
+  });
+
+  test("validates full config with health checks and load balancing", () => {
+    const result = ReverseProxyHandlerSchema.parse({
+      handler: "reverse_proxy",
+      upstreams: [
+        { dial: "localhost:3000", max_requests: 100 },
+        { dial: "localhost:3001", max_requests: 100 },
+      ],
+      load_balancing: {
+        selection_policy: { policy: "round_robin" },
+        retries: 3,
+        try_duration: "30s",
+      },
+      health_checks: {
+        active: {
+          uri: "/health",
+          interval: "10s",
+          timeout: "5s",
+          expect_status: 200,
+        },
+        passive: {
+          fail_duration: "30s",
+          max_fails: 3,
+        },
+      },
+      flush_interval: "100ms",
+      headers: {
+        request: {
+          set: { "X-Forwarded-Proto": ["https"] },
+        },
+        response: {
+          delete: ["Server"],
+        },
+      },
+    });
+
+    expect(result.upstreams).toHaveLength(2);
+    expect(result.load_balancing?.selection_policy?.policy).toBe("round_robin");
+    expect(result.health_checks?.active?.expect_status).toBe(200);
+    expect(result.headers?.request?.set?.["X-Forwarded-Proto"]).toEqual(["https"]);
+  });
+
+  test("rejects wrong handler type", () => {
+    expect(() =>
+      ReverseProxyHandlerSchema.parse({
+        handler: "static_response",
+      })
+    ).toThrow();
+  });
+});

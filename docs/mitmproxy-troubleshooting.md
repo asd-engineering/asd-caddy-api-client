@@ -470,7 +470,7 @@ If you encounter an issue not covered here:
 1. Check MITMproxy logs: `docker logs mitmproxy`
 2. Check Caddy logs: `docker logs caddy`
 3. Verify network connectivity: `docker network inspect <network-name>`
-4. Open an issue at: https://github.com/anthropics/asd-caddy-api-client/issues
+4. Open an issue at: https://github.com/asd-engineering/asd-caddy-api-client/issues
 
 Include:
 

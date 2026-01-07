@@ -42,7 +42,7 @@ const routes = buildServiceRoutes({
   },
 });
 
-// Add routes to Caddy (simplified - no loop needed!)
+// Add routes to Caddy
 await client.addRoutes("https_server", routes);
 ```
 
@@ -324,16 +324,30 @@ class CaddyClient {
   // Configuration
   getConfig(): Promise<unknown>;
   reload(): Promise<void>;
+  stop(): Promise<void>; // Gracefully stop Caddy server
+  adapt(config: string, adapter?: string): Promise<unknown>; // Convert Caddyfile to JSON
 
   // Routes
   getRoutes(server: string): Promise<CaddyRoute[]>;
   addRoute(server: string, route: CaddyRoute): Promise<boolean>;
+  addRoutes(server: string, routes: CaddyRoute[]): Promise<{ added: number; skipped: number }>;
   patchRoutes(server: string, routes: CaddyRoute[]): Promise<void>;
+  insertRoute(
+    server: string,
+    route: CaddyRoute,
+    position?: "beginning" | "end" | "after-health-checks"
+  ): Promise<void>;
+  replaceRouteById(server: string, id: string, newRoute: CaddyRoute): Promise<boolean>;
+  removeRouteById(server: string, id: string): Promise<boolean>;
   removeRoutesByHost(hostname: string, server?: string): Promise<number>;
 
   // Servers
   getServers(): Promise<unknown>;
+  getServerConfig(server: string): Promise<Record<string, unknown>>;
   patchServer(serverConfig: Record<string, unknown>): Promise<void>;
+
+  // Upstreams (reverse proxy status)
+  getUpstreams(): Promise<UpstreamStatus[]>; // Get health/status of upstream servers
 
   // Version
   getVersion(): Promise<unknown>;
@@ -388,6 +402,54 @@ updateDomain(options: UpdateDomainOptions): Promise<DomainConfig>;
 deleteDomain(options: DeleteDomainOptions): Promise<void>;
 getDomainConfig(domain: Domain, adminUrl?: string): Promise<DomainConfig | null>;
 ```
+
+### Advanced Schemas
+
+Zod-validated schemas for advanced Caddy configurations:
+
+```typescript
+import {
+  // Duration (Go format)
+  CaddyDurationSchema, // "10s", "1m30s", or nanoseconds
+
+  // Health checks
+  ActiveHealthChecksSchema, // uri, interval, timeout, expect_status, expect_body
+  PassiveHealthChecksSchema, // fail_duration, max_fails, unhealthy_status
+  HealthChecksSchema, // Combined active + passive
+
+  // Load balancing
+  LoadBalancingSchema, // selection_policy, retries, try_duration
+  UpstreamSchema, // dial, max_requests
+
+  // Route matching
+  ExtendedRouteMatcherSchema, // client_ip, remote_ip, path_regexp, expression, not
+
+  // Handler
+  ReverseProxyHandlerSchema, // Full reverse proxy with health checks + load balancing
+} from "@accelerated-software-development/caddy-api-client";
+```
+
+### Extended Caddy Types
+
+For advanced configurations beyond our Zod-validated builders, we re-export comprehensive type definitions from [caddy-json-types](https://github.com/CafuChino/caddy-json-types):
+
+```typescript
+import type {
+  IConfig,
+  IModulesCaddyhttpRoute,
+  IModulesCaddyhttpReverseproxyHandler,
+  IModulesCaddytlsConnectionPolicy,
+} from "@accelerated-software-development/caddy-api-client/caddy-types";
+```
+
+**Includes 591 types covering:**
+
+- Full Caddy JSON configuration structure
+- 50+ DNS providers for ACME challenges
+- Layer 4 (TCP/UDP) proxy configuration
+- PKI/CA management types
+- Storage backends (Redis, S3, DynamoDB, etc.)
+- All HTTP handlers, matchers, and encoders
 
 ## Error Handling
 
@@ -484,6 +546,23 @@ bun run lint
 bun run format
 ```
 
+## Contributing
+
+Contributions are welcome! Please [open an issue](https://github.com/asd-engineering/asd-caddy-api-client/issues) or submit a pull request if you have any improvements or fixes.
+
+1. Fork the repository
+2. Create a new branch (`git checkout -b my-feature-branch`)
+3. Make your changes
+4. Commit your changes (`git commit -am 'Add new feature'`)
+5. Push to the branch (`git push origin my-feature-branch`)
+6. Create a new Pull Request
+
 ## License
 
-MIT
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+
+This project is not affiliated with or endorsed by the Caddy project. It is an independent project created to improve the developer experience when working with Caddy JSON configurations in TypeScript.
+
+For more information on Caddy and its configuration options, please visit the [official Caddy documentation](https://caddyserver.com/docs/).

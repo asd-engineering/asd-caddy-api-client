@@ -5,6 +5,7 @@ export default defineConfig({
     index: "src/index.ts",
     "caddy/index": "src/caddy/index.ts",
     "mitm/index": "src/mitm/index.ts",
+    "caddy-types": "src/caddy-types.ts",
   },
   format: ["esm", "cjs"],
   dts: true,

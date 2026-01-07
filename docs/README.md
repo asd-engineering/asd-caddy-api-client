@@ -2,8 +2,9 @@
 
 ## 📋 Project Documentation
 
-- **[POST_PARITY_ROADMAP.md](project/POST_PARITY_ROADMAP.md)** - Tasks and priorities for npm package and .asd CLI
+- **[POST_PARITY_ROADMAP.md](project/POST_PARITY_ROADMAP.md)** - Future enhancements and roadmap
 - **[python-api-parity.md](project/python-api-parity.md)** - Feature comparison with Python caddy-api-client
+- **[mitmproxy-troubleshooting.md](mitmproxy-troubleshooting.md)** - MITMproxy troubleshooting guide
 
 ## Current Status
 
@@ -14,13 +15,13 @@
 - > 95% code coverage
 - Production ready
 
-## Next Steps
+See [CHANGELOG.md](../CHANGELOG.md) for version history and completed features.
+
+## Roadmap
 
 See [POST_PARITY_ROADMAP.md](project/POST_PARITY_ROADMAP.md) for:
 
-- P0 tasks: Package publishing, .asd integration, error recovery (~24-32 hours)
-- P1 tasks: Config validation, certificate management, logging (~38-46 hours)
-- P2 tasks: Advanced features (~60-74 hours)
-- P3 tasks: Polish & optimization (~44-62 hours)
-
-**Total identified work**: ~178-230 hours
+- **P0** - Critical: Package publishing, .asd integration, error recovery
+- **P1** - High Priority: Config validation, certificate management, logging
+- **P2** - Medium Priority: Advanced routing, multi-instance, security features
+- **P3** - Nice to Have: Developer experience, performance, testing improvements

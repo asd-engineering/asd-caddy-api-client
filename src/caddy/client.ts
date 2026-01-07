@@ -1,7 +1,7 @@
 /**
  * Caddy Admin API client
  */
-import type { CaddyClientOptions, CaddyRoute } from "../types.js";
+import type { CaddyClientOptions, CaddyRoute, UpstreamStatus } from "../types.js";
 import { CaddyApiError, NetworkError, TimeoutError, CaddyApiClientError } from "../errors.js";
 import { CaddyClientOptionsSchema, CaddyRouteSchema } from "../schemas.js";
 
@@ -421,5 +421,48 @@ export class CaddyClient {
     });
 
     return true;
+  }
+
+  /**
+   * Gracefully stop the Caddy server
+   * This triggers a graceful shutdown, allowing active connections to complete.
+   * @throws CaddyApiError if the stop request fails
+   */
+  async stop(): Promise<void> {
+    await this.request("/stop", {
+      method: "POST",
+    });
+  }
+
+  /**
+   * Get reverse proxy upstream status
+   * Returns the current state of all configured upstream servers.
+   * @returns Array of upstream server status objects
+   */
+  async getUpstreams(): Promise<UpstreamStatus[]> {
+    const response = await this.request("/reverse_proxy/upstreams");
+    const upstreams = await response.json();
+    return upstreams as UpstreamStatus[];
+  }
+
+  /**
+   * Adapt a configuration from one format to another
+   * Commonly used to convert Caddyfile to JSON configuration.
+   * @param config - The configuration content to adapt
+   * @param adapter - The adapter to use (e.g., "caddyfile")
+   * @returns The adapted configuration as JSON
+   */
+  async adapt(config: string, adapter = "caddyfile"): Promise<unknown> {
+    const response = await this.request(`/adapt`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/caddyfile",
+      },
+      body: JSON.stringify({
+        config,
+        adapter,
+      }),
+    });
+    return response.json();
   }
 }

@@ -253,6 +253,212 @@ export const LoadBalancerRouteOptionsSchema = z.object({
 });
 
 // ============================================================================
+// Advanced Caddy Schemas (from caddy-json-types coverage)
+// ============================================================================
+
+/**
+ * Caddy duration schema - accepts integer (nanoseconds) or Go duration string
+ * @example "10s", "1m30s", "2h45m", 5000000000
+ */
+export const CaddyDurationSchema = z.union([
+  z.number().int(),
+  z.string().regex(/^\d+(\.\d+)?(ns|us|µs|ms|s|m|h|d)$/, "Invalid Go duration format"),
+]);
+
+/**
+ * Active health checks schema - monitors backend health proactively
+ */
+export const ActiveHealthChecksSchema = z.object({
+  /** The URI (path and query) to use for health checks */
+  uri: z.string().optional(),
+  /** @deprecated Use 'uri' instead */
+  path: z.string().optional(),
+  /** Port to use if different from upstream's dial address */
+  port: z.number().int().positive().max(65535).optional(),
+  /** Custom headers to send with health check requests */
+  headers: z.record(z.string(), z.array(z.string())).optional(),
+  /** Whether to follow HTTP redirects (default: false) */
+  follow_redirects: z.boolean().optional(),
+  /** How frequently to perform health checks (default: 30s) */
+  interval: CaddyDurationSchema.optional(),
+  /** How long to wait for response before marking unhealthy (default: 5s) */
+  timeout: CaddyDurationSchema.optional(),
+  /** Consecutive passes before marking healthy again (default: 1) */
+  passes: z.number().int().positive().optional(),
+  /** Consecutive failures before marking unhealthy (default: 1) */
+  fails: z.number().int().positive().optional(),
+  /** Maximum response body size to download during health check */
+  max_size: z.number().int().positive().optional(),
+  /** Expected HTTP status code from healthy backend */
+  expect_status: z.number().int().min(100).max(599).optional(),
+  /** Regex pattern to match against response body */
+  expect_body: z.string().optional(),
+});
+
+/**
+ * Passive health checks schema - monitors proxied requests for errors
+ */
+export const PassiveHealthChecksSchema = z.object({
+  /** How long to remember failed requests (enables passive checks when > 0) */
+  fail_duration: CaddyDurationSchema.optional(),
+  /** Number of failures within fail_duration to mark as down (default: 1) */
+  max_fails: z.number().int().positive().optional(),
+  /** Mark as down if this many concurrent requests (default: unlimited) */
+  unhealthy_request_count: z.number().int().positive().optional(),
+  /** HTTP status codes to consider as failures */
+  unhealthy_status: z.array(z.number().int().min(100).max(599)).optional(),
+  /** Count as failed if response takes at least this long */
+  unhealthy_latency: CaddyDurationSchema.optional(),
+});
+
+/**
+ * Combined health checks schema
+ */
+export const HealthChecksSchema = z.object({
+  active: ActiveHealthChecksSchema.optional(),
+  passive: PassiveHealthChecksSchema.optional(),
+});
+
+/**
+ * Load balancing configuration schema
+ */
+export const LoadBalancingSchema = z.object({
+  /** Selection policy for choosing backends */
+  selection_policy: z
+    .object({
+      policy: z.enum([
+        "first",
+        "random",
+        "least_conn",
+        "round_robin",
+        "ip_hash",
+        "uri_hash",
+        "header",
+        "cookie",
+      ]),
+    })
+    .passthrough()
+    .optional(),
+  /** How many times to retry selecting backends if next host is down */
+  retries: z.number().int().nonnegative().optional(),
+  /** How long to try selecting backends (0 = disabled) */
+  try_duration: CaddyDurationSchema.optional(),
+  /** How long to wait between selecting next host (default: 250ms if try_duration set) */
+  try_interval: CaddyDurationSchema.optional(),
+});
+
+/**
+ * Upstream configuration schema
+ */
+export const UpstreamSchema = z.object({
+  /** Network address to dial (host:port or unix socket) */
+  dial: z.string().min(1),
+  /** Maximum simultaneous requests to this upstream */
+  max_requests: z.number().int().positive().optional(),
+});
+
+/**
+ * Header regexp matcher schema
+ */
+export const HeaderRegexpSchema = z.object({
+  name: z.string().optional(),
+  pattern: z.string(),
+});
+
+/**
+ * Base route matcher schema (non-recursive fields)
+ */
+const BaseRouteMatcherSchema = z.object({
+  /** Match by hostname */
+  host: z.array(z.string()).optional(),
+  /** Match by path */
+  path: z.array(z.string()).optional(),
+  /** Match by path with regex */
+  path_regexp: z
+    .object({
+      name: z.string().optional(),
+      pattern: z.string(),
+    })
+    .optional(),
+  /** Match by HTTP method */
+  method: z.array(HttpMethodSchema).optional(),
+  /** Match by header values */
+  header: z.record(z.string(), z.array(z.string())).optional(),
+  /** Match by header with regex (header name -> pattern) */
+  header_regexp: z.record(z.string(), HeaderRegexpSchema).optional(),
+  /** Match by query parameters */
+  query: z.record(z.string(), z.array(z.string())).optional(),
+  /** Match by client IP (CIDR ranges) */
+  client_ip: z
+    .object({
+      ranges: z.array(z.string()),
+    })
+    .optional(),
+  /** Match by remote IP (CIDR ranges) */
+  remote_ip: z
+    .object({
+      ranges: z.array(z.string()),
+    })
+    .optional(),
+  /** Match by protocol (http, https, grpc) */
+  protocol: z.enum(["http", "https", "grpc"]).optional(),
+  /** CEL expression matcher */
+  expression: z.string().optional(),
+});
+
+/**
+ * Extended route matchers schema - covers more matcher types
+ */
+export const ExtendedRouteMatcherSchema: z.ZodType<
+  z.infer<typeof BaseRouteMatcherSchema> & {
+    not?: z.infer<typeof BaseRouteMatcherSchema>[];
+  }
+> = BaseRouteMatcherSchema.extend({
+  /** Negate other matchers */
+  not: z.array(z.lazy(() => BaseRouteMatcherSchema)).optional(),
+});
+
+/**
+ * Reverse proxy handler schema with full options
+ */
+export const ReverseProxyHandlerSchema = z.object({
+  handler: z.literal("reverse_proxy"),
+  /** Static list of upstreams */
+  upstreams: z.array(UpstreamSchema).optional(),
+  /** Load balancing configuration */
+  load_balancing: LoadBalancingSchema.optional(),
+  /** Health check configuration */
+  health_checks: HealthChecksSchema.optional(),
+  /** Transport configuration (http, fastcgi, etc.) */
+  transport: z.object({ protocol: z.string() }).passthrough().optional(),
+  /** How often to flush response buffer */
+  flush_interval: CaddyDurationSchema.optional(),
+  /** Request buffer limit in bytes */
+  request_buffers: z.number().int().nonnegative().optional(),
+  /** Response buffer limit in bytes */
+  response_buffers: z.number().int().nonnegative().optional(),
+  /** Headers to add/set/delete on requests */
+  headers: z
+    .object({
+      request: z
+        .object({
+          add: z.record(z.string(), z.array(z.string())).optional(),
+          set: z.record(z.string(), z.array(z.string())).optional(),
+          delete: z.array(z.string()).optional(),
+        })
+        .optional(),
+      response: z
+        .object({
+          add: z.record(z.string(), z.array(z.string())).optional(),
+          set: z.record(z.string(), z.array(z.string())).optional(),
+          delete: z.array(z.string()).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+// ============================================================================
 // MITMProxy Schemas
 // ============================================================================
 

@@ -5,6 +5,31 @@
  */
 
 /**
+ * Caddy Admin API URL (docker-compose port 46019 -> internal 2019)
+ */
+export const CADDY_ADMIN_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:46019";
+
+/**
+ * Caddy HTTP URL (docker-compose port 46080 -> internal 80)
+ */
+export const CADDY_HTTP_URL = process.env.CADDY_HTTP_URL ?? "http://127.0.0.1:46080";
+
+/**
+ * Caddy HTTPS URL (docker-compose port 46443 -> internal 443)
+ */
+export const CADDY_HTTPS_URL = process.env.CADDY_HTTPS_URL ?? "https://127.0.0.1:46443";
+
+/**
+ * Caddy HTTP port (for httpRequest calls)
+ */
+export const CADDY_HTTP_PORT = parseInt(process.env.CADDY_HTTP_PORT ?? "46080", 10);
+
+/**
+ * Caddy HTTPS port (for https requests)
+ */
+export const CADDY_HTTPS_PORT = parseInt(process.env.CADDY_HTTPS_PORT ?? "46443", 10);
+
+/**
  * Short delay after simple operations (route add, delete)
  */
 export const DELAY_SHORT = 100;

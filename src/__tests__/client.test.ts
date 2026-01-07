@@ -865,4 +865,164 @@ describe("CaddyClient", () => {
       expect(patchedConfig.https_server.routes[0]["@id"]).toBe("route1");
     });
   });
+
+  describe("stop", () => {
+    test("sends POST request to /stop endpoint", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "",
+      } as Response);
+
+      const client = new CaddyClient();
+      await client.stop();
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "http://127.0.0.1:2019/stop",
+        expect.objectContaining({
+          method: "POST",
+        })
+      );
+    });
+
+    test("throws CaddyApiError on failure", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+        text: async () => "Shutdown failed",
+      } as Response);
+
+      const client = new CaddyClient();
+      await expect(client.stop()).rejects.toThrow(CaddyApiError);
+    });
+  });
+
+  describe("getUpstreams", () => {
+    test("fetches upstream server status", async () => {
+      const mockUpstreams = [
+        { address: "localhost:3000", num_requests: 5, fails: 0, healthy: true },
+        { address: "localhost:3001", num_requests: 3, fails: 1, healthy: true },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockUpstreams,
+      } as Response);
+
+      const client = new CaddyClient();
+      const upstreams = await client.getUpstreams();
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "http://127.0.0.1:2019/reverse_proxy/upstreams",
+        expect.any(Object)
+      );
+      expect(upstreams).toEqual(mockUpstreams);
+      expect(upstreams[0].healthy).toBe(true);
+      expect(upstreams[1].fails).toBe(1);
+    });
+
+    test("returns empty array when no upstreams configured", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      } as Response);
+
+      const client = new CaddyClient();
+      const upstreams = await client.getUpstreams();
+
+      expect(upstreams).toEqual([]);
+    });
+  });
+
+  describe("adapt", () => {
+    test("converts Caddyfile to JSON config", async () => {
+      const caddyfile = `
+        example.com {
+          reverse_proxy localhost:3000
+        }
+      `;
+
+      const mockAdaptedConfig = {
+        apps: {
+          http: {
+            servers: {
+              srv0: {
+                listen: [":443"],
+                routes: [
+                  {
+                    match: [{ host: ["example.com"] }],
+                    handle: [
+                      {
+                        handler: "reverse_proxy",
+                        upstreams: [{ dial: "localhost:3000" }],
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockAdaptedConfig,
+      } as Response);
+
+      const client = new CaddyClient();
+      const result = await client.adapt(caddyfile);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "http://127.0.0.1:2019/adapt",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            "Content-Type": "text/caddyfile",
+          }),
+        })
+      );
+      expect(result).toEqual(mockAdaptedConfig);
+    });
+
+    test("uses default caddyfile adapter", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+
+      const client = new CaddyClient();
+      await client.adapt("example.com {}");
+
+      const callArgs = mockFetch.mock.calls[0][1];
+      const body = JSON.parse(callArgs?.body as string);
+      expect(body.adapter).toBe("caddyfile");
+    });
+
+    test("allows custom adapter", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+
+      const client = new CaddyClient();
+      await client.adapt('{"apps":{}}', "json");
+
+      const callArgs = mockFetch.mock.calls[0][1];
+      const body = JSON.parse(callArgs?.body as string);
+      expect(body.adapter).toBe("json");
+    });
+
+    test("throws CaddyApiError on invalid config", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: "Bad Request",
+        text: async () => "invalid Caddyfile syntax",
+      } as Response);
+
+      const client = new CaddyClient();
+      await expect(client.adapt("invalid {{{")).rejects.toThrow(CaddyApiError);
+    });
+  });
 });

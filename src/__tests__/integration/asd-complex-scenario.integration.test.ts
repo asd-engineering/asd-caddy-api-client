@@ -27,9 +27,9 @@ import {
 } from "../../caddy/index.js";
 import type { CaddyRoute } from "../../types.js";
 import * as http from "http";
-import { DELAY_LONG } from "./constants.js";
+import { CADDY_ADMIN_URL, CADDY_HTTP_PORT, DELAY_LONG } from "./constants.js";
 
-const CADDY_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:2019";
+const CADDY_URL = CADDY_ADMIN_URL;
 const INTEGRATION_TEST = process.env.INTEGRATION_TEST === "true";
 
 // Skip integration tests unless explicitly enabled
@@ -404,7 +404,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 1: Global health endpoint works (highest priority)
     const healthResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/health",
       headers: { Host: "studio.localhost" },
     });
@@ -416,7 +416,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 2: Health endpoint works for db.localhost
     const healthResponse2 = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/health",
       headers: { Host: "db.localhost" },
     });
@@ -428,7 +428,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 2b: Health endpoint works for metrics.localhost
     const healthResponse3 = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/health",
       headers: { Host: "metrics.localhost" },
     });
@@ -440,7 +440,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 3: API service has correct X-ASD-Service-ID header
     const apiResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/api/users",
       headers: { Host: "studio.localhost" },
     });
@@ -453,7 +453,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 4: Admin service has correct X-ASD-Service-ID header
     const adminResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/admin/dashboard",
       headers: { Host: "studio.localhost" },
     });
@@ -466,7 +466,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 5: Code Server (root path) has correct X-ASD-Service-ID header
     const codeServerResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/",
       headers: { Host: "studio.localhost" },
     });
@@ -478,7 +478,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 6: Database UI has correct X-ASD-Service-ID header
     const dbResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/",
       headers: { Host: "db.localhost" },
     });
@@ -490,7 +490,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 7: Monitoring service has correct X-ASD-Service-ID header
     const metricsResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/",
       headers: { Host: "metrics.localhost" },
     });
@@ -503,7 +503,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // (Already tested above, but let's explicitly verify)
     const apiPrecedenceResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/api/test",
       headers: { Host: "studio.localhost" },
     });
@@ -522,7 +522,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 10: Domain-level auth - admin.localhost requires authentication
     const adminDashboardNoAuth = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/dashboard",
       headers: { Host: "admin.localhost" },
     });
@@ -533,7 +533,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 11: Domain-level auth - correct credentials work
     const adminDashboardWithAuth = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/dashboard",
       headers: { Host: "admin.localhost" },
       auth: { username: ADMIN_USER, password: ADMIN_PASS },
@@ -546,7 +546,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 12: Domain-level auth - multiple users work
     const adminDashboardSuperuser = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/settings",
       headers: { Host: "admin.localhost" },
       auth: { username: "superadmin", password: ADMIN_PASS },
@@ -556,7 +556,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 13: Path-level auth - api.localhost/admin/* requires auth
     const apiAdminNoAuth = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/admin/users",
       headers: { Host: "api.localhost" },
     });
@@ -566,7 +566,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 14: Path-level auth - api.localhost/admin/* works with credentials
     const apiAdminWithAuth = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/admin/users",
       headers: { Host: "api.localhost" },
       auth: { username: API_USER, password: API_PASS },
@@ -579,7 +579,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 15: Path-level auth - api.localhost/* (non-admin) is public
     const apiPublicPath = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/public/data",
       headers: { Host: "api.localhost" },
     });
@@ -590,7 +590,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 16: Public service - public.localhost is accessible without auth
     const publicService = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/data",
       headers: { Host: "public.localhost" },
     });
@@ -602,7 +602,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 17: Service isolation - admin creds don't work on API service
     const adminCredsOnApi = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/admin/test",
       headers: { Host: "api.localhost" },
       auth: { username: ADMIN_USER, password: ADMIN_PASS },
@@ -612,7 +612,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 18: Service isolation - API creds don't work on admin service
     const apiCredsOnAdmin = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/dashboard",
       headers: { Host: "admin.localhost" },
       auth: { username: API_USER, password: API_PASS },
@@ -622,7 +622,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 19: Wrong credentials are rejected
     const wrongPassword = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/dashboard",
       headers: { Host: "admin.localhost" },
       auth: { username: ADMIN_USER, password: "wrongpass" },
@@ -634,7 +634,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 20: Path prefix rewriting - /backend-service/* gets prefix stripped
     const pathRewrite = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/backend-service/api/users",
       headers: { Host: "rewrite.localhost" },
     });
@@ -648,7 +648,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 21: Path rewrite service - root path without prefix
     const pathRewriteRoot = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/backend-service/",
       headers: { Host: "rewrite.localhost" },
     });
@@ -658,7 +658,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 22: HTTPS backend service works
     const httpsBackend = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/data",
       headers: { Host: "https-backend.localhost" },
     });
@@ -670,7 +670,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 23: Verify total services count in health endpoint
     const healthCheck = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/health",
       headers: { Host: "rewrite.localhost" },
     });
@@ -904,7 +904,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 1: Global health endpoint
     const healthResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/health",
       headers: { Host: "studio.localhost" },
     });
@@ -916,7 +916,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 2: Health endpoint works for db.localhost
     const healthResponse2 = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/health",
       headers: { Host: "db.localhost" },
     });
@@ -928,7 +928,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 2b: Health endpoint works for metrics.localhost
     const healthResponse3 = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/health",
       headers: { Host: "metrics.localhost" },
     });
@@ -940,7 +940,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 3: API service has correct X-ASD-Service-ID header
     const apiResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/api/users",
       headers: { Host: "studio.localhost" },
     });
@@ -954,7 +954,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 4: Admin service has correct X-ASD-Service-ID header
     const adminResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/admin/dashboard",
       headers: { Host: "studio.localhost" },
     });
@@ -968,7 +968,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 5: Code Server (root path) has correct X-ASD-Service-ID header
     const codeServerResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/",
       headers: { Host: "studio.localhost" },
     });
@@ -981,7 +981,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 6: Database UI has correct X-ASD-Service-ID header
     const dbResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/",
       headers: { Host: "db.localhost" },
     });
@@ -994,7 +994,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 7: Monitoring service has correct X-ASD-Service-ID header
     const metricsResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/",
       headers: { Host: "metrics.localhost" },
     });
@@ -1007,7 +1007,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 8: Verify route ordering - /api/* takes precedence over /*
     const apiPrecedenceResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/api/test",
       headers: { Host: "studio.localhost" },
     });
@@ -1017,7 +1017,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Test 9: Verify /admin/* takes precedence over /*
     const adminPrecedenceResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/admin/users",
       headers: { Host: "studio.localhost" },
     });
@@ -1092,7 +1092,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Verify specific path is matched first
     const specificResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/api/test",
       headers: { Host: "test.localhost" },
     });
@@ -1102,7 +1102,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
     // Verify catch-all is matched for other paths
     const catchAllResponse = await httpRequest({
       host: "localhost",
-      port: 8080,
+      port: CADDY_HTTP_PORT,
       path: "/other",
       headers: { Host: "test.localhost" },
     });

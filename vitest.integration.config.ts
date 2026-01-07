@@ -11,6 +11,17 @@ export default defineConfig({
     fileParallelism: false,
     // Disable isolation to keep global state between tests
     isolate: false,
+    // Run tests within each file sequentially (critical for shared Caddy state)
+    sequence: {
+      concurrent: false,
+    },
+    // Use single thread to avoid race conditions
+    pool: "forks",
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
