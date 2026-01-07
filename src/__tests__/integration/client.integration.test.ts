@@ -9,9 +9,16 @@
 import { describe, test, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { CaddyClient } from "../../caddy/client.js";
 import * as http from "http";
-import { DELAY_SHORT, DELAY_MEDIUM, DELAY_LONG, DELAY_SERVER_START } from "./constants.js";
+import {
+  CADDY_ADMIN_URL,
+  CADDY_HTTP_PORT,
+  DELAY_SHORT,
+  DELAY_MEDIUM,
+  DELAY_LONG,
+  DELAY_SERVER_START,
+} from "./constants.js";
 
-const CADDY_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:2019";
+const CADDY_URL = CADDY_ADMIN_URL;
 const INTEGRATION_TEST = process.env.INTEGRATION_TEST === "true";
 
 /**
@@ -839,7 +846,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
         // Request 1: backend1.localhost should hit backend 1
         const body1 = await httpRequest({
           host: "localhost",
-          port: 8080,
+          port: CADDY_HTTP_PORT,
           path: "/",
           headers: { Host: "backend1.localhost" },
         });
@@ -848,7 +855,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
         // Request 2: backend2.localhost should hit backend 2
         const body2 = await httpRequest({
           host: "localhost",
-          port: 8080,
+          port: CADDY_HTTP_PORT,
           path: "/",
           headers: { Host: "backend2.localhost" },
         });
@@ -857,7 +864,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
         // Request 3: any other host should hit backend 3 (wildcard)
         const body3 = await httpRequest({
           host: "localhost",
-          port: 8080,
+          port: CADDY_HTTP_PORT,
           path: "/",
           headers: { Host: "other.localhost" },
         });
@@ -921,7 +928,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
         // Test: /api/test should hit backend 2 (specific route matches first)
         const body1 = await httpRequest({
           host: "localhost",
-          port: 8080,
+          port: CADDY_HTTP_PORT,
           path: "/api/test",
         });
         expect(body1).toContain("Hello from backend 2");
@@ -929,7 +936,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
         // Test: /other should hit backend 3 (wildcard route)
         const body2 = await httpRequest({
           host: "localhost",
-          port: 8080,
+          port: CADDY_HTTP_PORT,
           path: "/other",
         });
         expect(body2).toContain("Hello from backend 3");
@@ -973,7 +980,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
         // Test: /api/test should NOW hit backend 3 (wildcard matches first!)
         const body3 = await httpRequest({
           host: "localhost",
-          port: 8080,
+          port: CADDY_HTTP_PORT,
           path: "/api/test",
         });
         expect(body3).toContain("Hello from backend 3");
@@ -981,7 +988,7 @@ describeIntegration("CaddyClient Integration Tests", () => {
         // Test: /other should still hit backend 3 (wildcard)
         const body4 = await httpRequest({
           host: "localhost",
-          port: 8080,
+          port: CADDY_HTTP_PORT,
           path: "/other",
         });
         expect(body4).toContain("Hello from backend 3");

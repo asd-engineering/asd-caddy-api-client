@@ -17,9 +17,9 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { CaddyClient } from "../../caddy/client.js";
 import * as http from "http";
-import { DELAY_MEDIUM, DELAY_LONG } from "./constants.js";
+import { CADDY_ADMIN_URL, CADDY_HTTP_PORT, DELAY_MEDIUM, DELAY_LONG } from "./constants.js";
 
-const CADDY_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:2019";
+const CADDY_URL = CADDY_ADMIN_URL;
 const INTEGRATION_TEST = process.env.INTEGRATION_TEST === "true";
 
 // Skip integration tests unless explicitly enabled
@@ -193,7 +193,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
       // Verify all three subdomains reach the same backend
       const response1 = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: { Host: "test-1.asd.local" },
       });
@@ -202,7 +202,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
 
       const response2 = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: { Host: "test-2.asd.local" },
       });
@@ -211,7 +211,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
 
       const response3 = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: { Host: "test-3.asd.local" },
       });
@@ -244,7 +244,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
       // Test different subdomains matching the wildcard
       const response1 = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: { Host: "project-abc.projects.asd.local" },
       });
@@ -253,7 +253,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
 
       const response2 = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: { Host: "project-xyz.projects.asd.local" },
       });
@@ -323,7 +323,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
       // Test /api/* goes to backend 2
       const apiResponse = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/api/users",
         headers: { Host: "studio.localhost" },
       });
@@ -333,7 +333,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
       // Test /admin/* goes to backend 3
       const adminResponse = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/admin/dashboard",
         headers: { Host: "studio.localhost" },
       });
@@ -343,7 +343,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
       // Test / goes to backend 1
       const rootResponse = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: { Host: "studio.localhost" },
       });
@@ -392,7 +392,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
       // /api/v2/users should hit backend 3 (most specific)
       const v2Response = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/api/v2/users",
         headers: { Host: "app.localhost" },
       });
@@ -402,7 +402,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
       // /api/v1/users should hit backend 2
       const v1Response = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/api/v1/users",
         headers: { Host: "app.localhost" },
       });
@@ -439,7 +439,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
       try {
         const response = await httpRequest({
           host: "localhost",
-          port: 8080,
+          port: CADDY_HTTP_PORT,
           path: "/",
           headers: { Host: "host-service.localhost" },
         });
@@ -595,7 +595,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
       // Make request with custom Host header
       const response = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: { Host: "test.cicd.eu1.asd.engineer" },
       });
@@ -648,7 +648,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
       // Verify each project routes to its assigned port/backend
       const response1 = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: { Host: "project-alpha.asd.local" },
       });
@@ -657,7 +657,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
 
       const response2 = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: { Host: "project-beta.asd.local" },
       });
@@ -666,7 +666,7 @@ describeIntegration("ASD Production Routing Scenarios", () => {
 
       const response3 = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: { Host: "project-gamma.asd.local" },
       });

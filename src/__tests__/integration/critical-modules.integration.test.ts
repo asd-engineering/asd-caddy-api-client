@@ -22,9 +22,15 @@ import * as http from "http";
 import * as https from "https";
 import * as fs from "fs";
 import * as path from "path";
-import { DELAY_MEDIUM, DELAY_LONG } from "./constants.js";
+import {
+  CADDY_ADMIN_URL,
+  CADDY_HTTP_PORT,
+  CADDY_HTTPS_PORT,
+  DELAY_MEDIUM,
+  DELAY_LONG,
+} from "./constants.js";
 
-const CADDY_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:2019";
+const CADDY_URL = CADDY_ADMIN_URL;
 const INTEGRATION_TEST = process.env.INTEGRATION_TEST === "true";
 
 // Skip integration tests unless explicitly enabled
@@ -236,7 +242,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
       // Make HTTP request through the proxy
       const response = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: { Host: "proxy.localhost" },
       });
@@ -260,7 +266,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
       // Make request to www subdomain
       const response = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/test?foo=bar",
         headers: { Host: "www.redirect.localhost" },
       });
@@ -283,7 +289,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
 
       const response = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: { Host: "temp.localhost" },
       });
@@ -314,7 +320,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
       // Request with Accept-Encoding: gzip
       const response = await httpRequest({
         host: "localhost",
-        port: 8080,
+        port: CADDY_HTTP_PORT,
         path: "/",
         headers: {
           Host: "compress.localhost",
@@ -427,7 +433,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
           const req = https.request(
             {
               hostname: "localhost",
-              port: 8443,
+              port: CADDY_HTTPS_PORT,
               path: "/",
               method: "GET",
               headers: { Host: "https-test.localhost" },
@@ -670,7 +676,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
           const req = https.request(
             {
               hostname: "localhost",
-              port: 8443,
+              port: CADDY_HTTPS_PORT,
               path: "/",
               method: "GET",
               headers: { Host: "e2e-test.localhost" },
@@ -698,7 +704,7 @@ describeIntegration("Critical Modules Integration Tests", () => {
         const req = https.request(
           {
             hostname: "localhost",
-            port: 8443,
+            port: CADDY_HTTPS_PORT,
             path: "/test",
             method: "GET",
             headers: { Host: "www.e2e-test.localhost" },

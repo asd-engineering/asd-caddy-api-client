@@ -3,9 +3,9 @@ services:
     image: caddy:2.9-alpine
     container_name: caddy-test
     ports:
-      - "2019:2019" # Admin API
-      - "8443:443" # HTTPS (non-standard port to avoid conflicts)
-      - "8080:80" # HTTP
+      - "46019:2019" # Admin API (high port to avoid conflicts)
+      - "46443:443" # HTTPS (high port to avoid conflicts)
+      - "46080:80" # HTTP (high port to avoid conflicts)
     environment:
       - CADDY_ADMIN=0.0.0.0:2019
     command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile

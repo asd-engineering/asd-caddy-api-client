@@ -24,12 +24,10 @@
 import { describe, test, expect, beforeAll, afterEach } from "vitest";
 import { CaddyClient } from "../../caddy/client.js";
 import { buildHostRoute, buildLoadBalancerRoute } from "../../caddy/routes.js";
-import { MITMPROXY_WEB_URL, DELAY_MEDIUM } from "./constants.js";
+import { CADDY_ADMIN_URL, CADDY_HTTP_URL, MITMPROXY_WEB_URL, DELAY_MEDIUM } from "./constants.js";
 
 describe("Caddy + MITMproxy Integration Flow", () => {
   let client: CaddyClient;
-  const CADDY_ADMIN_URL = "http://127.0.0.1:2019";
-  const CADDY_HTTP_URL = "http://127.0.0.1:8080";
   const CADDY_SERVER_NAME = "https_server"; // Server name from other integration tests
 
   beforeAll(async () => {
