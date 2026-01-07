@@ -97,8 +97,8 @@ jobs:
 
       - name: Wait for services to be ready
         run: |
-          echo "Waiting for Caddy..."
-          timeout 60 bash -c 'until curl -f http://localhost:2019/config/; do sleep 2; done'
+          echo "Waiting for Caddy Admin API..."
+          timeout 60 bash -c 'until curl -f http://localhost:46019/config/; do sleep 2; done'
           echo "Waiting for MITMproxy..."
           timeout 60 bash -c 'until curl -f http://localhost:8081/; do sleep 2; done'
           echo "Waiting for Backend..."
@@ -115,8 +115,6 @@ jobs:
         run: bun run test:integration
         env:
           INTEGRATION_TEST: true
-          CADDY_ADMIN_URL: http://localhost:2019
-          CADDY_HTTP_URL: http://localhost:8080
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
