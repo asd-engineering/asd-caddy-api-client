@@ -1,43 +1,37 @@
-# Post-Parity Roadmap
+# Roadmap
 
 **Status**: ✅ Feature parity with Python achieved (2025-11-19)
 
-This document outlines remaining tasks and enhancements for the TypeScript Caddy API client to progress as:
+This document outlines future enhancements for the TypeScript Caddy API client.
 
-1. A critical component of the .asd CLI
-2. A standalone npm package for programmatic Caddy management
+For completed features, see [CHANGELOG.md](../../CHANGELOG.md).
 
 ---
 
-## 🎯 P0 - Critical for .asd CLI (Immediate)
+## 🎯 P0 - Critical
 
-### 1. Package Publishing ⚠️ **BLOCKER**
+### 1. Package Publishing
 
-**Why Critical**: Cannot be used in .asd CLI until published
+**Why Critical**: Required for .asd CLI integration
 
 **Tasks**:
 
-- [ ] Finalize package.json metadata
+- [x] Finalize package.json metadata
   - Package name: `@accelerated-software-development/caddy-api-client`
   - Description, keywords, repository links
   - License verification (MIT)
-- [ ] Set up npm publishing workflow
+- [x] Set up npm publishing workflow
   - GitHub Actions for automated publishing
   - Semantic versioning strategy
   - Pre-release vs stable releases
-- [ ] Publish v0.1.0 to npm registry
-  - Beta/alpha release first for testing
-  - Announce to .asd team
-
-**Dependencies**: None
-**Estimated Effort**: 4-6 hours
-**Priority**: P0 - Must complete before .asd integration
+- [x] Publish to npm registry
+  - Announce to Accelerated Software Development B.V. team
 
 ---
 
 ### 2. .asd CLI Integration Documentation
 
-**Why Critical**: .asd developers need clear integration guide
+**Why Critical**: Developers need clear integration guide
 
 **Tasks**:
 
@@ -54,15 +48,11 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
 - [ ] Create migration guide (if replacing existing code)
 - [ ] Add .asd CLI usage examples
 
-**Dependencies**: Package publishing
-**Estimated Effort**: 8-10 hours
-**Priority**: P0 - Critical for adoption
-
 ---
 
 ### 3. Error Recovery & Resilience
 
-**Why Critical**: .asd CLI must handle Caddy failures gracefully
+**Why Critical**: Production deployments must handle Caddy failures gracefully
 
 **Tasks**:
 
@@ -81,13 +71,9 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
   - Configurable timeouts
   - Clear error messages
 
-**Dependencies**: None
-**Estimated Effort**: 12-16 hours
-**Priority**: P0 - Production reliability
-
 ---
 
-## 🔥 P1 - High Priority (Near-term)
+## 🔥 P1 - High Priority
 
 ### 4. Config Validation & Testing
 
@@ -109,15 +95,11 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
   - Save before each change
   - Easy restore functionality
 
-**Dependencies**: None
-**Estimated Effort**: 10-12 hours
-**Priority**: P1 - Safety & debugging
-
 ---
 
 ### 5. Enhanced Certificate Management
 
-**Why Important**: .asd services need advanced cert features
+**Why Important**: Advanced cert features for production services
 
 **Tasks**:
 
@@ -137,15 +119,11 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
   - Webhook notifications for expiring certs
   - Dashboard integration
 
-**Dependencies**: None
-**Estimated Effort**: 16-20 hours
-**Priority**: P1 - Production cert management
-
 ---
 
 ### 6. Logging & Observability
 
-**Why Important**: .asd CLI needs visibility into Caddy operations
+**Why Important**: Visibility into Caddy operations
 
 **Tasks**:
 
@@ -165,13 +143,9 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
   - Log all config changes
   - Who/what/when tracking
 
-**Dependencies**: None
-**Estimated Effort**: 12-14 hours
-**Priority**: P1 - Debugging & monitoring
-
 ---
 
-## 🚀 P2 - Medium Priority (Future)
+## 🚀 P2 - Medium Priority
 
 ### 7. Advanced Routing Features
 
@@ -195,10 +169,6 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
   - Cache control headers
   - Cache key customization
 
-**Dependencies**: None
-**Estimated Effort**: 20-24 hours
-**Priority**: P2 - Advanced use cases
-
 ---
 
 ### 8. Multi-Caddy Instance Management
@@ -218,10 +188,6 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
 - [ ] Health checking across cluster
   - Instance health monitoring
   - Auto-remove unhealthy instances
-
-**Dependencies**: Error recovery & resilience
-**Estimated Effort**: 24-30 hours
-**Priority**: P2 - Enterprise deployments
 
 ---
 
@@ -248,13 +214,9 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
   - API key rotation
   - Multi-key support
 
-**Dependencies**: None
-**Estimated Effort**: 16-20 hours
-**Priority**: P2 - Security hardening
-
 ---
 
-## 📦 P3 - Nice to Have (Optional)
+## 📦 P3 - Nice to Have
 
 ### 10. Developer Experience Enhancements
 
@@ -276,9 +238,6 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
   - Import from other reverse proxies (nginx, traefik)
   - Export to other formats
 
-**Estimated Effort**: 20-30 hours
-**Priority**: P3 - Developer convenience
-
 ---
 
 ### 11. Performance Optimization
@@ -295,9 +254,6 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
   - Cache getConfig() results
   - Invalidation strategies
   - TTL configuration
-
-**Estimated Effort**: 8-12 hours
-**Priority**: P3 - Performance at scale
 
 ---
 
@@ -320,76 +276,6 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
   - Invalid input handling
   - Edge case discovery
 
-**Estimated Effort**: 16-20 hours
-**Priority**: P3 - Robustness
-
----
-
-## 📊 Priority Summary
-
-| Priority | Count   | Total Effort | Focus                               |
-| -------- | ------- | ------------ | ----------------------------------- |
-| **P0**   | 3 tasks | 24-32 hours  | .asd CLI integration & publishing   |
-| **P1**   | 3 tasks | 50-62 hours  | Production reliability & monitoring |
-| **P2**   | 3 tasks | 60-74 hours  | Advanced features                   |
-| **P3**   | 3 tasks | 44-62 hours  | Polish & optimization               |
-
-**Total Remaining**: ~178-230 hours of work
-
----
-
-## 🎯 Recommended Next Steps
-
-### Immediate (Next 2 weeks)
-
-1. ✅ **Package Publishing** - Unblock .asd CLI integration
-2. ✅ **Integration Docs** - Enable .asd team to use the package
-3. ✅ **Retry Logic** - Production stability
-
-### Short-term (Next month)
-
-4. Config validation & safety features
-5. Enhanced certificate management
-6. Logging & observability
-
-### Long-term (Next quarter)
-
-7. Advanced routing features
-8. Security enhancements
-9. Developer experience improvements
-
----
-
-## 📈 Current State
-
-### ✅ Completed (Feature Parity)
-
-- All core domain management (add, update, delete)
-- Certificate rotation with zero-downtime
-- Redirect modes (www ↔ domain, configurable status codes)
-- Security headers (HSTS, X-Frame-Options, etc.)
-- HTTP Basic Authentication
-- Path rewriting
-- Load balancing
-- Compression (gzip, zstd, brotli)
-- TLS connection policies
-- Route ordering system
-- High-level helper functions
-- 294 unit tests + 51 integration tests
-- > 95% code coverage
-
-### ❌ Not Yet Implemented
-
-- Package publishing to npm
-- .asd CLI integration documentation
-- Retry logic & error recovery
-- Config validation & dry-run
-- `load_pem` certificate support
-- Structured logging
-- Advanced routing (rate limiting, caching)
-- Multi-instance management
-- Advanced security (CSP, mTLS, IP filtering)
-
 ---
 
 ## 📝 Notes
@@ -405,7 +291,5 @@ This document outlines remaining tasks and enhancements for the TypeScript Caddy
 
 ## 🔗 Related Documents
 
-- [FEATURE_ROADMAP.md](FEATURE_ROADMAP.md) - Historical feature implementation
+- [CHANGELOG.md](../../CHANGELOG.md) - Version history and completed features
 - [python-api-parity.md](python-api-parity.md) - Python comparison
-- [REFACTOR_PROGRESS.md](REFACTOR_PROGRESS.md) - Architecture improvements
-- [../wiki/TESTING_STRATEGY.md](../wiki/TESTING_STRATEGY.md) - Testing philosophy

@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-01-06
+
+### Added
+
+- **GitHub Pages API documentation** - Auto-generated TypeDoc at [asd-engineering.github.io/asd-caddy-api-client](https://asd-engineering.github.io/asd-caddy-api-client)
+- **Automated npm publishing** - GitHub Actions workflow with provenance attestation
+- **VERSIONING.md** - Comprehensive versioning and release guide
+- **LICENSE** - MIT license file
+- **TypeDoc configuration** - API documentation generation (`bun run docs:build`)
+- **Release automation** - standard-version for changelog generation and version bumping
+- **Version auto-sync** - VERSION export now reads from package.json automatically
+- **Justfile commands** - `just release`, `just release-dry`, `just verify-package`
+- **.npmignore** - Proper npm package file filtering
+
+### Changed
+
+- Package name: `@asd/caddy-api-client` → `@accelerated-software-development/caddy-api-client`
+- Repository URL: `github.com/asd/caddy-api-client` → `github.com/asd-engineering/asd-caddy-api-client`
+- Homepage now points to GitHub Pages documentation
+- Examples updated to use new package name
+- Roadmap cleaned up (removed time estimates, updated team references)
+- README simplified (removed redundant documentation section)
+
+### Fixed
+
+- Incorrect GitHub URLs throughout documentation
+- Broken documentation links in README (now use absolute GitHub URLs)
+
 ## [0.1.0] - 2025-11-18
 
 ### Added
@@ -48,6 +76,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Usage examples for all major features
   - Error handling guide
 
+### Python API Parity
+
+Full feature parity with [caddy-api-client](https://github.com/migetapp/caddy-api-client) (Python) v0.2.4:
+
+- ✅ All core domain management (add, update, delete)
+- ✅ Certificate rotation with zero-downtime
+- ✅ Redirect modes (www ↔ domain, configurable status codes)
+- ✅ Security headers (HSTS, X-Frame-Options, etc.)
+- ✅ HTTP Basic Authentication
+- ✅ Path rewriting
+- ✅ Load balancing with health checks
+- ✅ Compression support (gzip, zstd, brotli)
+- ✅ TLS connection policies
+- ✅ Route ordering system
+- ✅ High-level helper functions
+- ✅ 294 unit tests + 51 integration tests
+- ✅ > 95% code coverage
+
 ### Features
 
 - ✅ Zero runtime dependencies (only peer dependency: zod)
@@ -58,4 +104,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Rich error messages with context
 - ✅ 100% test coverage for route builders and schemas
 
-[0.1.0]: https://github.com/asd/caddy-api-client/releases/tag/v0.1.0
+[0.2.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/asd-engineering/asd-caddy-api-client/releases/tag/v0.1.0
