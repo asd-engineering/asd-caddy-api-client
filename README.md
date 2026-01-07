@@ -324,16 +324,30 @@ class CaddyClient {
   // Configuration
   getConfig(): Promise<unknown>;
   reload(): Promise<void>;
+  stop(): Promise<void>; // Gracefully stop Caddy server
+  adapt(config: string, adapter?: string): Promise<unknown>; // Convert Caddyfile to JSON
 
   // Routes
   getRoutes(server: string): Promise<CaddyRoute[]>;
   addRoute(server: string, route: CaddyRoute): Promise<boolean>;
+  addRoutes(server: string, routes: CaddyRoute[]): Promise<{ added: number; skipped: number }>;
   patchRoutes(server: string, routes: CaddyRoute[]): Promise<void>;
+  insertRoute(
+    server: string,
+    route: CaddyRoute,
+    position?: "beginning" | "end" | "after-health-checks"
+  ): Promise<void>;
+  replaceRouteById(server: string, id: string, newRoute: CaddyRoute): Promise<boolean>;
+  removeRouteById(server: string, id: string): Promise<boolean>;
   removeRoutesByHost(hostname: string, server?: string): Promise<number>;
 
   // Servers
   getServers(): Promise<unknown>;
+  getServerConfig(server: string): Promise<Record<string, unknown>>;
   patchServer(serverConfig: Record<string, unknown>): Promise<void>;
+
+  // Upstreams (reverse proxy status)
+  getUpstreams(): Promise<UpstreamStatus[]>; // Get health/status of upstream servers
 
   // Version
   getVersion(): Promise<unknown>;
