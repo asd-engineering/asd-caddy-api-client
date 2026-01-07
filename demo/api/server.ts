@@ -81,13 +81,26 @@ async function setupRoutes() {
   });
 
   // 3. MITMproxy Web UI route - with iframe-permissive headers
+  // Match both /mitmproxy and /mitmproxy/* paths
+  // Set Host header to IP to bypass mitmproxy's DNS rebinding protection
   routes.push({
     "@id": "mitmproxy_ui_route",
-    match: [{ path: ["/mitmproxy/*"] }],
+    match: [{ path: ["/mitmproxy", "/mitmproxy/*"] }],
     handle: [
       buildRewriteHandler("/mitmproxy"),
       buildIframePermissiveHandler(),
-      buildReverseProxyHandler("mitmproxy:8081"),
+      {
+        handler: "reverse_proxy",
+        transport: { protocol: "http" },
+        headers: {
+          request: {
+            set: {
+              Host: ["127.0.0.1:8081"],
+            },
+          },
+        },
+        upstreams: [{ dial: "mitmproxy:8081" }],
+      } as CaddyRouteHandler,
     ],
     terminal: true,
   });

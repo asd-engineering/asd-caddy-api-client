@@ -1,0 +1,26 @@
+version: 1
+project:
+  name: "${PROJECT_NAME:-app}"
+automation:
+  start:
+    - run: "bun ./.asd/bin/asd.ts supabase bootstrap"
+    - reloadDotenv: true
+    - run: "just dev" # user's app dev target
+  stop:
+    - run: 'pkill -f "vite|pnpm.*dev|node.*dev"' # best-effort; user may edit
+  routes.publish:
+    - run: "bun ./.asd/bin/asd.ts caddy start"
+    - run: "bun ./.asd/bin/asd.ts net-apply --live"
+network:
+  services:
+    # Demo services
+    demo:
+      name: Demo Dashboard
+      dial: "127.0.0.1:9080"
+      host: "demo.localhost"
+      paths: ["/"]
+      tunnelPreferred: true
+      publishPreferred: host
+
+tunnels:
+  mode: caddy

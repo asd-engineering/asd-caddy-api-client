@@ -50,6 +50,7 @@ services:
       --listen-port 8080
       --no-web-open-browser
       --set keep_host_header=true
+      --set block_global=false
     ports:
       - "9082:8080" # Proxy port (external 9082 -> internal 8080)
       - "9081:8081" # Web UI (external 9081 -> internal 8081)

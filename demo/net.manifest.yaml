@@ -1,0 +1,83 @@
+id: demo
+name: MITMproxy Demo
+description: Dynamic MITMproxy traffic inspection via Caddy Admin API
+tunnel:
+  tunnelPreferred: true
+  protocol: http
+  port: 9080
+  subdomainHint: demo
+caddy:
+  publishPreferred: true
+  rawRoutes:
+    # Dashboard route
+    - "@id": demo_dashboard
+      match:
+        - path: ["/dashboard", "/dashboard/*"]
+      handle:
+        - handler: reverse_proxy
+          upstreams:
+            - dial: "127.0.0.1:9080"
+      terminal: true
+
+    # App route with CORS
+    - "@id": demo_app
+      match:
+        - path: ["/app", "/app/*"]
+      handle:
+        - handler: headers
+          response:
+            set:
+              Access-Control-Allow-Origin: ["*"]
+        - handler: reverse_proxy
+          upstreams:
+            - dial: "127.0.0.1:9080"
+      terminal: true
+
+    # MITMproxy Web UI with iframe-permissive headers
+    - "@id": demo_mitmproxy
+      match:
+        - path: ["/mitmproxy", "/mitmproxy/*"]
+      handle:
+        - handler: headers
+          response:
+            deferred: true
+            delete: ["X-Frame-Options", "Content-Security-Policy", "X-Xss-Protection"]
+            set:
+              Access-Control-Allow-Origin: ["*"]
+        - handler: reverse_proxy
+          upstreams:
+            - dial: "127.0.0.1:9080"
+      terminal: true
+
+    # API route
+    - "@id": demo_api
+      match:
+        - path: ["/api/*"]
+      handle:
+        - handler: reverse_proxy
+          upstreams:
+            - dial: "127.0.0.1:9080"
+      terminal: true
+
+    # ES route (dynamically modified by demo)
+    - "@id": demo_es
+      match:
+        - path: ["/es/*"]
+      handle:
+        - handler: reverse_proxy
+          upstreams:
+            - dial: "127.0.0.1:9080"
+      terminal: true
+
+    # Root redirect
+    - "@id": demo_root
+      match:
+        - path: ["/"]
+      handle:
+        - handler: static_response
+          status_code: 302
+          headers:
+            Location: ["/dashboard"]
+      terminal: true
+labels:
+  group: demo
