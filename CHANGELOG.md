@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `getUpstreams()` - Get reverse proxy upstream server status (health, request counts)
   - `adapt()` - Convert Caddyfile or other formats to JSON configuration
 - **UpstreamStatus type** - Type definition for upstream server status
+- **Extended Caddy types** - Re-export of 591 comprehensive type definitions from [caddy-json-types](https://github.com/CafuChino/caddy-json-types) via `/caddy-types` entry point. Includes DNS providers, Layer 4 proxy, PKI/CA, storage backends, and all HTTP handlers/matchers.
+- **Advanced Zod schemas** - New validated schemas for advanced Caddy configurations:
+  - `CaddyDurationSchema` - Go duration strings ("10s", "1m30s") and nanoseconds
+  - `ActiveHealthChecksSchema` - Full active health check options (uri, interval, timeout, expect_status, etc.)
+  - `PassiveHealthChecksSchema` - Passive health monitoring (fail_duration, max_fails, unhealthy_status)
+  - `HealthChecksSchema` - Combined active + passive health checks
+  - `LoadBalancingSchema` - Selection policies (ip_hash, uri_hash, cookie, header) + retry options
+  - `UpstreamSchema` - Upstream config with max_requests
+  - `ExtendedRouteMatcherSchema` - client_ip, remote_ip, path_regexp, header_regexp, protocol, expression, not
+  - `ReverseProxyHandlerSchema` - Full reverse proxy config with health checks, load balancing, headers
 - **GitHub Pages API documentation** - Auto-generated TypeDoc at [asd-engineering.github.io/asd-caddy-api-client](https://asd-engineering.github.io/asd-caddy-api-client)
 - **Automated npm publishing** - GitHub Actions workflow with provenance attestation
 - **VERSIONING.md** - Comprehensive versioning and release guide

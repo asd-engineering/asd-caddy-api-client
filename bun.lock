@@ -5,6 +5,7 @@
       "name": "@asd/caddy-api-client",
       "dependencies": {
         "@peculiar/x509": "^1.14.2",
+        "caddy-json-types": "^1.0.4",
       },
       "devDependencies": {
         "@eslint/js": "^9.32.0",
@@ -309,6 +310,8 @@
     "bundle-require": ["bundle-require@5.1.0", "", { "dependencies": { "load-tsconfig": "^0.2.3" }, "peerDependencies": { "esbuild": ">=0.18" } }, "sha512-3WrrOuZiyaaZPWiEt4G3+IffISVC9HYlWueJEBWED4ZH4aIAC2PnkdnuRrR94M+w6yGWn4AglWtJtBI8YqvgoA=="],
 
     "cac": ["cac@6.7.14", "", {}, "sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ=="],
+
+    "caddy-json-types": ["caddy-json-types@1.0.4", "", {}, "sha512-N5/+J/oejkxtbkRRvs72ZGFKwjiBgAbP19V2AoS14ZYUFA9IcXCR2dal5MRIkkxkwzG2E5chKfiyOwwU8mPl/A=="],
 
     "callsites": ["callsites@3.1.0", "", {}, "sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ=="],
 

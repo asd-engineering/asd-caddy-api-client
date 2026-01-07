@@ -21,6 +21,11 @@
       "types": "./dist/mitm/index.d.ts",
       "import": "./dist/mitm/index.js",
       "require": "./dist/mitm/index.cjs"
+    },
+    "./caddy-types": {
+      "types": "./dist/caddy-types.d.ts",
+      "import": "./dist/caddy-types.js",
+      "require": "./dist/caddy-types.cjs"
     }
   },
   "files": [
@@ -105,6 +110,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@peculiar/x509": "^1.14.2"
+    "@peculiar/x509": "^1.14.2",
+    "caddy-json-types": "^1.0.4"
   }
 }

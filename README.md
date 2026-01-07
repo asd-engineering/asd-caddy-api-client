@@ -42,7 +42,7 @@ const routes = buildServiceRoutes({
   },
 });
 
-// Add routes to Caddy (simplified - no loop needed!)
+// Add routes to Caddy
 await client.addRoutes("https_server", routes);
 ```
 
@@ -402,6 +402,54 @@ updateDomain(options: UpdateDomainOptions): Promise<DomainConfig>;
 deleteDomain(options: DeleteDomainOptions): Promise<void>;
 getDomainConfig(domain: Domain, adminUrl?: string): Promise<DomainConfig | null>;
 ```
+
+### Advanced Schemas
+
+Zod-validated schemas for advanced Caddy configurations:
+
+```typescript
+import {
+  // Duration (Go format)
+  CaddyDurationSchema, // "10s", "1m30s", or nanoseconds
+
+  // Health checks
+  ActiveHealthChecksSchema, // uri, interval, timeout, expect_status, expect_body
+  PassiveHealthChecksSchema, // fail_duration, max_fails, unhealthy_status
+  HealthChecksSchema, // Combined active + passive
+
+  // Load balancing
+  LoadBalancingSchema, // selection_policy, retries, try_duration
+  UpstreamSchema, // dial, max_requests
+
+  // Route matching
+  ExtendedRouteMatcherSchema, // client_ip, remote_ip, path_regexp, expression, not
+
+  // Handler
+  ReverseProxyHandlerSchema, // Full reverse proxy with health checks + load balancing
+} from "@accelerated-software-development/caddy-api-client";
+```
+
+### Extended Caddy Types
+
+For advanced configurations beyond our Zod-validated builders, we re-export comprehensive type definitions from [caddy-json-types](https://github.com/CafuChino/caddy-json-types):
+
+```typescript
+import type {
+  IConfig,
+  IModulesCaddyhttpRoute,
+  IModulesCaddyhttpReverseproxyHandler,
+  IModulesCaddytlsConnectionPolicy,
+} from "@accelerated-software-development/caddy-api-client/caddy-types";
+```
+
+**Includes 591 types covering:**
+
+- Full Caddy JSON configuration structure
+- 50+ DNS providers for ACME challenges
+- Layer 4 (TCP/UDP) proxy configuration
+- PKI/CA management types
+- Storage backends (Redis, S3, DynamoDB, etc.)
+- All HTTP handlers, matchers, and encoders
 
 ## Error Handling
 
