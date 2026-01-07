@@ -21,11 +21,14 @@ export default defineConfig({
         "node_modules/",
         "dist/",
         ".asd/",
+        "docs/",
+        "docs/api/",
         "**/*.test.ts",
         "**/*.config.ts",
         "**/*.config.mjs",
         "examples/",
         "test/",
+        "**/index.ts", // Re-export files have no logic
       ],
     },
     testTimeout: 10000, // 10s for integration tests
