@@ -64,10 +64,44 @@ function createProductCard(product) {
   const description = document.createElement("div");
   description.className = "product-description";
   description.textContent = product.description || "";
+  // Hide descriptions by default (feature flag can show them)
+  description.style.display = appConfig.showDescriptions === true ? "block" : "none";
 
   const price = document.createElement("div");
   price.className = "product-price";
-  price.textContent = `$${(product.price || 0).toFixed(2)}`;
+
+  const originalPrice = product.price || 0;
+  const symbol = appConfig.currencySymbol || "$";
+
+  // Apply discount if configured
+  if (appConfig.discountPercent > 0 && appConfig.discountPercent < 100) {
+    const discountedPrice = originalPrice * (1 - appConfig.discountPercent / 100);
+
+    const originalSpan = document.createElement("span");
+    originalSpan.className = "original-price";
+    originalSpan.textContent = `${symbol}${originalPrice.toFixed(2)}`;
+
+    const discountedSpan = document.createElement("span");
+    discountedSpan.className = "discounted-price";
+    discountedSpan.textContent = `${symbol}${discountedPrice.toFixed(2)}`;
+
+    const badge = document.createElement("span");
+    badge.className = "discount-badge";
+    badge.textContent = `-${appConfig.discountPercent}%`;
+
+    price.appendChild(originalSpan);
+    price.appendChild(document.createTextNode(" "));
+    price.appendChild(discountedSpan);
+    price.appendChild(document.createTextNode(" "));
+    price.appendChild(badge);
+  } else {
+    price.textContent = `${symbol}${originalPrice.toFixed(2)}`;
+  }
+
+  // Hide prices if configured
+  if (appConfig.showPrices === false) {
+    price.style.display = "none";
+  }
 
   card.appendChild(category);
   card.appendChild(name);
@@ -277,16 +311,114 @@ function applyTheme(config) {
   if (config.primaryColor) root.style.setProperty("--primary-color", config.primaryColor);
   if (config.accentColor) root.style.setProperty("--accent-color", config.accentColor);
 
-  // Light theme preset
+  // Theme presets
   if (config.theme === "light") {
     root.style.setProperty("--bg-color", "#f8fafc");
     root.style.setProperty("--card-color", "#ffffff");
     root.style.setProperty("--text-color", "#1e293b");
+  } else if (config.theme === "neon") {
+    root.style.setProperty("--bg-color", "#0a0a0a");
+    root.style.setProperty("--card-color", "#1a1a2e");
+    root.style.setProperty("--text-color", "#00ff88");
+    root.style.setProperty("--primary-color", "#ff00ff");
+    root.style.setProperty("--accent-color", "#00ffff");
+  } else if (config.theme === "hacker") {
+    root.style.setProperty("--bg-color", "#000000");
+    root.style.setProperty("--card-color", "#0d1117");
+    root.style.setProperty("--text-color", "#00ff00");
+    root.style.setProperty("--primary-color", "#00ff00");
+    root.style.setProperty("--accent-color", "#00ff00");
   }
 
   // Update app name
   const h1 = document.querySelector("h1");
   if (h1 && config.appName) h1.textContent = config.appName;
+
+  // Apply feature flags
+  applyFeatures(config);
+}
+
+/**
+ * Create debug panel content using safe DOM methods
+ */
+function createDebugPanelContent(config) {
+  const fragment = document.createDocumentFragment();
+
+  const title = document.createElement("div");
+  title.className = "debug-title";
+  title.textContent = "Admin Debug Panel";
+  fragment.appendChild(title);
+
+  const items = [
+    ["Config loaded:", new Date().toLocaleTimeString()],
+    ["Theme:", config.theme || "dark"],
+    ["Prices visible:", String(config.showPrices !== false)],
+    ["Discount:", `${config.discountPercent || 0}%`],
+    ["Admin mode:", "ACTIVE"],
+  ];
+
+  items.forEach(([label, value]) => {
+    const item = document.createElement("div");
+    item.className = "debug-item";
+    const labelSpan = document.createElement("span");
+    labelSpan.textContent = label;
+    item.appendChild(labelSpan);
+    item.appendChild(document.createTextNode(" " + value));
+    fragment.appendChild(item);
+  });
+
+  return fragment;
+}
+
+/**
+ * Apply feature flags from config (interceptable for manipulation!)
+ */
+function applyFeatures(config) {
+  // Secret message banner
+  let banner = document.getElementById("secret-banner");
+  if (config.secretMessage) {
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.id = "secret-banner";
+      banner.className = "secret-banner";
+      document.body.insertBefore(banner, document.body.firstChild);
+    }
+    banner.textContent = config.secretMessage;
+    banner.style.display = "block";
+  } else if (banner) {
+    banner.style.display = "none";
+  }
+
+  // Admin mode debug panel
+  let debugPanel = document.getElementById("debug-panel");
+  if (config.adminMode === true) {
+    if (!debugPanel) {
+      debugPanel = document.createElement("div");
+      debugPanel.id = "debug-panel";
+      debugPanel.className = "debug-panel";
+      document.body.appendChild(debugPanel);
+    }
+    // Clear existing content
+    while (debugPanel.firstChild) {
+      debugPanel.removeChild(debugPanel.firstChild);
+    }
+    debugPanel.appendChild(createDebugPanelContent(config));
+    debugPanel.style.display = "block";
+  } else if (debugPanel) {
+    debugPanel.style.display = "none";
+  }
+
+  // Show/hide prices
+  const priceElements = document.querySelectorAll(".product-price");
+  priceElements.forEach((el) => {
+    el.style.display = config.showPrices === false ? "none" : "block";
+  });
+
+  // Show/hide descriptions
+  const descElements = document.querySelectorAll(".product-description");
+  descElements.forEach((el) => {
+    el.style.display = config.showDescriptions === true ? "block" : "none";
+  });
 }
 
 // Initialize

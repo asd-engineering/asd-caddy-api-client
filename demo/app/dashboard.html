@@ -44,6 +44,16 @@
         box-shadow:
           0 2px 12px rgba(0, 0, 0, 0.1),
           0 1px 3px rgba(0, 0, 0, 0.08);
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Glowing border when capturing */
+      .flow-control.capturing {
+        border: 2px solid #22c55e;
+        box-shadow:
+          0 0 10px rgba(34, 197, 94, 0.4),
+          0 0 20px rgba(34, 197, 94, 0.2);
       }
       .flow-node {
         padding: 0.5rem 1rem;
@@ -411,6 +421,21 @@
         border-radius: 0.15rem;
         color: #94a3b8;
       }
+      .challenge-divider {
+        border-top: 1px solid #334155;
+        margin: 0.75rem 0;
+      }
+      .challenge-header {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #f59e0b;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 0.5rem 0.75rem;
+        background: linear-gradient(90deg, rgba(245, 158, 11, 0.1), transparent);
+        border-left: 2px solid #f59e0b;
+        margin-bottom: 0.5rem;
+      }
 
       /* Toast */
       .toast {
@@ -435,15 +460,53 @@
         background: #7f1d1d;
       }
 
-      /* Resize handle */
+      /* Resize handle - draggable divider between panels */
       .resize-handle {
-        width: 4px;
+        width: 6px;
         background: #334155;
         cursor: col-resize;
         transition: background 0.2s;
+        position: relative;
+        flex-shrink: 0;
       }
-      .resize-handle:hover {
-        background: #475569;
+      .resize-handle::before {
+        content: "";
+        position: absolute;
+        left: -4px;
+        right: -4px;
+        top: 0;
+        bottom: 0;
+        cursor: col-resize;
+      }
+      .resize-handle:hover,
+      .resize-handle.dragging {
+        background: #3b82f6;
+      }
+      .resize-handle::after {
+        content: "⋮";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #64748b;
+        font-size: 0.75rem;
+        pointer-events: none;
+      }
+      .resize-handle:hover::after {
+        color: white;
+      }
+
+      /* Smooth resize - disable iframe interaction during drag */
+      body.resizing {
+        cursor: col-resize;
+        user-select: none;
+      }
+      body.resizing iframe {
+        pointer-events: none;
+      }
+      body.resizing .app-pane,
+      body.resizing .mitm-pane {
+        transition: none;
       }
     </style>
   </head>
@@ -555,11 +618,13 @@
               <div class="challenge-title">Modify Response Data</div>
               <div class="challenge-desc">Change prices, inject products, fix errors</div>
               <ol class="challenge-steps">
-                <li>Enable intercept in <b>Options</b> → <code>~s</code></li>
-                <li>Search "keyboard" - response pauses</li>
-                <li>Click flow → <b>Response</b> → <b>Edit</b></li>
-                <li>Change <code>"price": 149.99</code> → <code>0.01</code></li>
-                <li>Press <b>a</b> to resume</li>
+                <li>Click <b>Options</b> tab in MITMproxy</li>
+                <li>Find <b>intercept</b> field, enter: <code>~s</code> (all responses)</li>
+                <li>Search "keyboard" in Product Search app</li>
+                <li>Response pauses (orange) → click the flow</li>
+                <li>Click <b>Response</b> tab → find JSON body</li>
+                <li>Change <code>"price": 149.99</code> → <code>"price": 0.01</code></li>
+                <li>Press <b>a</b> to resume - see the cheap keyboard!</li>
               </ol>
             </div>
             <div class="challenge">
@@ -593,6 +658,67 @@
                 <li>See <code>index_not_found_exception</code></li>
                 <li>URL has typo: <code>products_v2</code> → <code>products</code></li>
                 <li><b>Edit</b> URL path and <b>Replay</b></li>
+              </ol>
+            </div>
+
+            <div class="challenge-divider"></div>
+            <div class="challenge-header">Response Manipulation (Node API)</div>
+
+            <div class="challenge">
+              <div class="challenge-title">Theme Hacking</div>
+              <div class="challenge-desc">Intercept /node/config and change app colors</div>
+              <ol class="challenge-steps">
+                <li>Switch to <b>Node API</b> tab above</li>
+                <li>In MITMproxy: click <b>Options</b> tab (top menu)</li>
+                <li>Find <b>intercept</b> field (scroll down or search)</li>
+                <li>Enter: <code>~s & ~u config</code> (intercepts config responses)</li>
+                <li>In Product Search app (left): refresh the page</li>
+                <li>
+                  <b>Note:</b> The flow list may not auto-update. Click <b>Flow List</b> tab or
+                  press F5 to see the paused orange flow
+                </li>
+                <li>Click the orange/paused config flow in the list</li>
+                <li>Click <b>Response</b> tab → Click <b>Edit</b> button</li>
+                <li>Change <code>"backgroundColor"</code> to <code>"#ff0000"</code></li>
+                <li>Or try <code>"theme": "neon"</code> or <code>"hacker"</code></li>
+                <li>Click <b>Resume All</b> (top right) to complete the response</li>
+              </ol>
+            </div>
+            <div class="challenge">
+              <div class="challenge-title">Unlock Secret Banner</div>
+              <div class="challenge-desc">Add hidden feature flag to show a banner</div>
+              <ol class="challenge-steps">
+                <li>
+                  Set up intercept as above (Options → intercept → <code>~s & ~u config</code>)
+                </li>
+                <li>Refresh Product Search app, then refresh MITMproxy flow list</li>
+                <li>Click paused flow → Response → Edit</li>
+                <li>Add: <code>"secretMessage": "You found me!"</code></li>
+                <li>Click <b>Resume All</b> → A rainbow banner appears!</li>
+              </ol>
+            </div>
+            <div class="challenge">
+              <div class="challenge-title">Enable Admin Mode</div>
+              <div class="challenge-desc">Activate hidden debug panel</div>
+              <ol class="challenge-steps">
+                <li>Set up intercept as above</li>
+                <li>Refresh app, refresh MITMproxy, click paused config flow</li>
+                <li>
+                  Response → Edit → Change <code>"adminMode": false</code> to <code>true</code>
+                </li>
+                <li>Click <b>Resume All</b></li>
+                <li>Green debug panel appears in bottom-right!</li>
+              </ol>
+            </div>
+            <div class="challenge">
+              <div class="challenge-title">Apply Fake Discount</div>
+              <div class="challenge-desc">Make all products show discounted prices</div>
+              <ol class="challenge-steps">
+                <li>Set up intercept as above</li>
+                <li>Refresh app, refresh MITMproxy flow list</li>
+                <li>Click paused flow → Response → Edit</li>
+                <li>Change <code>"discountPercent": 0</code> to <code>50</code></li>
+                <li>Click <b>Resume All</b> → Search for products → 50% off badges!</li>
               </ol>
             </div>
           </div>
@@ -866,24 +992,36 @@
         arrow.textContent = content.classList.contains("open") ? "▲" : "▼";
       });
 
-      // Resize handle
+      // Resize handle - drag to resize panels
       const resizeHandle = document.getElementById("resize-handle");
       const appPane = document.getElementById("app-pane");
+      const mainContainer = document.querySelector(".main-container");
       let isResizing = false;
 
-      resizeHandle.addEventListener("mousedown", () => {
+      resizeHandle.addEventListener("mousedown", (e) => {
         isResizing = true;
+        resizeHandle.classList.add("dragging");
+        document.body.classList.add("resizing");
+        e.preventDefault();
       });
+
       document.addEventListener("mousemove", (e) => {
         if (!isResizing) return;
-        const containerWidth = document.querySelector(".main-container").offsetWidth;
-        const newWidth = (e.clientX / containerWidth) * 100;
-        if (newWidth > 20 && newWidth < 80) {
-          appPane.style.flex = `0 0 ${newWidth}%`;
-        }
+        requestAnimationFrame(() => {
+          const containerRect = mainContainer.getBoundingClientRect();
+          const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+          if (newWidth > 15 && newWidth < 85) {
+            appPane.style.flex = `0 0 ${newWidth}%`;
+          }
+        });
       });
+
       document.addEventListener("mouseup", () => {
-        isResizing = false;
+        if (isResizing) {
+          isResizing = false;
+          resizeHandle.classList.remove("dragging");
+          document.body.classList.remove("resizing");
+        }
       });
 
       // Init

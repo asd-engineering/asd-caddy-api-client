@@ -34,13 +34,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Collapsible debugging challenges panel
   - Resizable split-pane layout
 
-- **Elasticsearch Debugging Challenges** (6 real-world scenarios)
+- **Elasticsearch Debugging Challenges** (5 automated + 1 guide)
   - Bulk indexing failures (malformed NDJSON detection)
   - Zero-hits search debugging (Query DSL field name/case issues)
-  - Mapping type mismatch (`mapper_parsing_exception`)
+  - Mapping type mismatch (`document_parsing_exception`)
   - Aggregation on text field (fielddata disabled error)
   - Index not found 404 (typo in index name)
   - Response modification walkthrough (manual MITMproxy guide)
+
+- **Response Manipulation Challenges** (4 interactive feature flag demos)
+  - Theme Hacking - Intercept `/node/config` to change app colors
+  - Unlock Secret Banner - Inject `secretMessage` to show rainbow banner
+  - Enable Admin Mode - Set `adminMode: true` to reveal debug panel
+  - Apply Fake Discount - Set `discountPercent` to show sale prices
+
+- **Feature Flag System** for demo app manipulation
+  - `showPrices` - Toggle price visibility
+  - `showDescriptions` - Toggle product descriptions
+  - `discountPercent` - Apply percentage discount with strikethrough styling
+  - `secretMessage` - Display animated rainbow banner
+  - `adminMode` - Show terminal-style debug panel
+  - Theme presets: `dark`, `light`, `neon`, `hacker`
+  - `_manipulation_hints` - In-response hints for MITMproxy users
 
 - **Demo API Endpoints** (`demo/api/server.ts`)
   - `/api/monitoring/enable/:service` - Enable MITMproxy interception
@@ -52,6 +67,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Demo app uses clean, minimal UI design with muted colors
 - Flow diagram replaces toggle switch as primary intercept control
+- Improved panel resize handle with visual feedback (drag indicator, blue highlight)
+- Challenge instructions now include detailed steps for MITMproxy Options → intercept setup
+- Challenge instructions updated with "Resume All" workflow (replaces keyboard shortcut 'a')
+- MITMproxy iframe auto-refreshes when interception is enabled
+- Note: MITMproxy flow list may require manual refresh when accessed through Caddy proxy
 
 ## [0.2.0] - 2026-01-06
 

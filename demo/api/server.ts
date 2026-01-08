@@ -577,9 +577,11 @@ const server = Bun.serve({
       }
 
       // Theme config - intercept and change to see visual effects!
+      // This endpoint is perfect for MITMproxy manipulation challenges
       if (path === "/node/config" || path === "/config") {
         return Response.json(
           {
+            // === Theme Settings (modify these to change app appearance) ===
             theme: "dark",
             primaryColor: "#3b82f6",
             accentColor: "#f59e0b",
@@ -588,11 +590,27 @@ const server = Bun.serve({
             textColor: "#e2e8f0",
             borderRadius: "0.5rem",
             appName: "Product Search",
-            showPrices: true,
+
+            // === Feature Flags (hidden features - activate by changing values!) ===
+            showPrices: true, // Set to false to hide all prices
+            showDescriptions: false, // Set to true to show product descriptions
+            discountPercent: 0, // Set 1-99 to show discounted prices (e.g., 50 = 50% off)
+            secretMessage: null, // Set to any string to show a secret banner!
+            adminMode: false, // Set to true to show debug info panel
+
+            // === Display Settings ===
             currency: "USD",
             currencySymbol: "$",
             maxResults: 20,
-            _hint: "Change theme to 'light' or modify colors!",
+
+            // === Hints for MITMproxy users ===
+            _manipulation_hints: {
+              theme: "Try: 'light', 'dark', 'neon', or 'hacker'",
+              backgroundColor: "Try: '#ff0000' (red), '#00ff00' (green)",
+              secretMessage: "Try: 'You found the secret!'",
+              discountPercent: "Try: 50 (shows 50% off all prices)",
+              adminMode: "Try: true (shows debug panel)",
+            },
           },
           { headers: corsHeaders }
         );
