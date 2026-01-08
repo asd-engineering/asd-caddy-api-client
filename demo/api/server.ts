@@ -243,7 +243,143 @@ const server = Bun.serve({
         );
       }
 
-      // Challenge endpoints for MITMproxy demos
+      // ============================================
+      // CHALLENGE ENDPOINTS - Real ES Debugging Scenarios
+      // ============================================
+
+      // Challenge 1: Bulk Indexing with broken NDJSON
+      // Real symptom: _bulk returns 400 or partial failures
+      if (path === "/api/challenge/bulk-broken" && req.method === "POST") {
+        // Simulate sending broken NDJSON to Elasticsearch
+        // Problem: Pretty-printed JSON instead of NDJSON, missing newlines
+        const brokenBulkPayload = `{"index":{"_index":"products"}}
+{
+  "name": "Broken Product",
+  "price": 99.99,
+  "category": "Electronics"
+}
+{"index":{"_index":"products"}}{"name":"Missing Newline","price":49.99}{"index":{"_index":"products"}}
+{"name": "Also Broken", "price": 29.99}`;
+
+        // Send to ES via the /es route (which may go through MITM)
+        try {
+          const esResponse = await fetch(`http://localhost:9080/es/_bulk`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-ndjson" },
+            body: brokenBulkPayload,
+          });
+          const result = await esResponse.json();
+          return Response.json(
+            {
+              challenge: "bulk-indexing",
+              description: "Bulk request sent with formatting issues",
+              hint: "In MITMproxy: Check the request body - see the pretty-printed JSON and missing newlines?",
+              mitmAction: "Edit the request body to fix NDJSON format: each line must be compact JSON",
+              esResponse: result,
+            },
+            { headers: corsHeaders }
+          );
+        } catch (e) {
+          return Response.json(
+            { error: "Failed to send bulk request", details: String(e) },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+      }
+
+      // Challenge 2: Search returns 0 hits - Query DSL mismatch
+      // Real symptom: _search returns empty hits when you expect results
+      if (path === "/api/challenge/search-zero-hits" && req.method === "POST") {
+        // Send a query with common mistakes:
+        // - Using 'match' on a 'keyword' field (should use 'term')
+        // - Wrong field name
+        const brokenQuery = {
+          query: {
+            bool: {
+              must: [
+                { match: { category: "electronics" } }, // Problem: category is keyword, needs exact match "Electronics"
+                { match: { product_name: "keyboard" } }, // Problem: field is "name", not "product_name"
+              ],
+            },
+          },
+        };
+
+        try {
+          const esResponse = await fetch(`http://localhost:9080/es/products/_search`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(brokenQuery),
+          });
+          const result = await esResponse.json();
+          return Response.json(
+            {
+              challenge: "query-dsl-mismatch",
+              description: "Search returned 0 hits - but we know keyboards exist!",
+              sentQuery: brokenQuery,
+              hint: "In MITMproxy: Inspect the request body - the Query DSL has issues",
+              problems: [
+                "1. 'category' is a keyword field - needs exact case: 'Electronics' not 'electronics'",
+                "2. Field name is 'name', not 'product_name'",
+              ],
+              mitmAction: "Edit request: change 'product_name' to 'name', change 'electronics' to 'Electronics'",
+              esResponse: result,
+            },
+            { headers: corsHeaders }
+          );
+        } catch (e) {
+          return Response.json(
+            { error: "Failed to send search", details: String(e) },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+      }
+
+      // Challenge 3: 429 Rate Limiting / Rejection Storm
+      // Real symptom: Under load, ES returns 429s and retries make it worse
+      if (path === "/api/challenge/rate-limit-storm" && req.method === "POST") {
+        const results: Array<{ request: number; status: number; time: number }> = [];
+        const startTime = Date.now();
+
+        // Fire 10 rapid requests to simulate burst traffic
+        const promises = Array.from({ length: 10 }, async (_, i) => {
+          const reqStart = Date.now() - startTime;
+          try {
+            const response = await fetch(`http://localhost:9080/es/products/_search`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                query: { match_all: {} },
+                size: 100,
+                _source: true,
+              }),
+            });
+            results.push({ request: i + 1, status: response.status, time: reqStart });
+          } catch {
+            results.push({ request: i + 1, status: 0, time: reqStart });
+          }
+        });
+
+        await Promise.all(promises);
+
+        return Response.json(
+          {
+            challenge: "rate-limit-burst",
+            description: "Fired 10 rapid requests - watch for patterns in MITMproxy",
+            hint: "In MITMproxy: Sort by timing, look for status codes and request patterns",
+            mitmInsights: [
+              "• See burst timing - all requests within milliseconds",
+              "• In production, 429s would appear here during overload",
+              "• Retries would show as duplicate requests",
+              "• This is how you diagnose 'retry storm' problems",
+            ],
+            results: results.sort((a, b) => a.time - b.time),
+            totalTime: Date.now() - startTime,
+          },
+          { headers: corsHeaders }
+        );
+      }
+
+      // Challenge 4: Fix broken JSON response (original, enhanced)
       if (path === "/node/broken" || path === "/broken") {
         // Returns intentionally broken JSON - fix it in MITMproxy!
         const brokenJson = `{
@@ -258,6 +394,7 @@ const server = Bun.serve({
         });
       }
 
+      // Challenge 5: 500 Error (original, enhanced)
       if (path === "/node/error500" || path === "/error500") {
         // Returns 500 error - change to 200 in MITMproxy!
         return Response.json(

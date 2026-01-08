@@ -550,13 +550,84 @@
           </button>
         </div>
 
-        <!-- Tips (collapsible) -->
+        <!-- Challenges (collapsible) -->
         <div class="tips-section">
           <div class="tips-header" id="tips-toggle">
-            <span class="tips-title">🎯 Challenges</span>
+            <span class="tips-title">🎯 Real-World ES Debugging</span>
             <span class="tips-arrow" id="tips-arrow">▼</span>
           </div>
           <div class="tips-content" id="tips-content">
+
+          <!-- Challenge 1: Bulk Indexing Debug -->
+          <div class="tip" style="border-left-color: #ef4444;">
+            <div class="tip-header">📦 Debug Bulk Indexing Failures</div>
+            <div class="tip-desc" style="margin-bottom: 0.5rem; color: #94a3b8;">
+              <b>Real symptom:</b> <code>_bulk</code> returns 400 or partial failures
+            </div>
+            <button class="challenge-btn red" id="btn-bulk-broken">Send Broken Bulk Request</button>
+            <ol class="tip-steps">
+              <li>Click above → request goes through MITMproxy</li>
+              <li>Find the <code>/_bulk</code> request in the flow list</li>
+              <li>Click request → see the <b>raw wire payload</b></li>
+              <li>Spot the issues:
+                <ul style="margin-left: 1rem; margin-top: 0.25rem;">
+                  <li>Pretty-printed JSON (should be compact)</li>
+                  <li>Missing newline delimiters</li>
+                  <li>Check <code>Content-Type: application/x-ndjson</code></li>
+                </ul>
+              </li>
+              <li><b>Replay</b> with fixed NDJSON to see success!</li>
+            </ol>
+          </div>
+
+          <!-- Challenge 2: Query DSL Inspector -->
+          <div class="tip" style="border-left-color: #f59e0b;">
+            <div class="tip-header">🔍 Debug "0 Hits" Search Results</div>
+            <div class="tip-desc" style="margin-bottom: 0.5rem; color: #94a3b8;">
+              <b>Real symptom:</b> Search returns empty when you expect results
+            </div>
+            <button class="challenge-btn" id="btn-search-zero" style="background: linear-gradient(135deg, #f59e0b, #d97706);">Send Broken Query</button>
+            <ol class="tip-steps">
+              <li>Click above → expect keyboards, get 0 hits!</li>
+              <li>In MITMproxy: find the <code>/_search</code> request</li>
+              <li>Click → <b>Request</b> tab → see the Query DSL</li>
+              <li>Spot the bugs:
+                <ul style="margin-left: 1rem; margin-top: 0.25rem;">
+                  <li><code>"category": "electronics"</code> → should be <code>"Electronics"</code> (keyword field!)</li>
+                  <li><code>"product_name"</code> → field is actually <code>"name"</code></li>
+                </ul>
+              </li>
+              <li><b>Edit</b> the request and <b>Replay</b> to fix it!</li>
+            </ol>
+          </div>
+
+          <!-- Challenge 3: Rate Limit Storm -->
+          <div class="tip" style="border-left-color: #8b5cf6;">
+            <div class="tip-header">⚡ Analyze Burst Traffic Patterns</div>
+            <div class="tip-desc" style="margin-bottom: 0.5rem; color: #94a3b8;">
+              <b>Real symptom:</b> 429 rejections under load, retries make it worse
+            </div>
+            <button class="challenge-btn" id="btn-rate-storm" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">Fire 10 Rapid Requests</button>
+            <ol class="tip-steps">
+              <li>Click above → fires 10 requests in parallel</li>
+              <li>In MITMproxy: watch the <b>timeline</b> fill up</li>
+              <li>Sort by timing → see the burst pattern</li>
+              <li>In production, you'd see:
+                <ul style="margin-left: 1rem; margin-top: 0.25rem;">
+                  <li>429 status codes during overload</li>
+                  <li>Duplicate requests from retries</li>
+                  <li>Escalating "retry storm"</li>
+                </ul>
+              </li>
+              <li>This is how you diagnose threadpool rejections!</li>
+            </ol>
+          </div>
+
+          <div style="border-top: 1px solid #334155; margin: 0.75rem 0; padding-top: 0.5rem;">
+            <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Quick Challenges</div>
+          </div>
+
+          <!-- Original challenges, condensed -->
           <div class="tip">
             <div class="tip-header">💰 Change a Price to $0.01</div>
             <ol class="tip-steps">
@@ -567,24 +638,13 @@
               <li>Press <b>a</b> to resume</li>
             </ol>
           </div>
+
           <div class="tip">
             <div class="tip-header">🔧 Fix Broken JSON</div>
             <button class="challenge-btn" id="btn-broken-json">Send Broken Response</button>
             <div class="tip-desc">Intercept and fix the malformed JSON before it reaches the browser!</div>
           </div>
-          <div class="tip">
-            <div class="tip-header">🎁 Inject a Free Product</div>
-            <ol class="tip-steps">
-              <li>Intercept a search response</li>
-              <li>In the hits array, add:</li>
-            </ol>
-            <code class="tip-code">{"_source":{"name":"FREE GIFT","price":0,"category":"Secret"}}</code>
-          </div>
-          <div class="tip">
-            <div class="tip-header">💀 Simulate Server Error</div>
-            <button class="challenge-btn red" id="btn-500-error">Trigger 500 Error</button>
-            <div class="tip-desc">Change status 200→500 and see error handling!</div>
-          </div>
+
           <div class="tip">
             <div class="tip-header">🎨 Switch to Light Theme</div>
             <button class="challenge-btn green" id="btn-theme">Fetch Theme Config</button>
@@ -592,17 +652,9 @@
               <li>Click above to fetch config</li>
               <li>Intercept the <code>/node/config</code> response</li>
               <li>Change <code>"theme": "dark"</code> → <code>"light"</code></li>
-              <li>Watch the app switch themes! ✨</li>
             </ol>
           </div>
-          <div class="tip">
-            <div class="tip-header">🏷️ Rename the App</div>
-            <ol class="tip-steps">
-              <li>Intercept <code>/node/config</code></li>
-              <li>Change <code>"appName"</code> to anything!</li>
-              <li>Try: <code>"HACKED Store"</code> 😈</li>
-            </ol>
-          </div>
+
           </div>
         </div>
       </div>
@@ -803,17 +855,61 @@
         }
       });
 
-      document.getElementById("btn-500-error").addEventListener("click", async () => {
-        showToast("Sending request that returns 500... Change it to 200! 💀");
+      // New ES debugging challenges
+      document.getElementById("btn-bulk-broken")?.addEventListener("click", async () => {
+        if (!state.elasticsearch) {
+          showToast("Enable Elasticsearch monitoring first! ⚠️", "error");
+          return;
+        }
+        showToast("Sending broken bulk request... Check /_bulk in MITMproxy! 📦");
         try {
-          const res = await fetch(`${API}/node/error500`);
-          if (res.status === 200) {
-            showToast("Status 200! You fixed it! 🎉");
+          const res = await fetch(`${API}/api/challenge/bulk-broken`, { method: "POST" });
+          const result = await res.json();
+          if (result.esResponse?.errors) {
+            showToast("Bulk had errors! Inspect the NDJSON format in MITMproxy 🔴", "error");
           } else {
-            showToast(`Status ${res.status} - Change to 200 in MITMproxy!`, "error");
+            showToast("Bulk succeeded - check the wire format anyway! ✅");
           }
+          console.log("Bulk challenge result:", result);
         } catch (e) {
-          showToast("Request failed: " + e.message, "error");
+          showToast("Challenge failed: " + e.message, "error");
+        }
+      });
+
+      document.getElementById("btn-search-zero")?.addEventListener("click", async () => {
+        if (!state.elasticsearch) {
+          showToast("Enable Elasticsearch monitoring first! ⚠️", "error");
+          return;
+        }
+        showToast("Sending broken query... Should find keyboards but won't! 🔍");
+        try {
+          const res = await fetch(`${API}/api/challenge/search-zero-hits`, { method: "POST" });
+          const result = await res.json();
+          const hits = result.esResponse?.hits?.total?.value ?? 0;
+          if (hits === 0) {
+            showToast(`0 hits! Inspect the Query DSL in MITMproxy to find the bugs 🔴`, "error");
+          } else {
+            showToast(`Found ${hits} hits! Did you fix the query? 🎉`);
+          }
+          console.log("Search challenge result:", result);
+        } catch (e) {
+          showToast("Challenge failed: " + e.message, "error");
+        }
+      });
+
+      document.getElementById("btn-rate-storm")?.addEventListener("click", async () => {
+        if (!state.elasticsearch) {
+          showToast("Enable Elasticsearch monitoring first! ⚠️", "error");
+          return;
+        }
+        showToast("Firing 10 rapid requests... Watch MITMproxy timeline! ⚡");
+        try {
+          const res = await fetch(`${API}/api/challenge/rate-limit-storm`, { method: "POST" });
+          const result = await res.json();
+          showToast(`Burst complete in ${result.totalTime}ms - check the pattern!`);
+          console.log("Rate storm challenge result:", result);
+        } catch (e) {
+          showToast("Challenge failed: " + e.message, "error");
         }
       });
 
