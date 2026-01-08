@@ -128,7 +128,7 @@ services:
 
   # Seed sample data into Elasticsearch
   seed:
-    image: curlimages/curl:latest
+    image: alpine:latest
     container_name: demo-seed
     volumes:
       - ./data:/data:ro
@@ -138,7 +138,7 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
-    entrypoint: ["sh", "/seed.sh"]
+    entrypoint: ["sh", "-c", "apk add --no-cache curl jq && sh /seed.sh"]
 
 networks:
   demo-net:

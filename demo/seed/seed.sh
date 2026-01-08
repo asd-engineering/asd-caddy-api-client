@@ -59,30 +59,11 @@ curl -sf -X PUT "${ES_URL}/${INDEX_NAME}" \
 echo ""
 echo "Loading sample products..."
 
-# Read products and bulk index
-# Build bulk request body
-BULK_BODY=""
-ID=1
-
-# Read JSON and create bulk index request
-while IFS= read -r line; do
-  # Skip empty lines and array brackets
-  case "$line" in
-    "["*|"]"*|"") continue ;;
-  esac
-
-  # Remove trailing comma if present
-  line=$(echo "$line" | sed 's/,$//')
-
-  # Add bulk index action and document
-  BULK_BODY="${BULK_BODY}{\"index\":{\"_index\":\"${INDEX_NAME}\",\"_id\":\"${ID}\"}}\n${line}\n"
-  ID=$((ID + 1))
-done < /data/products.json
-
-# Send bulk request
-echo -e "$BULK_BODY" | curl -sf -X POST "${ES_URL}/_bulk" \
-  -H "Content-Type: application/x-ndjson" \
-  --data-binary @-
+# Use jq to convert JSON array to NDJSON bulk format
+jq -c '.[] | {"index": {"_index": "'"${INDEX_NAME}"'"}}, .' /data/products.json | \
+  curl -sf -X POST "${ES_URL}/_bulk" \
+    -H "Content-Type: application/x-ndjson" \
+    --data-binary @-
 
 echo ""
 echo "Refreshing index..."
