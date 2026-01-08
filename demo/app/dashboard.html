@@ -14,6 +14,8 @@
         flex-direction: column;
         color: #e2e8f0;
       }
+
+      /* Header */
       header {
         background: #1e293b;
         padding: 0.5rem 1rem;
@@ -22,109 +24,108 @@
         align-items: center;
         border-bottom: 1px solid #334155;
       }
-      h1 { color: #f59e0b; font-size: 1rem; font-weight: 600; }
-      .subtitle { color: #64748b; font-size: 0.75rem; }
-
-      .main-container { display: flex; flex: 1; overflow: hidden; }
-
-      /* Switchboard Panel */
-      .switchboard {
-        width: 300px;
-        background: #1e293b;
-        border-right: 1px solid #334155;
-        padding: 1rem;
+      h1 { color: #94a3b8; font-size: 0.9rem; font-weight: 500; }
+      h1 span { color: #e2e8f0; font-weight: 600; }
+      .header-status {
         display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        overflow-y: auto;
-      }
-      .switchboard-title {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.75rem;
         color: #64748b;
-        margin-bottom: 0.25rem;
       }
-
-      /* Flow Diagram */
-      .flow-diagram {
-        background: #0f172a;
-        border-radius: 0.5rem;
-        padding: 0.5rem;
-        font-size: 0.65rem;
-      }
-      .flow-path {
-        display: flex;
-        align-items: center;
-        gap: 0.2rem;
-        padding: 0.25rem;
-        background: #1e293b;
-        border-radius: 0.25rem;
-        margin-bottom: 0.25rem;
-        transition: all 0.3s;
-      }
-      .flow-path:last-child { margin-bottom: 0; }
-      .flow-path.active {
-        background: rgba(245, 158, 11, 0.15);
-        border: 1px solid rgba(245, 158, 11, 0.4);
-      }
-      .flow-node {
-        padding: 0.15rem 0.3rem;
-        border-radius: 0.15rem;
-        font-size: 0.6rem;
-        white-space: nowrap;
-      }
-      .flow-node.browser { background: #3b82f6; color: white; }
-      .flow-node.caddy { background: #22c55e; color: white; }
-      .flow-node.mitmproxy { background: #f59e0b; color: #1e293b; font-weight: 600; }
-      .flow-node.service { background: #8b5cf6; color: white; }
-      .flow-node.muted { background: #334155; color: #64748b; }
-      .flow-arrow { color: #475569; font-size: 0.5rem; }
-
-      /* Service Card */
-      .service-card {
-        background: #0f172a;
-        border-radius: 0.5rem;
-        padding: 0.625rem;
-        border: 2px solid #334155;
-        transition: all 0.3s;
-      }
-      .service-card.enabled {
-        border-color: #f59e0b;
-        box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
-      }
-      .service-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .service-info { display: flex; flex-direction: column; gap: 0.1rem; }
-      .service-name { font-weight: 600; font-size: 0.85rem; }
-      .service-path { font-size: 0.65rem; color: #64748b; font-family: monospace; }
-      .service-status {
-        display: flex;
-        align-items: center;
-        gap: 0.375rem;
-        margin-top: 0.5rem;
-        padding-top: 0.5rem;
-        border-top: 1px solid #334155;
-        font-size: 0.65rem;
-      }
-      .service-status .status-dot {
+      .status-dot {
         width: 8px;
         height: 8px;
         border-radius: 50%;
         background: #64748b;
       }
-      .service-status .status-text { color: #94a3b8; }
-      .service-card.enabled .service-status .status-dot { background: #22c55e; }
-      .service-card.enabled .service-status .status-text { color: #22c55e; }
+      .status-dot.active { background: #22c55e; }
 
-      /* Toggle Switch */
+      /* Main Layout */
+      .main-container {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      /* App Pane (Left) */
+      .app-pane {
+        flex: 0 0 45%;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #334155;
+      }
+      .app-header {
+        padding: 0.5rem 1rem;
+        background: #1e293b;
+        border-bottom: 1px solid #334155;
+        font-size: 0.8rem;
+        color: #94a3b8;
+      }
+      .app-iframe {
+        flex: 1;
+        border: none;
+        background: #0f172a;
+      }
+
+      /* MITMproxy Pane (Right) */
+      .mitm-pane {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #1e293b;
+      }
+
+      /* Tab Header with Controls */
+      .mitm-header {
+        display: flex;
+        align-items: stretch;
+        border-bottom: 1px solid #334155;
+      }
+      .mitm-tabs {
+        display: flex;
+        flex: 1;
+      }
+      .mitm-tab {
+        padding: 0.625rem 1rem;
+        background: transparent;
+        border: none;
+        color: #64748b;
+        font-size: 0.8rem;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .mitm-tab:hover { color: #94a3b8; }
+      .mitm-tab.active {
+        color: #e2e8f0;
+        border-bottom-color: #64748b;
+      }
+      .mitm-tab .indicator {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #475569;
+      }
+      .mitm-tab.capturing .indicator { background: #22c55e; }
+
+      /* Service Toggle in Header */
+      .service-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0 1rem;
+        border-left: 1px solid #334155;
+        font-size: 0.75rem;
+        color: #64748b;
+      }
       .toggle-switch {
         position: relative;
-        width: 48px;
-        height: 26px;
+        width: 36px;
+        height: 20px;
         cursor: pointer;
       }
       .toggle-switch input { opacity: 0; width: 0; height: 0; }
@@ -132,560 +133,279 @@
         position: absolute;
         inset: 0;
         background: #334155;
-        border-radius: 26px;
-        transition: all 0.3s;
+        border-radius: 20px;
+        transition: all 0.2s;
       }
       .toggle-slider::before {
         content: "";
         position: absolute;
-        width: 20px;
-        height: 20px;
+        width: 14px;
+        height: 14px;
         left: 3px;
         bottom: 3px;
         background: #64748b;
         border-radius: 50%;
-        transition: all 0.3s;
+        transition: all 0.2s;
       }
-      .toggle-switch input:checked + .toggle-slider { background: #f59e0b; }
+      .toggle-switch input:checked + .toggle-slider { background: #475569; }
       .toggle-switch input:checked + .toggle-slider::before {
-        transform: translateX(22px);
-        background: white;
+        transform: translateX(16px);
+        background: #22c55e;
       }
-      .toggle-switch input:disabled + .toggle-slider { opacity: 0.5; cursor: not-allowed; }
 
-      /* Action Buttons */
-      .action-section {
+      /* Tab Content */
+      .mitm-content {
+        flex: 1;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
+      }
+      .tab-panel {
+        display: none;
+        flex: 1;
+        flex-direction: column;
+      }
+      .tab-panel.active { display: flex; }
+
+      /* Test Actions Bar */
+      .actions-bar {
+        display: flex;
+        align-items: center;
         gap: 0.5rem;
-        padding-top: 0.5rem;
-        border-top: 1px solid #334155;
+        padding: 0.5rem 0.75rem;
+        background: #0f172a;
+        border-bottom: 1px solid #334155;
+      }
+      .actions-label {
+        font-size: 0.7rem;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
       }
       .action-btn {
-        padding: 0.5rem;
+        padding: 0.375rem 0.75rem;
         background: #334155;
         border: none;
-        border-radius: 0.375rem;
-        color: #e2e8f0;
-        font-size: 0.75rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-      }
-      .action-btn:hover { background: #475569; }
-      .action-btn:active { transform: scale(0.98); }
-
-      /* Tip Box */
-      .tip-box {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: #1e3a5f;
-        border-radius: 0.375rem;
-        padding: 0.5rem 0.75rem;
-        font-size: 0.7rem;
+        border-radius: 0.25rem;
         color: #94a3b8;
-      }
-      .tip-box kbd {
-        background: #334155;
-        padding: 0.1rem 0.3rem;
-        border-radius: 0.2rem;
-        font-family: monospace;
-        font-weight: bold;
-        color: #f59e0b;
-      }
-
-      /* Test Buttons */
-      .test-section { padding-top: 0.5rem; border-top: 1px solid #334155; }
-
-      /* Tips Section */
-      .tips-section {
-        margin-top: 0.75rem;
-        padding-top: 0.5rem;
-        border-top: 1px solid #334155;
-      }
-      .tips-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        cursor: pointer;
-        padding: 0.375rem;
-        background: #334155;
-        border-radius: 0.375rem;
-        margin-bottom: 0.5rem;
-        transition: background 0.2s;
-      }
-      .tips-header:hover { background: #475569; }
-      .tips-title {
         font-size: 0.75rem;
-        font-weight: 600;
-        color: #f59e0b;
+        cursor: pointer;
+        transition: all 0.15s;
       }
-      .tips-arrow {
-        font-size: 0.65rem;
+      .action-btn:hover { background: #475569; color: #e2e8f0; }
+      .action-btn code {
         color: #64748b;
-        transition: transform 0.2s;
+        font-size: 0.65rem;
+        margin-left: 0.25rem;
       }
-      .tips-arrow.collapsed { transform: rotate(-90deg); }
-      .tips-content {
-        max-height: 500px;
+
+      /* MITMproxy iframe */
+      .mitm-iframe {
+        flex: 1;
+        border: none;
+        background: #0f172a;
+      }
+
+      /* Challenges Panel (collapsible) */
+      .challenges-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.75rem;
+        background: #1e293b;
+        border-top: 1px solid #334155;
+        cursor: pointer;
+        font-size: 0.75rem;
+        color: #64748b;
+      }
+      .challenges-toggle:hover { background: #334155; }
+      .challenges-content {
+        max-height: 0;
         overflow: hidden;
         transition: max-height 0.3s ease;
-      }
-      .tips-content.collapsed {
-        max-height: 0;
-      }
-      .tip {
         background: #0f172a;
-        border-radius: 0.375rem;
-        padding: 0.5rem;
-        margin-bottom: 0.5rem;
-        border-left: 3px solid #3b82f6;
       }
-      .tip-header {
-        font-size: 0.7rem;
-        font-weight: 600;
-        color: #e2e8f0;
-        margin-bottom: 0.375rem;
+      .challenges-content.open { max-height: 400px; overflow-y: auto; }
+      .challenge {
+        padding: 0.75rem;
+        border-bottom: 1px solid #1e293b;
       }
-      .tip-steps {
-        font-size: 0.65rem;
-        color: #94a3b8;
-        margin-left: 1rem;
-        line-height: 1.5;
-      }
-      .tip-steps li { margin-bottom: 0.15rem; }
-      .tip-steps code {
-        background: #334155;
-        padding: 0.1rem 0.25rem;
-        border-radius: 0.2rem;
-        font-size: 0.6rem;
-        color: #22c55e;
-      }
-      .tip-steps b { color: #f59e0b; }
-      .tip-desc {
-        font-size: 0.6rem;
-        color: #64748b;
-        margin-top: 0.25rem;
-        font-style: italic;
-      }
-      .tip-code {
-        display: block;
-        background: #334155;
-        padding: 0.375rem;
-        border-radius: 0.25rem;
-        font-size: 0.55rem;
-        color: #22c55e;
-        margin-top: 0.25rem;
-        word-break: break-all;
-        line-height: 1.4;
-      }
-      .challenge-btn {
-        width: 100%;
-        padding: 0.375rem;
-        margin-top: 0.25rem;
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-        border: none;
-        border-radius: 0.25rem;
-        color: white;
-        font-size: 0.65rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-      .challenge-btn:hover { transform: scale(1.02); filter: brightness(1.1); }
-      .challenge-btn:active { transform: scale(0.98); }
-      .challenge-btn.red { background: linear-gradient(135deg, #dc2626, #991b1b); }
-      .challenge-btn.green { background: linear-gradient(135deg, #22c55e, #15803d); }
-      .test-title { font-size: 0.65rem; color: #64748b; margin-bottom: 0.375rem; }
-      .test-btn {
-        width: 100%;
-        padding: 0.375rem 0.5rem;
-        margin-bottom: 0.25rem;
-        background: #334155;
-        border: none;
-        border-radius: 0.25rem;
-        color: #e2e8f0;
-        font-size: 0.7rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-align: left;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .test-btn:hover { background: #475569; }
-      .test-btn .endpoint { font-family: monospace; color: #94a3b8; font-size: 0.6rem; }
-      .test-btn.es { border-left: 3px solid #8b5cf6; }
-      .test-btn.node { border-left: 3px solid #22c55e; }
-
-      /* Content Area */
-      .content-area { flex: 1; display: flex; flex-direction: column; }
-
-      /* Panes */
-      .panes { flex: 1; display: flex; padding: 4px; }
-      .pane {
-        display: flex;
-        flex-direction: column;
-        background: #1e293b;
-        border-radius: 0.5rem;
-        overflow: hidden;
-        min-width: 200px;
-      }
-      .pane-left { flex: 0 0 40%; }
-      .pane-right { flex: 1; }
-
-      /* Resize Handle */
-      .resize-handle {
-        width: 12px;
-        background: linear-gradient(90deg, #1e293b, #334155, #1e293b);
-        cursor: col-resize;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-        position: relative;
-      }
-      .resize-handle::before {
-        content: "⋮⋮";
-        color: #64748b;
-        font-size: 0.875rem;
-        letter-spacing: -2px;
-      }
-      .resize-handle:hover, .resize-handle.dragging {
-        background: linear-gradient(90deg, #f59e0b22, #f59e0b, #f59e0b22);
-        width: 14px;
-      }
-      .resize-handle:hover::before, .resize-handle.dragging::before {
-        color: #f59e0b;
-      }
-      .pane-header {
-        padding: 0.375rem 0.625rem;
-        background: #334155;
-        color: #e2e8f0;
-        font-weight: 600;
-        font-size: 0.7rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .pane-badge {
-        font-size: 0.6rem;
-        padding: 0.1rem 0.3rem;
-        border-radius: 9999px;
-        background: #475569;
-      }
-      .pane-badge.active { background: #f59e0b; color: #1e293b; }
-
-      /* Tabs for MITM proxies */
-      .mitm-tabs {
-        display: flex;
-        gap: 4px;
-        padding: 0.5rem;
-        background: #0f172a;
-        border-bottom: 2px solid #334155;
-      }
-      .mitm-tab {
-        padding: 0.5rem 1rem;
-        background: #334155;
-        border: 2px solid #475569;
-        border-bottom: none;
-        border-radius: 0.5rem 0.5rem 0 0;
-        color: #94a3b8;
+      .challenge:last-child { border-bottom: none; }
+      .challenge-title {
         font-size: 0.8rem;
         font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-        position: relative;
-        top: 2px;
+        color: #e2e8f0;
+        margin-bottom: 0.25rem;
       }
-      .mitm-tab:hover { background: #475569; color: #e2e8f0; border-color: #64748b; }
-      .mitm-tab.active {
-        background: #1e293b;
-        color: #f59e0b;
-        font-weight: 600;
-        border-color: #f59e0b;
-        border-bottom: 2px solid #1e293b;
+      .challenge-desc {
+        font-size: 0.7rem;
+        color: #64748b;
+        margin-bottom: 0.5rem;
       }
-      .mitm-tab .badge {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        margin-left: 0.5rem;
-        background: #475569;
-        vertical-align: middle;
-      }
-      .mitm-tab.capturing .badge { background: #22c55e; animation: pulse 1.5s infinite; }
-      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-      .mitm-content { flex: 1; position: relative; }
-      .mitm-iframe {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
+      .challenge-btn {
+        padding: 0.375rem 0.75rem;
+        background: #334155;
         border: none;
-        background: #0f172a;
-        display: none;
+        border-radius: 0.25rem;
+        color: #94a3b8;
+        font-size: 0.7rem;
+        cursor: pointer;
+        transition: all 0.15s;
       }
-      .mitm-iframe.active { display: block; }
-
-      iframe { flex: 1; border: none; background: #0f172a; }
+      .challenge-btn:hover { background: #475569; color: #e2e8f0; }
+      .challenge-steps {
+        font-size: 0.65rem;
+        color: #64748b;
+        margin-top: 0.5rem;
+        padding-left: 1rem;
+        line-height: 1.6;
+      }
+      .challenge-steps code {
+        background: #1e293b;
+        padding: 0.1rem 0.25rem;
+        border-radius: 0.15rem;
+        color: #94a3b8;
+      }
 
       /* Toast */
       .toast {
         position: fixed;
         bottom: 1rem;
-        right: 1rem;
-        background: #1e293b;
-        border: 1px solid #334155;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: #334155;
+        color: #e2e8f0;
+        padding: 0.75rem 1.5rem;
         border-radius: 0.5rem;
-        padding: 0.75rem 1rem;
-        font-size: 0.8rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        transform: translateY(100px);
+        font-size: 0.85rem;
         opacity: 0;
         transition: all 0.3s;
-        z-index: 100;
+        z-index: 1000;
       }
-      .toast.show { transform: translateY(0); opacity: 1; }
-      .toast.success { border-color: #22c55e; }
-      .toast.error { border-color: #ef4444; }
+      .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+      .toast.error { background: #7f1d1d; }
+
+      /* Resize handle */
+      .resize-handle {
+        width: 4px;
+        background: #334155;
+        cursor: col-resize;
+        transition: background 0.2s;
+      }
+      .resize-handle:hover { background: #475569; }
     </style>
   </head>
   <body>
     <header>
-      <div>
-        <h1>MITMproxy Traffic Inspection</h1>
-        <span class="subtitle">caddy-api-client + MitmproxyManager</span>
+      <h1><span>MITMproxy</span> Traffic Inspection</h1>
+      <div class="header-status">
+        <span>caddy-api-client</span>
       </div>
     </header>
 
     <div class="main-container">
-      <div class="switchboard">
-        <div class="switchboard-title">Traffic Flow</div>
-        <div class="flow-diagram">
-          <div class="flow-path" id="flow-es">
-            <span class="flow-node browser">Browser</span>
-            <span class="flow-arrow">→</span>
-            <span class="flow-node caddy">Caddy</span>
-            <span class="flow-arrow">→</span>
-            <span class="flow-node muted" id="flow-es-mitm">skip</span>
-            <span class="flow-arrow">→</span>
-            <span class="flow-node service">ES</span>
-          </div>
-          <div class="flow-path" id="flow-node">
-            <span class="flow-node browser">Browser</span>
-            <span class="flow-arrow">→</span>
-            <span class="flow-node caddy">Caddy</span>
-            <span class="flow-arrow">→</span>
-            <span class="flow-node muted" id="flow-node-mitm">skip</span>
-            <span class="flow-arrow">→</span>
-            <span class="flow-node service">Node</span>
-          </div>
-        </div>
+      <!-- App Pane -->
+      <div class="app-pane" id="app-pane">
+        <div class="app-header">Product Search Demo</div>
+        <iframe class="app-iframe" id="app-iframe" src="http://localhost:9080/app/"></iframe>
+      </div>
 
-        <div class="switchboard-title">Services</div>
+      <div class="resize-handle" id="resize-handle"></div>
 
-        <!-- Elasticsearch -->
-        <div class="service-card" id="card-es">
-          <div class="service-header">
-            <div class="service-info">
-              <div class="service-name">Elasticsearch</div>
-              <div class="service-path">/es/* → :9200</div>
-            </div>
-            <label class="toggle-switch" title="Toggle traffic interception">
-              <input type="checkbox" id="toggle-es" />
+      <!-- MITMproxy Pane -->
+      <div class="mitm-pane">
+        <div class="mitm-header">
+          <div class="mitm-tabs">
+            <button class="mitm-tab active" id="tab-es" data-target="es">
+              <span class="indicator"></span>
+              Elasticsearch
+            </button>
+            <button class="mitm-tab" id="tab-node" data-target="node">
+              <span class="indicator"></span>
+              Node API
+            </button>
+          </div>
+          <div class="service-toggle" id="toggle-container">
+            <span id="toggle-label">Intercept</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-intercept">
               <span class="toggle-slider"></span>
             </label>
           </div>
-          <div class="service-status" id="status-es">
-            <span class="status-dot"></span>
-            <span class="status-text">Direct connection (not intercepting)</span>
-          </div>
         </div>
 
-        <!-- Node API -->
-        <div class="service-card" id="card-node">
-          <div class="service-header">
-            <div class="service-info">
-              <div class="service-name">Node API</div>
-              <div class="service-path">/node/* → :3000</div>
+        <div class="mitm-content">
+          <!-- Elasticsearch Tab -->
+          <div class="tab-panel active" id="panel-es">
+            <div class="actions-bar">
+              <span class="actions-label">Test</span>
+              <button class="action-btn" id="test-search">Search Products <code>/es/_search</code></button>
+              <button class="action-btn" id="test-bulk">Bulk Index <code>/es/_bulk</code></button>
+              <button class="action-btn" id="test-query-bug">Bad Query <code>0 hits</code></button>
             </div>
-            <label class="toggle-switch" title="Toggle traffic interception">
-              <input type="checkbox" id="toggle-node" />
-              <span class="toggle-slider"></span>
-            </label>
+            <iframe class="mitm-iframe" id="iframe-es" src="http://localhost:9080/mitmproxy/"></iframe>
           </div>
-          <div class="service-status" id="status-node">
-            <span class="status-dot"></span>
-            <span class="status-text">Direct connection (not intercepting)</span>
+
+          <!-- Node API Tab -->
+          <div class="tab-panel" id="panel-node">
+            <div class="actions-bar">
+              <span class="actions-label">Test</span>
+              <button class="action-btn" id="test-echo">Echo <code>/node/echo</code></button>
+              <button class="action-btn" id="test-random">Random <code>/node/random</code></button>
+              <button class="action-btn" id="test-config">Config <code>/node/config</code></button>
+            </div>
+            <iframe class="mitm-iframe" id="iframe-node" src="http://localhost:9080/mitmproxy-node/"></iframe>
           </div>
-        </div>
-
-        <!-- Tip for clearing flows -->
-        <div class="tip-box">
-          <span>💡</span>
-          <span>Press <kbd>z</kbd> in the MITMproxy panel to clear flows</span>
-        </div>
-
-        <!-- Test Buttons -->
-        <div class="test-section">
-          <div class="test-title">Send Test Requests</div>
-          <button class="test-btn es" id="test-es">
-            <span>Search Products</span>
-            <span class="endpoint">/es/_search</span>
-          </button>
-          <button class="test-btn node" id="test-node-echo">
-            <span>Echo</span>
-            <span class="endpoint">/node/echo</span>
-          </button>
-          <button class="test-btn node" id="test-node-random">
-            <span>Random</span>
-            <span class="endpoint">/node/random</span>
-          </button>
         </div>
 
         <!-- Challenges (collapsible) -->
-        <div class="tips-section">
-          <div class="tips-header" id="tips-toggle">
-            <span class="tips-title">🎯 Real-World ES Debugging</span>
-            <span class="tips-arrow" id="tips-arrow">▼</span>
-          </div>
-          <div class="tips-content" id="tips-content">
-
-          <!-- Challenge 1: Bulk Indexing Debug -->
-          <div class="tip" style="border-left-color: #ef4444;">
-            <div class="tip-header">📦 Debug Bulk Indexing Failures</div>
-            <div class="tip-desc" style="margin-bottom: 0.5rem; color: #94a3b8;">
-              <b>Real symptom:</b> <code>_bulk</code> returns 400 or partial failures
-            </div>
-            <button class="challenge-btn red" id="btn-bulk-broken">Send Broken Bulk Request</button>
-            <ol class="tip-steps">
-              <li>Click above → request goes through MITMproxy</li>
-              <li>Find the <code>/_bulk</code> request in the flow list</li>
-              <li>Click request → see the <b>raw wire payload</b></li>
-              <li>Spot the issues:
-                <ul style="margin-left: 1rem; margin-top: 0.25rem;">
-                  <li>Pretty-printed JSON (should be compact)</li>
-                  <li>Missing newline delimiters</li>
-                  <li>Check <code>Content-Type: application/x-ndjson</code></li>
-                </ul>
-              </li>
-              <li><b>Replay</b> with fixed NDJSON to see success!</li>
+        <div class="challenges-toggle" id="challenges-toggle">
+          <span>Debugging Challenges</span>
+          <span id="challenges-arrow">▼</span>
+        </div>
+        <div class="challenges-content" id="challenges-content">
+          <div class="challenge">
+            <div class="challenge-title">Debug Bulk Indexing Failures</div>
+            <div class="challenge-desc">Real symptom: _bulk returns 400 or partial failures</div>
+            <button class="challenge-btn" id="btn-bulk-broken">Send Broken Bulk</button>
+            <ol class="challenge-steps">
+              <li>Find <code>/_bulk</code> in flow list</li>
+              <li>Check request body for NDJSON issues</li>
+              <li>Look for pretty-printed JSON, missing newlines</li>
+              <li>Use <b>Replay</b> with fixed format</li>
             </ol>
           </div>
-
-          <!-- Challenge 2: Query DSL Inspector -->
-          <div class="tip" style="border-left-color: #f59e0b;">
-            <div class="tip-header">🔍 Debug "0 Hits" Search Results</div>
-            <div class="tip-desc" style="margin-bottom: 0.5rem; color: #94a3b8;">
-              <b>Real symptom:</b> Search returns empty when you expect results
-            </div>
-            <button class="challenge-btn" id="btn-search-zero" style="background: linear-gradient(135deg, #f59e0b, #d97706);">Send Broken Query</button>
-            <ol class="tip-steps">
-              <li>Click above → expect keyboards, get 0 hits!</li>
-              <li>In MITMproxy: find the <code>/_search</code> request</li>
-              <li>Click → <b>Request</b> tab → see the Query DSL</li>
-              <li>Spot the bugs:
-                <ul style="margin-left: 1rem; margin-top: 0.25rem;">
-                  <li><code>"category": "electronics"</code> → should be <code>"Electronics"</code> (keyword field!)</li>
-                  <li><code>"product_name"</code> → field is actually <code>"name"</code></li>
-                </ul>
-              </li>
-              <li><b>Edit</b> the request and <b>Replay</b> to fix it!</li>
+          <div class="challenge">
+            <div class="challenge-title">Debug "0 Hits" Search Results</div>
+            <div class="challenge-desc">Real symptom: Search returns empty unexpectedly</div>
+            <button class="challenge-btn" id="btn-search-zero">Send Bad Query</button>
+            <ol class="challenge-steps">
+              <li>Find <code>/_search</code> request</li>
+              <li>Check Query DSL: <code>category</code> needs exact case</li>
+              <li>Wrong field: <code>product_name</code> → <code>name</code></li>
+              <li><b>Edit</b> request and <b>Replay</b></li>
             </ol>
           </div>
-
-          <!-- Challenge 3: Rate Limit Storm -->
-          <div class="tip" style="border-left-color: #8b5cf6;">
-            <div class="tip-header">⚡ Analyze Burst Traffic Patterns</div>
-            <div class="tip-desc" style="margin-bottom: 0.5rem; color: #94a3b8;">
-              <b>Real symptom:</b> 429 rejections under load, retries make it worse
-            </div>
-            <button class="challenge-btn" id="btn-rate-storm" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">Fire 10 Rapid Requests</button>
-            <ol class="tip-steps">
-              <li>Click above → fires 10 requests in parallel</li>
-              <li>In MITMproxy: watch the <b>timeline</b> fill up</li>
-              <li>Sort by timing → see the burst pattern</li>
-              <li>In production, you'd see:
-                <ul style="margin-left: 1rem; margin-top: 0.25rem;">
-                  <li>429 status codes during overload</li>
-                  <li>Duplicate requests from retries</li>
-                  <li>Escalating "retry storm"</li>
-                </ul>
-              </li>
-              <li>This is how you diagnose threadpool rejections!</li>
+          <div class="challenge">
+            <div class="challenge-title">Analyze Burst Traffic</div>
+            <div class="challenge-desc">Real symptom: 429 rejections, retry storms</div>
+            <button class="challenge-btn" id="btn-rate-storm">Fire 10 Requests</button>
+            <ol class="challenge-steps">
+              <li>Watch timeline fill with burst</li>
+              <li>Sort by timing to see pattern</li>
+              <li>In production: spot 429s and retries</li>
             </ol>
           </div>
-
-          <div style="border-top: 1px solid #334155; margin: 0.75rem 0; padding-top: 0.5rem;">
-            <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Quick Challenges</div>
-          </div>
-
-          <!-- Original challenges, condensed -->
-          <div class="tip">
-            <div class="tip-header">💰 Change a Price to $0.01</div>
-            <ol class="tip-steps">
-              <li>Enable intercept: <b>Options</b> → <code>~s</code></li>
+          <div class="challenge">
+            <div class="challenge-title">Modify Response Data</div>
+            <div class="challenge-desc">Change prices, inject products, fix errors</div>
+            <ol class="challenge-steps">
+              <li>Enable intercept in <b>Options</b> → <code>~s</code></li>
               <li>Search "keyboard" - response pauses</li>
               <li>Click flow → <b>Response</b> → <b>Edit</b></li>
               <li>Change <code>"price": 149.99</code> → <code>0.01</code></li>
               <li>Press <b>a</b> to resume</li>
             </ol>
-          </div>
-
-          <div class="tip">
-            <div class="tip-header">🔧 Fix Broken JSON</div>
-            <button class="challenge-btn" id="btn-broken-json">Send Broken Response</button>
-            <div class="tip-desc">Intercept and fix the malformed JSON before it reaches the browser!</div>
-          </div>
-
-          <div class="tip">
-            <div class="tip-header">🎨 Switch to Light Theme</div>
-            <button class="challenge-btn green" id="btn-theme">Fetch Theme Config</button>
-            <ol class="tip-steps">
-              <li>Click above to fetch config</li>
-              <li>Intercept the <code>/node/config</code> response</li>
-              <li>Change <code>"theme": "dark"</code> → <code>"light"</code></li>
-            </ol>
-          </div>
-
-          </div>
-        </div>
-      </div>
-
-      <div class="content-area">
-        <div class="panes">
-          <div class="pane pane-left" id="pane-left">
-            <div class="pane-header">
-              <span>Product Search</span>
-              <span class="pane-badge" id="badge-app">Direct</span>
-            </div>
-            <iframe src="http://localhost:9080/app/" id="app-iframe"></iframe>
-          </div>
-          <div class="resize-handle" id="resize-handle"></div>
-          <div class="pane pane-right" id="pane-right">
-            <div class="pane-header">
-              <span>MITMproxy</span>
-              <span class="pane-badge" id="badge-mitm">Idle</span>
-            </div>
-            <div class="mitm-tabs">
-              <button class="mitm-tab active" id="tab-es" data-target="es">
-                📊 Elasticsearch<span class="badge"></span>
-              </button>
-              <button class="mitm-tab" id="tab-node" data-target="node">
-                🟢 Node API<span class="badge"></span>
-              </button>
-            </div>
-            <div class="mitm-content">
-              <iframe class="mitm-iframe active" id="iframe-es" src="http://localhost:9080/mitmproxy/"></iframe>
-              <iframe class="mitm-iframe" id="iframe-node" src="http://localhost:9080/mitmproxy-node/"></iframe>
-            </div>
           </div>
         </div>
       </div>
@@ -696,24 +416,18 @@
     <script>
       const API = "http://localhost:9080";
 
+      // State
+      let currentTab = "es";
+      let state = { elasticsearch: false, nodeapi: false };
+
       // DOM
-      const toggleEs = document.getElementById("toggle-es");
-      const toggleNode = document.getElementById("toggle-node");
-      const cardEs = document.getElementById("card-es");
-      const cardNode = document.getElementById("card-node");
-      const flowEs = document.getElementById("flow-es");
-      const flowNode = document.getElementById("flow-node");
-      const flowEsMitm = document.getElementById("flow-es-mitm");
-      const flowNodeMitm = document.getElementById("flow-node-mitm");
-      const badgeApp = document.getElementById("badge-app");
-      const badgeMitm = document.getElementById("badge-mitm");
       const tabEs = document.getElementById("tab-es");
       const tabNode = document.getElementById("tab-node");
-      let iframeEs = document.getElementById("iframe-es");
-      let iframeNode = document.getElementById("iframe-node");
+      const panelEs = document.getElementById("panel-es");
+      const panelNode = document.getElementById("panel-node");
+      const toggleIntercept = document.getElementById("toggle-intercept");
+      const toggleLabel = document.getElementById("toggle-label");
       const toast = document.getElementById("toast");
-
-      let state = { elasticsearch: false, nodeapi: false };
 
       function showToast(msg, type = "success") {
         toast.textContent = msg;
@@ -721,271 +435,194 @@
         setTimeout(() => toast.className = "toast", 3000);
       }
 
-      function updateUI() {
-        const { elasticsearch, nodeapi } = state;
-        const anyEnabled = elasticsearch || nodeapi;
+      // Tab switching
+      function switchTab(tab) {
+        currentTab = tab;
+        tabEs.classList.toggle("active", tab === "es");
+        tabNode.classList.toggle("active", tab === "node");
+        panelEs.classList.toggle("active", tab === "es");
+        panelNode.classList.toggle("active", tab === "node");
 
-        toggleEs.checked = elasticsearch;
-        toggleNode.checked = nodeapi;
-
-        cardEs.classList.toggle("enabled", elasticsearch);
-        cardNode.classList.toggle("enabled", nodeapi);
-
-        flowEs.classList.toggle("active", elasticsearch);
-        flowNode.classList.toggle("active", nodeapi);
-
-        flowEsMitm.textContent = elasticsearch ? "MITM" : "skip";
-        flowEsMitm.classList.toggle("mitmproxy", elasticsearch);
-        flowEsMitm.classList.toggle("muted", !elasticsearch);
-
-        flowNodeMitm.textContent = nodeapi ? "MITM" : "skip";
-        flowNodeMitm.classList.toggle("mitmproxy", nodeapi);
-        flowNodeMitm.classList.toggle("muted", !nodeapi);
-
-        tabEs.classList.toggle("capturing", elasticsearch);
-        tabNode.classList.toggle("capturing", nodeapi);
-
-        badgeApp.textContent = anyEnabled ? "Proxied" : "Direct";
-        badgeApp.classList.toggle("active", anyEnabled);
-        badgeMitm.textContent = anyEnabled ? "Capturing" : "Idle";
-        badgeMitm.classList.toggle("active", anyEnabled);
-
-        // Update service status text
-        const statusEs = document.querySelector("#status-es .status-text");
-        const statusNode = document.querySelector("#status-node .status-text");
-        if (statusEs) statusEs.textContent = elasticsearch
-          ? "🔍 Intercepting traffic via MITMproxy"
-          : "Direct connection (not intercepting)";
-        if (statusNode) statusNode.textContent = nodeapi
-          ? "🔍 Intercepting traffic via MITMproxy"
-          : "Direct connection (not intercepting)";
+        // Update toggle to reflect current service state
+        const serviceId = tab === "es" ? "elasticsearch" : "nodeapi";
+        toggleIntercept.checked = state[serviceId];
+        updateTabIndicators();
       }
 
+      function updateTabIndicators() {
+        tabEs.classList.toggle("capturing", state.elasticsearch);
+        tabNode.classList.toggle("capturing", state.nodeapi);
+      }
+
+      // Toggle interception
+      async function toggleService(enabled) {
+        const serviceId = currentTab === "es" ? "elasticsearch" : "nodeapi";
+        const action = enabled ? "enable" : "disable";
+
+        try {
+          const res = await fetch(`${API}/api/monitoring/${action}/${serviceId}`, { method: "POST" });
+          const data = await res.json();
+          state[serviceId] = enabled;
+          updateTabIndicators();
+          showToast(enabled ? `Intercepting ${serviceId}` : `Direct mode for ${serviceId}`);
+        } catch (e) {
+          showToast("Failed: " + e.message, "error");
+          toggleIntercept.checked = !enabled;
+        }
+      }
+
+      // Fetch initial status
       async function fetchStatus() {
         try {
           const res = await fetch(`${API}/api/monitoring/status`);
           const data = await res.json();
           state.elasticsearch = data.services?.elasticsearch?.enabled || false;
           state.nodeapi = data.services?.nodeapi?.enabled || false;
-          updateUI();
+          toggleIntercept.checked = currentTab === "es" ? state.elasticsearch : state.nodeapi;
+          updateTabIndicators();
         } catch (e) {
           console.error("Status fetch failed:", e);
         }
       }
 
-      async function toggleService(id, enable) {
-        const toggle = id === "elasticsearch" ? toggleEs : toggleNode;
-        toggle.disabled = true;
+      // Test requests
+      async function testSearch() {
+        showToast("Searching products...");
         try {
-          const ep = enable ? `/api/monitoring/enable/${id}` : `/api/monitoring/disable/${id}`;
-          const res = await fetch(`${API}${ep}`, { method: "POST" });
+          const res = await fetch(`${API}/es/products/_search`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: { match: { name: "keyboard" } }, size: 5 })
+          });
           const data = await res.json();
-          if (data.success) {
-            state[id] = enable;
-            updateUI();
-            showToast(`${id}: ${enable ? "intercepting" : "direct"}`);
-            // Reload relevant iframe
-            setTimeout(() => {
-              if (id === "elasticsearch") iframeEs.src = iframeEs.src;
-              else iframeNode.src = iframeNode.src;
-            }, 300);
-          }
+          const hits = data.hits?.total?.value ?? 0;
+          showToast(`Found ${hits} products`);
         } catch (e) {
-          showToast(`Failed: ${e.message}`, "error");
-          toggle.checked = !enable;
-        } finally {
-          toggle.disabled = false;
+          showToast("Search failed: " + e.message, "error");
         }
       }
 
-      async function sendRequest(type) {
-        try {
-          let res;
-          if (type === "es") {
-            res = await fetch(`${API}/es/products/_search`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ query: { match_all: {} }, size: 3 }),
-            });
-          } else if (type === "node-echo") {
-            res = await fetch(`${API}/node/echo`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ test: "hello", ts: Date.now() }),
-            });
-          } else {
-            res = await fetch(`${API}/node/random`);
-          }
-          await res.json();
-          const captured = (type === "es" && state.elasticsearch) || (type !== "es" && state.nodeapi);
-          showToast(captured ? "Request captured! Check panel →" : "Request sent (not captured)");
-        } catch (e) {
-          showToast(`Request failed: ${e.message}`, "error");
-        }
-      }
-
-      function switchTab(target) {
-        document.querySelectorAll(".mitm-tab").forEach(t => t.classList.remove("active"));
-        document.querySelectorAll(".mitm-iframe").forEach(f => f.classList.remove("active"));
-        document.querySelector(`.mitm-tab[data-target="${target}"]`).classList.add("active");
-        document.getElementById(`iframe-${target}`).classList.add("active");
-      }
-
-      // Events
-      toggleEs.addEventListener("change", e => toggleService("elasticsearch", e.target.checked));
-      toggleNode.addEventListener("change", e => toggleService("nodeapi", e.target.checked));
-      document.getElementById("test-es").addEventListener("click", () => sendRequest("es"));
-      document.getElementById("test-node-echo").addEventListener("click", () => sendRequest("node-echo"));
-      document.getElementById("test-node-random").addEventListener("click", () => sendRequest("node-random"));
-
-      // Challenge buttons
-      document.getElementById("btn-broken-json").addEventListener("click", async () => {
-        showToast("Sending broken JSON... Fix it in MITMproxy! 🔧");
-        try {
-          const res = await fetch(`${API}/node/broken`);
-          const text = await res.text();
-          try {
-            JSON.parse(text);
-            showToast("JSON was valid! (Maybe you fixed it?) ✅");
-          } catch {
-            showToast("JSON parse error! Check MITMproxy to fix it 🔴", "error");
-          }
-        } catch (e) {
-          showToast("Request failed: " + e.message, "error");
-        }
-      });
-
-      // New ES debugging challenges
-      document.getElementById("btn-bulk-broken")?.addEventListener("click", async () => {
-        if (!state.elasticsearch) {
-          showToast("Enable Elasticsearch monitoring first! ⚠️", "error");
-          return;
-        }
-        showToast("Sending broken bulk request... Check /_bulk in MITMproxy! 📦");
+      async function testBulk() {
+        showToast("Sending bulk request...");
         try {
           const res = await fetch(`${API}/api/challenge/bulk-broken`, { method: "POST" });
-          const result = await res.json();
-          if (result.esResponse?.errors) {
-            showToast("Bulk had errors! Inspect the NDJSON format in MITMproxy 🔴", "error");
+          const data = await res.json();
+          if (data.esResponse?.errors) {
+            showToast("Bulk had errors - check MITMproxy", "error");
           } else {
-            showToast("Bulk succeeded - check the wire format anyway! ✅");
+            showToast("Bulk complete - inspect the format");
           }
-          console.log("Bulk challenge result:", result);
         } catch (e) {
-          showToast("Challenge failed: " + e.message, "error");
+          showToast("Bulk failed: " + e.message, "error");
         }
-      });
+      }
 
-      document.getElementById("btn-search-zero")?.addEventListener("click", async () => {
-        if (!state.elasticsearch) {
-          showToast("Enable Elasticsearch monitoring first! ⚠️", "error");
-          return;
-        }
-        showToast("Sending broken query... Should find keyboards but won't! 🔍");
+      async function testQueryBug() {
+        showToast("Sending broken query...");
         try {
           const res = await fetch(`${API}/api/challenge/search-zero-hits`, { method: "POST" });
-          const result = await res.json();
-          const hits = result.esResponse?.hits?.total?.value ?? 0;
-          if (hits === 0) {
-            showToast(`0 hits! Inspect the Query DSL in MITMproxy to find the bugs 🔴`, "error");
-          } else {
-            showToast(`Found ${hits} hits! Did you fix the query? 🎉`);
-          }
-          console.log("Search challenge result:", result);
+          const data = await res.json();
+          const hits = data.esResponse?.hits?.total?.value ?? 0;
+          showToast(hits === 0 ? "0 hits! Check Query DSL" : `Got ${hits} hits`, hits === 0 ? "error" : "success");
         } catch (e) {
-          showToast("Challenge failed: " + e.message, "error");
+          showToast("Query failed: " + e.message, "error");
         }
-      });
+      }
 
-      document.getElementById("btn-rate-storm")?.addEventListener("click", async () => {
-        if (!state.elasticsearch) {
-          showToast("Enable Elasticsearch monitoring first! ⚠️", "error");
-          return;
-        }
-        showToast("Firing 10 rapid requests... Watch MITMproxy timeline! ⚡");
+      async function testEcho() {
+        showToast("Sending echo...");
         try {
-          const res = await fetch(`${API}/api/challenge/rate-limit-storm`, { method: "POST" });
-          const result = await res.json();
-          showToast(`Burst complete in ${result.totalTime}ms - check the pattern!`);
-          console.log("Rate storm challenge result:", result);
+          const res = await fetch(`${API}/node/echo`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ test: "data", time: Date.now() })
+          });
+          const data = await res.json();
+          showToast("Echo received");
         } catch (e) {
-          showToast("Challenge failed: " + e.message, "error");
+          showToast("Echo failed: " + e.message, "error");
         }
-      });
+      }
 
-      document.getElementById("btn-theme").addEventListener("click", async () => {
-        showToast("Fetching theme config... Intercept & change 'theme' to 'light'! 🎨");
+      async function testRandom() {
+        showToast("Fetching random...");
+        try {
+          const res = await fetch(`${API}/node/random`);
+          const data = await res.json();
+          showToast(`Random: ${data.random?.toFixed(4)}`);
+        } catch (e) {
+          showToast("Random failed: " + e.message, "error");
+        }
+      }
+
+      async function testConfig() {
+        showToast("Fetching config...");
         try {
           const res = await fetch(`${API}/node/config`);
-          const config = await res.json();
-          if (config.theme === "light") {
-            showToast("Light theme applied! 🌞");
-          } else {
-            showToast(`Theme: ${config.theme} - Try changing to 'light'!`);
-          }
-          // Refresh the app iframe to pick up new config
-          document.getElementById("app-iframe").contentWindow.location.reload();
+          const data = await res.json();
+          showToast(`Theme: ${data.theme}, App: ${data.appName}`);
         } catch (e) {
           showToast("Config failed: " + e.message, "error");
         }
-      });
+      }
+
+      async function testRateStorm() {
+        if (!state.elasticsearch) {
+          showToast("Enable ES intercept first", "error");
+          return;
+        }
+        showToast("Firing 10 requests...");
+        try {
+          const res = await fetch(`${API}/api/challenge/rate-limit-storm`, { method: "POST" });
+          const data = await res.json();
+          showToast(`Burst done in ${data.totalTime}ms`);
+        } catch (e) {
+          showToast("Burst failed: " + e.message, "error");
+        }
+      }
+
+      // Event listeners
       tabEs.addEventListener("click", () => switchTab("es"));
       tabNode.addEventListener("click", () => switchTab("node"));
+      toggleIntercept.addEventListener("change", e => toggleService(e.target.checked));
 
-      // Collapsible tips
-      document.getElementById("tips-toggle").addEventListener("click", () => {
-        const content = document.getElementById("tips-content");
-        const arrow = document.getElementById("tips-arrow");
-        content.classList.toggle("collapsed");
-        arrow.classList.toggle("collapsed");
+      document.getElementById("test-search").addEventListener("click", testSearch);
+      document.getElementById("test-bulk").addEventListener("click", testBulk);
+      document.getElementById("test-query-bug").addEventListener("click", testQueryBug);
+      document.getElementById("test-echo").addEventListener("click", testEcho);
+      document.getElementById("test-random").addEventListener("click", testRandom);
+      document.getElementById("test-config").addEventListener("click", testConfig);
+
+      document.getElementById("btn-bulk-broken")?.addEventListener("click", testBulk);
+      document.getElementById("btn-search-zero")?.addEventListener("click", testQueryBug);
+      document.getElementById("btn-rate-storm")?.addEventListener("click", testRateStorm);
+
+      // Challenges toggle
+      document.getElementById("challenges-toggle").addEventListener("click", () => {
+        const content = document.getElementById("challenges-content");
+        const arrow = document.getElementById("challenges-arrow");
+        content.classList.toggle("open");
+        arrow.textContent = content.classList.contains("open") ? "▲" : "▼";
       });
 
-      window.addEventListener("message", e => {
-        if (e.data?.type === "monitoring-toggled") {
-          fetchStatus();
-          setTimeout(() => { iframeEs.src = iframeEs.src; iframeNode.src = iframeNode.src; }, 300);
-        }
-      });
-
-      fetchStatus();
-      setInterval(fetchStatus, 5000);
-
-      // Resize functionality
+      // Resize handle
       const resizeHandle = document.getElementById("resize-handle");
-      const paneLeft = document.getElementById("pane-left");
-      const panes = document.querySelector(".panes");
+      const appPane = document.getElementById("app-pane");
       let isResizing = false;
 
-      resizeHandle.addEventListener("mousedown", (e) => {
-        isResizing = true;
-        resizeHandle.classList.add("dragging");
-        document.body.style.cursor = "col-resize";
-        document.body.style.userSelect = "none";
-        // Disable pointer events on iframes during resize
-        document.querySelectorAll("iframe").forEach(f => f.style.pointerEvents = "none");
-      });
-
-      document.addEventListener("mousemove", (e) => {
+      resizeHandle.addEventListener("mousedown", () => { isResizing = true; });
+      document.addEventListener("mousemove", e => {
         if (!isResizing) return;
-        const containerRect = panes.getBoundingClientRect();
-        const newWidth = e.clientX - containerRect.left;
-        const containerWidth = containerRect.width;
-        const minWidth = 200;
-        const maxWidth = containerWidth - 250; // Leave room for MITMproxy
-        const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-        const percent = (clampedWidth / containerWidth) * 100;
-        paneLeft.style.flex = `0 0 ${percent}%`;
-      });
-
-      document.addEventListener("mouseup", () => {
-        if (isResizing) {
-          isResizing = false;
-          resizeHandle.classList.remove("dragging");
-          document.body.style.cursor = "";
-          document.body.style.userSelect = "";
-          document.querySelectorAll("iframe").forEach(f => f.style.pointerEvents = "");
+        const containerWidth = document.querySelector(".main-container").offsetWidth;
+        const newWidth = (e.clientX / containerWidth) * 100;
+        if (newWidth > 20 && newWidth < 80) {
+          appPane.style.flex = `0 0 ${newWidth}%`;
         }
       });
+      document.addEventListener("mouseup", () => { isResizing = false; });
+
+      // Init
+      fetchStatus();
     </script>
   </body>
 </html>
