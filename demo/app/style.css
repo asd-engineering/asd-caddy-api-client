@@ -18,7 +18,9 @@ body {
   color: var(--text-color);
   min-height: 100vh;
   padding: 1rem;
-  transition: background 0.3s, color 0.3s;
+  transition:
+    background 0.3s,
+    color 0.3s;
 }
 
 .container {

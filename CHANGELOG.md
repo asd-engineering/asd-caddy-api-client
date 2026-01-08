@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-08
+
+### Added
+
+- **MITMproxy Traffic Inspection Demo** - Interactive demo showcasing dynamic route switching via Caddy Admin API
+  - Real-time traffic interception toggle between direct and proxy modes
+  - Visual flow diagram control (`Browser → Caddy → MITM → Service`)
+  - Support for multiple services (Elasticsearch, Node API)
+  - Elasticsearch debugging challenges with guided walkthroughs
+
+- **MitmproxyManager class** (`src/mitm/manager.ts`) - Multi-service traffic interception manager
+  - Enable/disable interception per service dynamically
+  - Route switching without service restarts
+  - Status tracking for multiple proxy endpoints
+
+- **Demo Docker Compose Stack** (`demo/docker-compose.yml`)
+  - Caddy reverse proxy with Admin API
+  - Elasticsearch 8.11 backend with sample product data
+  - MITMproxy instances for ES and Node API traffic
+  - Demo API server (Bun + caddy-api-client)
+  - Automated seed data loading
+
+- **Interactive Dashboard** (`demo/app/dashboard.html`)
+  - Light header with centered flow diagram intercept control
+  - Pulsing green glow effect when intercepting traffic
+  - Tabbed interface for ES and Node API inspection
+  - Collapsible debugging challenges panel
+  - Resizable split-pane layout
+
+- **Elasticsearch Debugging Challenges** (6 real-world scenarios)
+  - Bulk indexing failures (malformed NDJSON detection)
+  - Zero-hits search debugging (Query DSL field name/case issues)
+  - Mapping type mismatch (`mapper_parsing_exception`)
+  - Aggregation on text field (fielddata disabled error)
+  - Index not found 404 (typo in index name)
+  - Response modification walkthrough (manual MITMproxy guide)
+
+- **Demo API Endpoints** (`demo/api/server.ts`)
+  - `/api/monitoring/enable/:service` - Enable MITMproxy interception
+  - `/api/monitoring/disable/:service` - Disable interception (direct mode)
+  - `/api/monitoring/status` - Get current interception status
+  - `/api/challenge/*` - Debugging challenge triggers
+
+### Changed
+
+- Demo app uses clean, minimal UI design with muted colors
+- Flow diagram replaces toggle switch as primary intercept control
+
 ## [0.2.0] - 2026-01-06
 
 ### Added
@@ -119,5 +167,6 @@ Full feature parity with [caddy-api-client](https://github.com/migetapp/caddy-ap
 - ✅ Rich error messages with context
 - ✅ 100% test coverage for route builders and schemas
 
+[0.3.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/asd-engineering/asd-caddy-api-client/releases/tag/v0.1.0

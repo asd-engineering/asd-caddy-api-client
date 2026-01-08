@@ -99,7 +99,7 @@ interface ServiceState {
 export class MitmproxyManager {
   private readonly caddy: CaddyClient;
   private readonly proxies: Record<string, MitmproxyInstance>;
-  private readonly services: Map<string, ServiceState> = new Map();
+  private readonly services = new Map<string, ServiceState>();
 
   /**
    * Create a new MitmproxyManager

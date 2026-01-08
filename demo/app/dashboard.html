@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MITMproxy Traffic Inspection Demo</title>
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         background: #0f172a;
@@ -15,31 +19,139 @@
         color: #e2e8f0;
       }
 
-      /* Header */
+      /* Header - Light background with centered flow */
       header {
-        background: #1e293b;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        padding: 0.75rem 1rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-bottom: 1px solid #cbd5e1;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      h1 {
+        display: none;
+      } /* Hide title, flow is the hero */
+
+      /* Flow Diagram - The Hero Control (Centered) */
+      .flow-control {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.625rem 1.5rem;
+        background: white;
+        border-radius: 2.5rem;
+        box-shadow:
+          0 2px 12px rgba(0, 0, 0, 0.1),
+          0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+      .flow-node {
         padding: 0.5rem 1rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #334155;
-      }
-      h1 { color: #94a3b8; font-size: 0.9rem; font-weight: 500; }
-      h1 span { color: #e2e8f0; font-weight: 600; }
-      .header-status {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
+        border-radius: 1.25rem;
         font-size: 0.75rem;
-        color: #64748b;
+        font-weight: 600;
+        transition: all 0.3s;
       }
-      .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
+      .flow-node.browser {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+      .flow-node.caddy {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+      .flow-node.service {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+
+      /* MITM Node - The Star */
+      .flow-node.mitm {
         background: #64748b;
+        color: white;
+        cursor: pointer;
+        border: 2px solid #94a3b8;
+        position: relative;
+        padding: 0.5rem 1.25rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
-      .status-dot.active { background: #22c55e; }
+      .flow-node.mitm:hover {
+        background: #475569;
+        border-color: #64748b;
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      .flow-node.mitm.active {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: white;
+        border-color: #22c55e;
+        box-shadow:
+          0 0 20px rgba(34, 197, 94, 0.5),
+          0 0 40px rgba(34, 197, 94, 0.25),
+          0 4px 12px rgba(34, 197, 94, 0.3);
+        animation: pulse-glow 2s ease-in-out infinite;
+        transform: scale(1.1);
+      }
+      .flow-node.mitm.active::after {
+        content: "●";
+        position: absolute;
+        right: -1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.5rem;
+        color: #22c55e;
+        animation: blink 1s infinite;
+      }
+      @keyframes pulse-glow {
+        0%,
+        100% {
+          box-shadow:
+            0 0 20px rgba(34, 197, 94, 0.5),
+            0 0 40px rgba(34, 197, 94, 0.25),
+            0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+        50% {
+          box-shadow:
+            0 0 30px rgba(34, 197, 94, 0.7),
+            0 0 50px rgba(34, 197, 94, 0.35),
+            0 4px 16px rgba(34, 197, 94, 0.4);
+        }
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+      .flow-arrow {
+        color: #94a3b8;
+        font-size: 0.85rem;
+        font-weight: 300;
+        transition: all 0.3s;
+      }
+      .flow-control.capturing .flow-arrow {
+        color: #22c55e;
+      }
+      .flow-hint {
+        font-size: 0.7rem;
+        color: #64748b;
+        margin-left: 0.5rem;
+        font-weight: 500;
+        transition: all 0.3s;
+      }
+      .flow-control.capturing .flow-hint {
+        color: #16a34a;
+        font-weight: 600;
+      }
 
       /* Main Layout */
       .main-container {
@@ -99,7 +211,9 @@
         align-items: center;
         gap: 0.5rem;
       }
-      .mitm-tab:hover { color: #94a3b8; }
+      .mitm-tab:hover {
+        color: #94a3b8;
+      }
       .mitm-tab.active {
         color: #e2e8f0;
         border-bottom-color: #64748b;
@@ -110,7 +224,9 @@
         border-radius: 50%;
         background: #475569;
       }
-      .mitm-tab.capturing .indicator { background: #22c55e; }
+      .mitm-tab.capturing .indicator {
+        background: #22c55e;
+      }
 
       /* Service Toggle in Header */
       .service-toggle {
@@ -128,7 +244,11 @@
         height: 20px;
         cursor: pointer;
       }
-      .toggle-switch input { opacity: 0; width: 0; height: 0; }
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
       .toggle-slider {
         position: absolute;
         inset: 0;
@@ -147,7 +267,9 @@
         border-radius: 50%;
         transition: all 0.2s;
       }
-      .toggle-switch input:checked + .toggle-slider { background: #475569; }
+      .toggle-switch input:checked + .toggle-slider {
+        background: #475569;
+      }
       .toggle-switch input:checked + .toggle-slider::before {
         transform: translateX(16px);
         background: #22c55e;
@@ -165,7 +287,9 @@
         flex: 1;
         flex-direction: column;
       }
-      .tab-panel.active { display: flex; }
+      .tab-panel.active {
+        display: flex;
+      }
 
       /* Test Actions Bar */
       .actions-bar {
@@ -192,7 +316,10 @@
         cursor: pointer;
         transition: all 0.15s;
       }
-      .action-btn:hover { background: #475569; color: #e2e8f0; }
+      .action-btn:hover {
+        background: #475569;
+        color: #e2e8f0;
+      }
       .action-btn code {
         color: #64748b;
         font-size: 0.65rem;
@@ -206,31 +333,46 @@
         background: #0f172a;
       }
 
-      /* Challenges Panel (collapsible) */
+      /* Challenges Panel - Sticky Footer */
+      .challenges-section {
+        flex-shrink: 0;
+        background: #1e293b;
+        border-top: 2px solid #3b82f6;
+      }
       .challenges-toggle {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0.5rem 0.75rem;
-        background: #1e293b;
-        border-top: 1px solid #334155;
+        padding: 0.625rem 1rem;
+        background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
         cursor: pointer;
-        font-size: 0.75rem;
-        color: #64748b;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #60a5fa;
       }
-      .challenges-toggle:hover { background: #334155; }
+      .challenges-toggle:hover {
+        background: #334155;
+      }
+      .challenges-toggle span:first-child::before {
+        content: "🔧 ";
+      }
       .challenges-content {
         max-height: 0;
         overflow: hidden;
         transition: max-height 0.3s ease;
         background: #0f172a;
       }
-      .challenges-content.open { max-height: 400px; overflow-y: auto; }
+      .challenges-content.open {
+        max-height: 350px;
+        overflow-y: auto;
+      }
       .challenge {
         padding: 0.75rem;
         border-bottom: 1px solid #1e293b;
       }
-      .challenge:last-child { border-bottom: none; }
+      .challenge:last-child {
+        border-bottom: none;
+      }
       .challenge-title {
         font-size: 0.8rem;
         font-weight: 500;
@@ -252,7 +394,10 @@
         cursor: pointer;
         transition: all 0.15s;
       }
-      .challenge-btn:hover { background: #475569; color: #e2e8f0; }
+      .challenge-btn:hover {
+        background: #475569;
+        color: #e2e8f0;
+      }
       .challenge-steps {
         font-size: 0.65rem;
         color: #64748b;
@@ -282,8 +427,13 @@
         transition: all 0.3s;
         z-index: 1000;
       }
-      .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-      .toast.error { background: #7f1d1d; }
+      .toast.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+      .toast.error {
+        background: #7f1d1d;
+      }
 
       /* Resize handle */
       .resize-handle {
@@ -292,14 +442,23 @@
         cursor: col-resize;
         transition: background 0.2s;
       }
-      .resize-handle:hover { background: #475569; }
+      .resize-handle:hover {
+        background: #475569;
+      }
     </style>
   </head>
   <body>
     <header>
       <h1><span>MITMproxy</span> Traffic Inspection</h1>
-      <div class="header-status">
-        <span>caddy-api-client</span>
+      <div class="flow-control" id="flow-control">
+        <span class="flow-node browser">Browser</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node caddy">Caddy</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node mitm" id="mitm-node" title="Click to toggle interception">MITM</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node service" id="service-node">ES</span>
+        <span class="flow-hint" id="flow-hint">click MITM to intercept</span>
       </div>
     </header>
 
@@ -325,25 +484,26 @@
               Node API
             </button>
           </div>
-          <div class="service-toggle" id="toggle-container">
-            <span id="toggle-label">Intercept</span>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-intercept">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
         </div>
+        <!-- Hidden toggle for JS compatibility -->
+        <input type="checkbox" id="toggle-intercept" style="display: none" />
 
         <div class="mitm-content">
           <!-- Elasticsearch Tab -->
           <div class="tab-panel active" id="panel-es">
             <div class="actions-bar">
               <span class="actions-label">Test</span>
-              <button class="action-btn" id="test-search">Search Products <code>/es/_search</code></button>
+              <button class="action-btn" id="test-search">
+                Search Products <code>/es/_search</code>
+              </button>
               <button class="action-btn" id="test-bulk">Bulk Index <code>/es/_bulk</code></button>
               <button class="action-btn" id="test-query-bug">Bad Query <code>0 hits</code></button>
             </div>
-            <iframe class="mitm-iframe" id="iframe-es" src="http://localhost:9080/mitmproxy/"></iframe>
+            <iframe
+              class="mitm-iframe"
+              id="iframe-es"
+              src="http://localhost:9080/mitmproxy/"
+            ></iframe>
           </div>
 
           <!-- Node API Tab -->
@@ -354,58 +514,87 @@
               <button class="action-btn" id="test-random">Random <code>/node/random</code></button>
               <button class="action-btn" id="test-config">Config <code>/node/config</code></button>
             </div>
-            <iframe class="mitm-iframe" id="iframe-node" src="http://localhost:9080/mitmproxy-node/"></iframe>
+            <iframe
+              class="mitm-iframe"
+              id="iframe-node"
+              src="http://localhost:9080/mitmproxy-node/"
+            ></iframe>
           </div>
         </div>
 
-        <!-- Challenges (collapsible) -->
-        <div class="challenges-toggle" id="challenges-toggle">
-          <span>Debugging Challenges</span>
-          <span id="challenges-arrow">▼</span>
-        </div>
-        <div class="challenges-content" id="challenges-content">
-          <div class="challenge">
-            <div class="challenge-title">Debug Bulk Indexing Failures</div>
-            <div class="challenge-desc">Real symptom: _bulk returns 400 or partial failures</div>
-            <button class="challenge-btn" id="btn-bulk-broken">Send Broken Bulk</button>
-            <ol class="challenge-steps">
-              <li>Find <code>/_bulk</code> in flow list</li>
-              <li>Check request body for NDJSON issues</li>
-              <li>Look for pretty-printed JSON, missing newlines</li>
-              <li>Use <b>Replay</b> with fixed format</li>
-            </ol>
+        <!-- Challenges - Sticky Footer -->
+        <div class="challenges-section">
+          <div class="challenges-toggle" id="challenges-toggle">
+            <span>Debugging Challenges</span>
+            <span id="challenges-arrow">▼</span>
           </div>
-          <div class="challenge">
-            <div class="challenge-title">Debug "0 Hits" Search Results</div>
-            <div class="challenge-desc">Real symptom: Search returns empty unexpectedly</div>
-            <button class="challenge-btn" id="btn-search-zero">Send Bad Query</button>
-            <ol class="challenge-steps">
-              <li>Find <code>/_search</code> request</li>
-              <li>Check Query DSL: <code>category</code> needs exact case</li>
-              <li>Wrong field: <code>product_name</code> → <code>name</code></li>
-              <li><b>Edit</b> request and <b>Replay</b></li>
-            </ol>
-          </div>
-          <div class="challenge">
-            <div class="challenge-title">Analyze Burst Traffic</div>
-            <div class="challenge-desc">Real symptom: 429 rejections, retry storms</div>
-            <button class="challenge-btn" id="btn-rate-storm">Fire 10 Requests</button>
-            <ol class="challenge-steps">
-              <li>Watch timeline fill with burst</li>
-              <li>Sort by timing to see pattern</li>
-              <li>In production: spot 429s and retries</li>
-            </ol>
-          </div>
-          <div class="challenge">
-            <div class="challenge-title">Modify Response Data</div>
-            <div class="challenge-desc">Change prices, inject products, fix errors</div>
-            <ol class="challenge-steps">
-              <li>Enable intercept in <b>Options</b> → <code>~s</code></li>
-              <li>Search "keyboard" - response pauses</li>
-              <li>Click flow → <b>Response</b> → <b>Edit</b></li>
-              <li>Change <code>"price": 149.99</code> → <code>0.01</code></li>
-              <li>Press <b>a</b> to resume</li>
-            </ol>
+          <div class="challenges-content" id="challenges-content">
+            <div class="challenge">
+              <div class="challenge-title">Debug Bulk Indexing Failures</div>
+              <div class="challenge-desc">Real symptom: _bulk returns 400 or partial failures</div>
+              <button class="challenge-btn" id="btn-bulk-broken">Send Broken Bulk</button>
+              <ol class="challenge-steps">
+                <li>Find <code>/_bulk</code> in flow list</li>
+                <li>Check request body for NDJSON issues</li>
+                <li>Look for pretty-printed JSON, missing newlines</li>
+                <li>Use <b>Replay</b> with fixed format</li>
+              </ol>
+            </div>
+            <div class="challenge">
+              <div class="challenge-title">Debug "0 Hits" Search Results</div>
+              <div class="challenge-desc">Real symptom: Search returns empty unexpectedly</div>
+              <button class="challenge-btn" id="btn-search-zero">Send Bad Query</button>
+              <ol class="challenge-steps">
+                <li>Find <code>/_search</code> request</li>
+                <li>Check Query DSL: <code>category</code> needs exact case</li>
+                <li>Wrong field: <code>product_name</code> → <code>name</code></li>
+                <li><b>Edit</b> request and <b>Replay</b></li>
+              </ol>
+            </div>
+            <div class="challenge">
+              <div class="challenge-title">Modify Response Data</div>
+              <div class="challenge-desc">Change prices, inject products, fix errors</div>
+              <ol class="challenge-steps">
+                <li>Enable intercept in <b>Options</b> → <code>~s</code></li>
+                <li>Search "keyboard" - response pauses</li>
+                <li>Click flow → <b>Response</b> → <b>Edit</b></li>
+                <li>Change <code>"price": 149.99</code> → <code>0.01</code></li>
+                <li>Press <b>a</b> to resume</li>
+              </ol>
+            </div>
+            <div class="challenge">
+              <div class="challenge-title">Mapping Type Mismatch</div>
+              <div class="challenge-desc">Real symptom: mapper_parsing_exception on index</div>
+              <button class="challenge-btn" id="btn-type-mismatch">Send Bad Types</button>
+              <ol class="challenge-steps">
+                <li>Find POST <code>/_doc</code> with 400 status</li>
+                <li>Check response for <code>mapper_parsing_exception</code></li>
+                <li>price: string → float, category: number → string</li>
+                <li><b>Edit</b> request body and <b>Replay</b></li>
+              </ol>
+            </div>
+            <div class="challenge">
+              <div class="challenge-title">Aggregation on Text Field</div>
+              <div class="challenge-desc">Real symptom: fielddata disabled error</div>
+              <button class="challenge-btn" id="btn-agg-text">Run Bad Agg</button>
+              <ol class="challenge-steps">
+                <li>Find <code>/_search</code> with aggregation error</li>
+                <li>See <code>illegal_argument_exception</code> in response</li>
+                <li>Change <code>name</code> → <code>name.keyword</code></li>
+                <li><b>Edit</b> and <b>Replay</b> to see results</li>
+              </ol>
+            </div>
+            <div class="challenge">
+              <div class="challenge-title">Index Not Found (404)</div>
+              <div class="challenge-desc">Real symptom: index_not_found_exception</div>
+              <button class="challenge-btn" id="btn-index-404">Query Wrong Index</button>
+              <ol class="challenge-steps">
+                <li>Find request with <b>404</b> status (red)</li>
+                <li>See <code>index_not_found_exception</code></li>
+                <li>URL has typo: <code>products_v2</code> → <code>products</code></li>
+                <li><b>Edit</b> URL path and <b>Replay</b></li>
+              </ol>
+            </div>
           </div>
         </div>
       </div>
@@ -428,11 +617,15 @@
       const toggleIntercept = document.getElementById("toggle-intercept");
       const toggleLabel = document.getElementById("toggle-label");
       const toast = document.getElementById("toast");
+      const mitmNode = document.getElementById("mitm-node");
+      const serviceNode = document.getElementById("service-node");
+      const flowControl = document.getElementById("flow-control");
+      const flowHint = document.getElementById("flow-hint");
 
       function showToast(msg, type = "success") {
         toast.textContent = msg;
         toast.className = `toast ${type} show`;
-        setTimeout(() => toast.className = "toast", 3000);
+        setTimeout(() => (toast.className = "toast"), 3000);
       }
 
       // Tab switching
@@ -443,15 +636,31 @@
         panelEs.classList.toggle("active", tab === "es");
         panelNode.classList.toggle("active", tab === "node");
 
-        // Update toggle to reflect current service state
-        const serviceId = tab === "es" ? "elasticsearch" : "nodeapi";
-        toggleIntercept.checked = state[serviceId];
         updateTabIndicators();
+        updateFlowDiagram();
       }
 
       function updateTabIndicators() {
         tabEs.classList.toggle("capturing", state.elasticsearch);
         tabNode.classList.toggle("capturing", state.nodeapi);
+      }
+
+      function updateFlowDiagram() {
+        const serviceId = currentTab === "es" ? "elasticsearch" : "nodeapi";
+        const isActive = state[serviceId];
+
+        // Update MITM node styling
+        mitmNode.classList.toggle("active", isActive);
+        flowControl.classList.toggle("capturing", isActive);
+
+        // Update service label
+        serviceNode.textContent = currentTab === "es" ? "ES" : "Node";
+
+        // Update hint
+        flowHint.textContent = isActive ? "intercepting traffic" : "click MITM to intercept";
+
+        // Sync the toggle switch
+        toggleIntercept.checked = isActive;
       }
 
       // Toggle interception
@@ -460,14 +669,29 @@
         const action = enabled ? "enable" : "disable";
 
         try {
-          const res = await fetch(`${API}/api/monitoring/${action}/${serviceId}`, { method: "POST" });
+          const res = await fetch(`${API}/api/monitoring/${action}/${serviceId}`, {
+            method: "POST",
+          });
           const data = await res.json();
           state[serviceId] = enabled;
           updateTabIndicators();
+          updateFlowDiagram();
           showToast(enabled ? `Intercepting ${serviceId}` : `Direct mode for ${serviceId}`);
+
+          // Refresh MITMproxy iframe to reconnect WebSocket and show fresh data
+          if (enabled) {
+            const iframe =
+              serviceId === "elasticsearch"
+                ? document.getElementById("iframe-es")
+                : document.getElementById("iframe-node");
+            if (iframe) {
+              iframe.src = iframe.src; // Force refresh
+            }
+          }
         } catch (e) {
           showToast("Failed: " + e.message, "error");
           toggleIntercept.checked = !enabled;
+          updateFlowDiagram();
         }
       }
 
@@ -478,8 +702,8 @@
           const data = await res.json();
           state.elasticsearch = data.services?.elasticsearch?.enabled || false;
           state.nodeapi = data.services?.nodeapi?.enabled || false;
-          toggleIntercept.checked = currentTab === "es" ? state.elasticsearch : state.nodeapi;
           updateTabIndicators();
+          updateFlowDiagram();
         } catch (e) {
           console.error("Status fetch failed:", e);
         }
@@ -492,7 +716,7 @@
           const res = await fetch(`${API}/es/products/_search`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query: { match: { name: "keyboard" } }, size: 5 })
+            body: JSON.stringify({ query: { match: { name: "keyboard" } }, size: 5 }),
           });
           const data = await res.json();
           const hits = data.hits?.total?.value ?? 0;
@@ -523,7 +747,10 @@
           const res = await fetch(`${API}/api/challenge/search-zero-hits`, { method: "POST" });
           const data = await res.json();
           const hits = data.esResponse?.hits?.total?.value ?? 0;
-          showToast(hits === 0 ? "0 hits! Check Query DSL" : `Got ${hits} hits`, hits === 0 ? "error" : "success");
+          showToast(
+            hits === 0 ? "0 hits! Check Query DSL" : `Got ${hits} hits`,
+            hits === 0 ? "error" : "success"
+          );
         } catch (e) {
           showToast("Query failed: " + e.message, "error");
         }
@@ -535,7 +762,7 @@
           const res = await fetch(`${API}/node/echo`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ test: "data", time: Date.now() })
+            body: JSON.stringify({ test: "data", time: Date.now() }),
           });
           const data = await res.json();
           showToast("Echo received");
@@ -566,25 +793,57 @@
         }
       }
 
-      async function testRateStorm() {
-        if (!state.elasticsearch) {
-          showToast("Enable ES intercept first", "error");
-          return;
-        }
-        showToast("Firing 10 requests...");
+      async function testTypeMismatch() {
+        showToast("Sending bad field types...");
         try {
-          const res = await fetch(`${API}/api/challenge/rate-limit-storm`, { method: "POST" });
+          const res = await fetch(`${API}/api/challenge/type-mismatch`, { method: "POST" });
           const data = await res.json();
-          showToast(`Burst done in ${data.totalTime}ms`);
+          const hasError = data.esResponse?.error;
+          showToast(
+            hasError ? "Type error! Check response" : "Indexed (check types)",
+            hasError ? "error" : "success"
+          );
         } catch (e) {
-          showToast("Burst failed: " + e.message, "error");
+          showToast("Request failed: " + e.message, "error");
+        }
+      }
+
+      async function testAggText() {
+        showToast("Running aggregation on text field...");
+        try {
+          const res = await fetch(`${API}/api/challenge/agg-text-field`, { method: "POST" });
+          const data = await res.json();
+          const hasError = data.esResponse?.error;
+          showToast(
+            hasError ? "Fielddata error! Use .keyword" : "Agg complete",
+            hasError ? "error" : "success"
+          );
+        } catch (e) {
+          showToast("Aggregation failed: " + e.message, "error");
+        }
+      }
+
+      async function testIndex404() {
+        showToast("Querying non-existent index...");
+        try {
+          const res = await fetch(`${API}/api/challenge/index-not-found`, { method: "POST" });
+          const data = await res.json();
+          showToast("404! Index not found", "error");
+        } catch (e) {
+          showToast("Request failed: " + e.message, "error");
         }
       }
 
       // Event listeners
       tabEs.addEventListener("click", () => switchTab("es"));
       tabNode.addEventListener("click", () => switchTab("node"));
-      toggleIntercept.addEventListener("change", e => toggleService(e.target.checked));
+      toggleIntercept.addEventListener("change", (e) => toggleService(e.target.checked));
+
+      // MITM node click - the main intercept control
+      mitmNode.addEventListener("click", () => {
+        const serviceId = currentTab === "es" ? "elasticsearch" : "nodeapi";
+        toggleService(!state[serviceId]);
+      });
 
       document.getElementById("test-search").addEventListener("click", testSearch);
       document.getElementById("test-bulk").addEventListener("click", testBulk);
@@ -595,7 +854,9 @@
 
       document.getElementById("btn-bulk-broken")?.addEventListener("click", testBulk);
       document.getElementById("btn-search-zero")?.addEventListener("click", testQueryBug);
-      document.getElementById("btn-rate-storm")?.addEventListener("click", testRateStorm);
+      document.getElementById("btn-type-mismatch")?.addEventListener("click", testTypeMismatch);
+      document.getElementById("btn-agg-text")?.addEventListener("click", testAggText);
+      document.getElementById("btn-index-404")?.addEventListener("click", testIndex404);
 
       // Challenges toggle
       document.getElementById("challenges-toggle").addEventListener("click", () => {
@@ -610,8 +871,10 @@
       const appPane = document.getElementById("app-pane");
       let isResizing = false;
 
-      resizeHandle.addEventListener("mousedown", () => { isResizing = true; });
-      document.addEventListener("mousemove", e => {
+      resizeHandle.addEventListener("mousedown", () => {
+        isResizing = true;
+      });
+      document.addEventListener("mousemove", (e) => {
         if (!isResizing) return;
         const containerWidth = document.querySelector(".main-container").offsetWidth;
         const newWidth = (e.clientX / containerWidth) * 100;
@@ -619,9 +882,12 @@
           appPane.style.flex = `0 0 ${newWidth}%`;
         }
       });
-      document.addEventListener("mouseup", () => { isResizing = false; });
+      document.addEventListener("mouseup", () => {
+        isResizing = false;
+      });
 
       // Init
+      updateFlowDiagram(); // Set initial flow state
       fetchStatus();
     </script>
   </body>

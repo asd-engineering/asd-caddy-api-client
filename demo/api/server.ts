@@ -25,7 +25,7 @@ const caddy = new CaddyClient({ adminUrl: CADDY_ADMIN_URL });
 
 // Initialize MitmproxyManager with two proxy instances
 const mitmManager = new MitmproxyManager(caddy, {
-  default: { host: "mitmproxy", port: 8080, webPort: 8081 },      // For Elasticsearch
+  default: { host: "mitmproxy", port: 8080, webPort: 8081 }, // For Elasticsearch
   nodeproxy: { host: "mitmproxy-node", port: 8080, webPort: 8081 }, // For Node API
 });
 
@@ -263,7 +263,7 @@ const server = Bun.serve({
 
         // Send to ES via the /es route (which may go through MITM)
         try {
-          const esResponse = await fetch(`http://localhost:9080/es/_bulk`, {
+          const esResponse = await fetch(`http://caddy:80/es/_bulk`, {
             method: "POST",
             headers: { "Content-Type": "application/x-ndjson" },
             body: brokenBulkPayload,
@@ -274,7 +274,8 @@ const server = Bun.serve({
               challenge: "bulk-indexing",
               description: "Bulk request sent with formatting issues",
               hint: "In MITMproxy: Check the request body - see the pretty-printed JSON and missing newlines?",
-              mitmAction: "Edit the request body to fix NDJSON format: each line must be compact JSON",
+              mitmAction:
+                "Edit the request body to fix NDJSON format: each line must be compact JSON",
               esResponse: result,
             },
             { headers: corsHeaders }
@@ -305,7 +306,7 @@ const server = Bun.serve({
         };
 
         try {
-          const esResponse = await fetch(`http://localhost:9080/es/products/_search`, {
+          const esResponse = await fetch(`http://caddy:80/es/products/_search`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(brokenQuery),
@@ -321,7 +322,8 @@ const server = Bun.serve({
                 "1. 'category' is a keyword field - needs exact case: 'Electronics' not 'electronics'",
                 "2. Field name is 'name', not 'product_name'",
               ],
-              mitmAction: "Edit request: change 'product_name' to 'name', change 'electronics' to 'Electronics'",
+              mitmAction:
+                "Edit request: change 'product_name' to 'name', change 'electronics' to 'Electronics'",
               esResponse: result,
             },
             { headers: corsHeaders }
@@ -344,7 +346,7 @@ const server = Bun.serve({
         const promises = Array.from({ length: 10 }, async (_, i) => {
           const reqStart = Date.now() - startTime;
           try {
-            const response = await fetch(`http://localhost:9080/es/products/_search`, {
+            const response = await fetch(`http://caddy:80/es/products/_search`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -379,7 +381,173 @@ const server = Bun.serve({
         );
       }
 
-      // Challenge 4: Fix broken JSON response (original, enhanced)
+      // Challenge 4: Mapping Type Mismatch - mapper_parsing_exception
+      // Real symptom: Document indexing fails with type errors
+      if (path === "/api/challenge/type-mismatch" && req.method === "POST") {
+        // Send document with wrong field types
+        const brokenDoc = {
+          name: "Test Product",
+          price: "not-a-number", // Problem: price should be a float
+          category: 12345, // Problem: category should be a string
+        };
+
+        try {
+          const esResponse = await fetch(`http://caddy:80/es/products/_doc`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(brokenDoc),
+          });
+          const result = await esResponse.json();
+          return Response.json(
+            {
+              challenge: "type-mismatch",
+              description: "Document indexing failed due to type mismatch",
+              sentDocument: brokenDoc,
+              hint: "In MITMproxy: Check response for 'mapper_parsing_exception'",
+              problems: [
+                "1. 'price' field expects float, got string 'not-a-number'",
+                "2. 'category' field expects keyword string, got number 12345",
+              ],
+              mitmAction: "Edit request: change price to 99.99, category to 'Electronics'",
+              esResponse: result,
+            },
+            { headers: corsHeaders }
+          );
+        } catch (e) {
+          return Response.json(
+            { error: "Failed to index document", details: String(e) },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+      }
+
+      // Challenge 5: Aggregation on Text Field - fielddata disabled error
+      // Real symptom: "Fielddata is disabled on text fields by default"
+      if (path === "/api/challenge/agg-text-field" && req.method === "POST") {
+        // Try to aggregate on 'name' which is a text field
+        const brokenAgg = {
+          size: 0,
+          aggs: {
+            top_names: {
+              terms: {
+                field: "name", // Problem: 'name' is text, need 'name.keyword'
+                size: 10,
+              },
+            },
+          },
+        };
+
+        try {
+          const esResponse = await fetch(`http://caddy:80/es/products/_search`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(brokenAgg),
+          });
+          const result = await esResponse.json();
+          return Response.json(
+            {
+              challenge: "aggregation-text-field",
+              description: "Aggregation failed - cannot aggregate on text field",
+              sentQuery: brokenAgg,
+              hint: "In MITMproxy: Look for 'illegal_argument_exception' about fielddata",
+              problems: [
+                "Text fields have fielddata disabled by default",
+                "Use 'name.keyword' for aggregations, not 'name'",
+              ],
+              mitmAction: "Edit request: change 'name' to 'name.keyword' in the aggregation",
+              esResponse: result,
+            },
+            { headers: corsHeaders }
+          );
+        } catch (e) {
+          return Response.json(
+            { error: "Failed to run aggregation", details: String(e) },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+      }
+
+      // Challenge 6: Slow Query / Large Result Set
+      // Real symptom: Very slow or timeout responses
+      if (path === "/api/challenge/slow-query" && req.method === "POST") {
+        // Request a huge result set - common performance mistake
+        const slowQuery = {
+          query: { match_all: {} },
+          size: 10000, // Problem: requesting way too many results
+          track_total_hits: true,
+        };
+
+        const startTime = Date.now();
+        try {
+          const esResponse = await fetch(`http://caddy:80/es/products/_search`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(slowQuery),
+          });
+          const result = await esResponse.json();
+          const duration = Date.now() - startTime;
+
+          return Response.json(
+            {
+              challenge: "slow-query",
+              description: `Query took ${duration}ms - size=10000 is problematic`,
+              sentQuery: slowQuery,
+              hint: "In MITMproxy: Check request body 'size' parameter",
+              problems: [
+                "Requesting 10000 results at once is slow and memory-intensive",
+                "Default max_result_window is 10000 - larger values fail",
+                "Use pagination with search_after or scroll for large datasets",
+              ],
+              mitmAction: "Edit request: change 'size' to 10 or 20 for faster response",
+              duration: `${duration}ms`,
+              esResponse: result,
+            },
+            { headers: corsHeaders }
+          );
+        } catch (e) {
+          return Response.json(
+            { error: "Query failed or timed out", details: String(e) },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+      }
+
+      // Challenge 7: Index Not Found (404)
+      // Real symptom: index_not_found_exception
+      if (path === "/api/challenge/index-not-found" && req.method === "POST") {
+        // Query a non-existent index - common typo scenario
+        try {
+          const esResponse = await fetch(`http://caddy:80/es/products_v2/_search`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: { match_all: {} } }),
+          });
+          const result = await esResponse.json();
+          return Response.json(
+            {
+              challenge: "index-not-found",
+              description: "Search failed - index does not exist",
+              attemptedIndex: "products_v2",
+              correctIndex: "products",
+              hint: "In MITMproxy: Look for 404 status and 'index_not_found_exception'",
+              problems: [
+                "Index 'products_v2' doesn't exist - typo in index name",
+                "Correct index name is 'products'",
+              ],
+              mitmAction: "Edit request URL: change '/products_v2/' to '/products/'",
+              esResponse: result,
+            },
+            { headers: corsHeaders }
+          );
+        } catch (e) {
+          return Response.json(
+            { error: "Request failed", details: String(e) },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+      }
+
+      // Challenge 8 (Node): Fix broken JSON response (original, enhanced)
       if (path === "/node/broken" || path === "/broken") {
         // Returns intentionally broken JSON - fix it in MITMproxy!
         const brokenJson = `{
@@ -510,7 +678,11 @@ const server = Bun.serve({
       if (path === "/api/monitoring/disable" && req.method === "POST") {
         await mitmManager.disable("elasticsearch");
         return Response.json(
-          { success: true, enabled: false, message: "Traffic monitoring disabled for elasticsearch" },
+          {
+            success: true,
+            enabled: false,
+            message: "Traffic monitoring disabled for elasticsearch",
+          },
           { headers: corsHeaders }
         );
       }
