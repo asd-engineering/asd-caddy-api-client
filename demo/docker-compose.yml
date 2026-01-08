@@ -37,7 +37,7 @@ services:
       timeout: 5s
       retries: 10
 
-  # MITMproxy in reverse mode (forwards to Elasticsearch)
+  # MITMproxy for Elasticsearch (reverse mode)
   mitmproxy:
     image: mitmproxy/mitmproxy:10.4.2
     container_name: demo-mitmproxy
@@ -70,6 +70,38 @@ services:
       retries: 10
       start_period: 10s
 
+  # MITMproxy for Node API (reverse mode)
+  mitmproxy-node:
+    image: mitmproxy/mitmproxy:10.4.2
+    container_name: demo-mitmproxy-node
+    command: >
+      mitmweb
+      --mode reverse:http://demo-api:3000
+      --web-host 0.0.0.0
+      --web-port 8081
+      --listen-host 0.0.0.0
+      --listen-port 8080
+      --no-web-open-browser
+      --set keep_host_header=true
+      --set block_global=false
+    ports:
+      - "9084:8080" # Proxy port
+      - "9083:8081" # Web UI
+    networks:
+      - demo-net
+    depends_on:
+      - demo-api
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python3 -c "import urllib.request; urllib.request.urlopen(''http://localhost:8081/'')"',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   # Demo API server (Bun + caddy-api-client library)
   demo-api:
     build:
@@ -81,6 +113,9 @@ services:
     environment:
       - CADDY_ADMIN_URL=http://caddy:2019
       - ELASTICSEARCH_URL=http://elasticsearch:9200
+    volumes:
+      - ./app:/app/public:ro
+      - ./api/server.ts:/app/demo/server.ts:ro
     networks:
       - demo-net
     depends_on:

@@ -5,78 +5,891 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MITMproxy Traffic Inspection Demo</title>
     <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: #1a1a2e;
+        background: #0f172a;
         height: 100vh;
         display: flex;
         flex-direction: column;
+        color: #e2e8f0;
       }
       header {
-        background: #16213e;
-        padding: 0.75rem 1.5rem;
+        background: #1e293b;
+        padding: 0.5rem 1rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid #0f3460;
+        border-bottom: 1px solid #334155;
       }
-      h1 {
-        color: #e94560;
-        font-size: 1.25rem;
-      }
-      .subtitle {
-        color: #94a3b8;
-        font-size: 0.875rem;
-      }
-      .container {
-        display: flex;
-        flex: 1;
-        gap: 4px;
-        padding: 4px;
-      }
-      .pane {
-        flex: 1;
+      h1 { color: #f59e0b; font-size: 1rem; font-weight: 600; }
+      .subtitle { color: #64748b; font-size: 0.75rem; }
+
+      .main-container { display: flex; flex: 1; overflow: hidden; }
+
+      /* Switchboard Panel */
+      .switchboard {
+        width: 300px;
+        background: #1e293b;
+        border-right: 1px solid #334155;
+        padding: 1rem;
         display: flex;
         flex-direction: column;
-        background: #16213e;
-        border-radius: 8px;
+        gap: 0.75rem;
+        overflow-y: auto;
+      }
+      .switchboard-title {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        margin-bottom: 0.25rem;
+      }
+
+      /* Flow Diagram */
+      .flow-diagram {
+        background: #0f172a;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        font-size: 0.65rem;
+      }
+      .flow-path {
+        display: flex;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 0.25rem;
+        background: #1e293b;
+        border-radius: 0.25rem;
+        margin-bottom: 0.25rem;
+        transition: all 0.3s;
+      }
+      .flow-path:last-child { margin-bottom: 0; }
+      .flow-path.active {
+        background: rgba(245, 158, 11, 0.15);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+      }
+      .flow-node {
+        padding: 0.15rem 0.3rem;
+        border-radius: 0.15rem;
+        font-size: 0.6rem;
+        white-space: nowrap;
+      }
+      .flow-node.browser { background: #3b82f6; color: white; }
+      .flow-node.caddy { background: #22c55e; color: white; }
+      .flow-node.mitmproxy { background: #f59e0b; color: #1e293b; font-weight: 600; }
+      .flow-node.service { background: #8b5cf6; color: white; }
+      .flow-node.muted { background: #334155; color: #64748b; }
+      .flow-arrow { color: #475569; font-size: 0.5rem; }
+
+      /* Service Card */
+      .service-card {
+        background: #0f172a;
+        border-radius: 0.5rem;
+        padding: 0.625rem;
+        border: 2px solid #334155;
+        transition: all 0.3s;
+      }
+      .service-card.enabled {
+        border-color: #f59e0b;
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+      }
+      .service-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .service-info { display: flex; flex-direction: column; gap: 0.1rem; }
+      .service-name { font-weight: 600; font-size: 0.85rem; }
+      .service-path { font-size: 0.65rem; color: #64748b; font-family: monospace; }
+      .service-status {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #334155;
+        font-size: 0.65rem;
+      }
+      .service-status .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #64748b;
+      }
+      .service-status .status-text { color: #94a3b8; }
+      .service-card.enabled .service-status .status-dot { background: #22c55e; }
+      .service-card.enabled .service-status .status-text { color: #22c55e; }
+
+      /* Toggle Switch */
+      .toggle-switch {
+        position: relative;
+        width: 48px;
+        height: 26px;
+        cursor: pointer;
+      }
+      .toggle-switch input { opacity: 0; width: 0; height: 0; }
+      .toggle-slider {
+        position: absolute;
+        inset: 0;
+        background: #334155;
+        border-radius: 26px;
+        transition: all 0.3s;
+      }
+      .toggle-slider::before {
+        content: "";
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        left: 3px;
+        bottom: 3px;
+        background: #64748b;
+        border-radius: 50%;
+        transition: all 0.3s;
+      }
+      .toggle-switch input:checked + .toggle-slider { background: #f59e0b; }
+      .toggle-switch input:checked + .toggle-slider::before {
+        transform: translateX(22px);
+        background: white;
+      }
+      .toggle-switch input:disabled + .toggle-slider { opacity: 0.5; cursor: not-allowed; }
+
+      /* Action Buttons */
+      .action-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #334155;
+      }
+      .action-btn {
+        padding: 0.5rem;
+        background: #334155;
+        border: none;
+        border-radius: 0.375rem;
+        color: #e2e8f0;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+      }
+      .action-btn:hover { background: #475569; }
+      .action-btn:active { transform: scale(0.98); }
+
+      /* Tip Box */
+      .tip-box {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #1e3a5f;
+        border-radius: 0.375rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.7rem;
+        color: #94a3b8;
+      }
+      .tip-box kbd {
+        background: #334155;
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.2rem;
+        font-family: monospace;
+        font-weight: bold;
+        color: #f59e0b;
+      }
+
+      /* Test Buttons */
+      .test-section { padding-top: 0.5rem; border-top: 1px solid #334155; }
+
+      /* Tips Section */
+      .tips-section {
+        margin-top: 0.75rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #334155;
+      }
+      .tips-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        padding: 0.375rem;
+        background: #334155;
+        border-radius: 0.375rem;
+        margin-bottom: 0.5rem;
+        transition: background 0.2s;
+      }
+      .tips-header:hover { background: #475569; }
+      .tips-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #f59e0b;
+      }
+      .tips-arrow {
+        font-size: 0.65rem;
+        color: #64748b;
+        transition: transform 0.2s;
+      }
+      .tips-arrow.collapsed { transform: rotate(-90deg); }
+      .tips-content {
+        max-height: 500px;
         overflow: hidden;
+        transition: max-height 0.3s ease;
+      }
+      .tips-content.collapsed {
+        max-height: 0;
+      }
+      .tip {
+        background: #0f172a;
+        border-radius: 0.375rem;
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+        border-left: 3px solid #3b82f6;
+      }
+      .tip-header {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #e2e8f0;
+        margin-bottom: 0.375rem;
+      }
+      .tip-steps {
+        font-size: 0.65rem;
+        color: #94a3b8;
+        margin-left: 1rem;
+        line-height: 1.5;
+      }
+      .tip-steps li { margin-bottom: 0.15rem; }
+      .tip-steps code {
+        background: #334155;
+        padding: 0.1rem 0.25rem;
+        border-radius: 0.2rem;
+        font-size: 0.6rem;
+        color: #22c55e;
+      }
+      .tip-steps b { color: #f59e0b; }
+      .tip-desc {
+        font-size: 0.6rem;
+        color: #64748b;
+        margin-top: 0.25rem;
+        font-style: italic;
+      }
+      .tip-code {
+        display: block;
+        background: #334155;
+        padding: 0.375rem;
+        border-radius: 0.25rem;
+        font-size: 0.55rem;
+        color: #22c55e;
+        margin-top: 0.25rem;
+        word-break: break-all;
+        line-height: 1.4;
+      }
+      .challenge-btn {
+        width: 100%;
+        padding: 0.375rem;
+        margin-top: 0.25rem;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        border: none;
+        border-radius: 0.25rem;
+        color: white;
+        font-size: 0.65rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .challenge-btn:hover { transform: scale(1.02); filter: brightness(1.1); }
+      .challenge-btn:active { transform: scale(0.98); }
+      .challenge-btn.red { background: linear-gradient(135deg, #dc2626, #991b1b); }
+      .challenge-btn.green { background: linear-gradient(135deg, #22c55e, #15803d); }
+      .test-title { font-size: 0.65rem; color: #64748b; margin-bottom: 0.375rem; }
+      .test-btn {
+        width: 100%;
+        padding: 0.375rem 0.5rem;
+        margin-bottom: 0.25rem;
+        background: #334155;
+        border: none;
+        border-radius: 0.25rem;
+        color: #e2e8f0;
+        font-size: 0.7rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: left;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .test-btn:hover { background: #475569; }
+      .test-btn .endpoint { font-family: monospace; color: #94a3b8; font-size: 0.6rem; }
+      .test-btn.es { border-left: 3px solid #8b5cf6; }
+      .test-btn.node { border-left: 3px solid #22c55e; }
+
+      /* Content Area */
+      .content-area { flex: 1; display: flex; flex-direction: column; }
+
+      /* Panes */
+      .panes { flex: 1; display: flex; padding: 4px; }
+      .pane {
+        display: flex;
+        flex-direction: column;
+        background: #1e293b;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        min-width: 200px;
+      }
+      .pane-left { flex: 0 0 40%; }
+      .pane-right { flex: 1; }
+
+      /* Resize Handle */
+      .resize-handle {
+        width: 12px;
+        background: linear-gradient(90deg, #1e293b, #334155, #1e293b);
+        cursor: col-resize;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        position: relative;
+      }
+      .resize-handle::before {
+        content: "⋮⋮";
+        color: #64748b;
+        font-size: 0.875rem;
+        letter-spacing: -2px;
+      }
+      .resize-handle:hover, .resize-handle.dragging {
+        background: linear-gradient(90deg, #f59e0b22, #f59e0b, #f59e0b22);
+        width: 14px;
+      }
+      .resize-handle:hover::before, .resize-handle.dragging::before {
+        color: #f59e0b;
       }
       .pane-header {
-        padding: 0.5rem 1rem;
-        background: #0f3460;
+        padding: 0.375rem 0.625rem;
+        background: #334155;
         color: #e2e8f0;
         font-weight: 600;
-        font-size: 0.875rem;
+        font-size: 0.7rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
       }
-      iframe {
-        flex: 1;
+      .pane-badge {
+        font-size: 0.6rem;
+        padding: 0.1rem 0.3rem;
+        border-radius: 9999px;
+        background: #475569;
+      }
+      .pane-badge.active { background: #f59e0b; color: #1e293b; }
+
+      /* Tabs for MITM proxies */
+      .mitm-tabs {
+        display: flex;
+        gap: 4px;
+        padding: 0.5rem;
+        background: #0f172a;
+        border-bottom: 2px solid #334155;
+      }
+      .mitm-tab {
+        padding: 0.5rem 1rem;
+        background: #334155;
+        border: 2px solid #475569;
+        border-bottom: none;
+        border-radius: 0.5rem 0.5rem 0 0;
+        color: #94a3b8;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+        top: 2px;
+      }
+      .mitm-tab:hover { background: #475569; color: #e2e8f0; border-color: #64748b; }
+      .mitm-tab.active {
+        background: #1e293b;
+        color: #f59e0b;
+        font-weight: 600;
+        border-color: #f59e0b;
+        border-bottom: 2px solid #1e293b;
+      }
+      .mitm-tab .badge {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-left: 0.5rem;
+        background: #475569;
+        vertical-align: middle;
+      }
+      .mitm-tab.capturing .badge { background: #22c55e; animation: pulse 1.5s infinite; }
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+      .mitm-content { flex: 1; position: relative; }
+      .mitm-iframe {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
         border: none;
         background: #0f172a;
+        display: none;
       }
+      .mitm-iframe.active { display: block; }
+
+      iframe { flex: 1; border: none; background: #0f172a; }
+
+      /* Toast */
+      .toast {
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        font-size: 0.8rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.3s;
+        z-index: 100;
+      }
+      .toast.show { transform: translateY(0); opacity: 1; }
+      .toast.success { border-color: #22c55e; }
+      .toast.error { border-color: #ef4444; }
     </style>
   </head>
   <body>
     <header>
       <div>
-        <h1>MITMproxy Traffic Inspection Demo</h1>
-        <span class="subtitle">Dynamic route switching via Caddy Admin API</span>
+        <h1>MITMproxy Traffic Inspection</h1>
+        <span class="subtitle">caddy-api-client + MitmproxyManager</span>
       </div>
     </header>
-    <div class="container">
-      <div class="pane">
-        <div class="pane-header">Product Search</div>
-        <iframe src="http://localhost:9080/app/"></iframe>
+
+    <div class="main-container">
+      <div class="switchboard">
+        <div class="switchboard-title">Traffic Flow</div>
+        <div class="flow-diagram">
+          <div class="flow-path" id="flow-es">
+            <span class="flow-node browser">Browser</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node caddy">Caddy</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node muted" id="flow-es-mitm">skip</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node service">ES</span>
+          </div>
+          <div class="flow-path" id="flow-node">
+            <span class="flow-node browser">Browser</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node caddy">Caddy</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node muted" id="flow-node-mitm">skip</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node service">Node</span>
+          </div>
+        </div>
+
+        <div class="switchboard-title">Services</div>
+
+        <!-- Elasticsearch -->
+        <div class="service-card" id="card-es">
+          <div class="service-header">
+            <div class="service-info">
+              <div class="service-name">Elasticsearch</div>
+              <div class="service-path">/es/* → :9200</div>
+            </div>
+            <label class="toggle-switch" title="Toggle traffic interception">
+              <input type="checkbox" id="toggle-es" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="service-status" id="status-es">
+            <span class="status-dot"></span>
+            <span class="status-text">Direct connection (not intercepting)</span>
+          </div>
+        </div>
+
+        <!-- Node API -->
+        <div class="service-card" id="card-node">
+          <div class="service-header">
+            <div class="service-info">
+              <div class="service-name">Node API</div>
+              <div class="service-path">/node/* → :3000</div>
+            </div>
+            <label class="toggle-switch" title="Toggle traffic interception">
+              <input type="checkbox" id="toggle-node" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="service-status" id="status-node">
+            <span class="status-dot"></span>
+            <span class="status-text">Direct connection (not intercepting)</span>
+          </div>
+        </div>
+
+        <!-- Tip for clearing flows -->
+        <div class="tip-box">
+          <span>💡</span>
+          <span>Press <kbd>z</kbd> in the MITMproxy panel to clear flows</span>
+        </div>
+
+        <!-- Test Buttons -->
+        <div class="test-section">
+          <div class="test-title">Send Test Requests</div>
+          <button class="test-btn es" id="test-es">
+            <span>Search Products</span>
+            <span class="endpoint">/es/_search</span>
+          </button>
+          <button class="test-btn node" id="test-node-echo">
+            <span>Echo</span>
+            <span class="endpoint">/node/echo</span>
+          </button>
+          <button class="test-btn node" id="test-node-random">
+            <span>Random</span>
+            <span class="endpoint">/node/random</span>
+          </button>
+        </div>
+
+        <!-- Tips (collapsible) -->
+        <div class="tips-section">
+          <div class="tips-header" id="tips-toggle">
+            <span class="tips-title">🎯 Challenges</span>
+            <span class="tips-arrow" id="tips-arrow">▼</span>
+          </div>
+          <div class="tips-content" id="tips-content">
+          <div class="tip">
+            <div class="tip-header">💰 Change a Price to $0.01</div>
+            <ol class="tip-steps">
+              <li>Enable intercept: <b>Options</b> → <code>~s</code></li>
+              <li>Search "keyboard" - response pauses</li>
+              <li>Click flow → <b>Response</b> → <b>Edit</b></li>
+              <li>Change <code>"price": 149.99</code> → <code>0.01</code></li>
+              <li>Press <b>a</b> to resume</li>
+            </ol>
+          </div>
+          <div class="tip">
+            <div class="tip-header">🔧 Fix Broken JSON</div>
+            <button class="challenge-btn" id="btn-broken-json">Send Broken Response</button>
+            <div class="tip-desc">Intercept and fix the malformed JSON before it reaches the browser!</div>
+          </div>
+          <div class="tip">
+            <div class="tip-header">🎁 Inject a Free Product</div>
+            <ol class="tip-steps">
+              <li>Intercept a search response</li>
+              <li>In the hits array, add:</li>
+            </ol>
+            <code class="tip-code">{"_source":{"name":"FREE GIFT","price":0,"category":"Secret"}}</code>
+          </div>
+          <div class="tip">
+            <div class="tip-header">💀 Simulate Server Error</div>
+            <button class="challenge-btn red" id="btn-500-error">Trigger 500 Error</button>
+            <div class="tip-desc">Change status 200→500 and see error handling!</div>
+          </div>
+          <div class="tip">
+            <div class="tip-header">🎨 Switch to Light Theme</div>
+            <button class="challenge-btn green" id="btn-theme">Fetch Theme Config</button>
+            <ol class="tip-steps">
+              <li>Click above to fetch config</li>
+              <li>Intercept the <code>/node/config</code> response</li>
+              <li>Change <code>"theme": "dark"</code> → <code>"light"</code></li>
+              <li>Watch the app switch themes! ✨</li>
+            </ol>
+          </div>
+          <div class="tip">
+            <div class="tip-header">🏷️ Rename the App</div>
+            <ol class="tip-steps">
+              <li>Intercept <code>/node/config</code></li>
+              <li>Change <code>"appName"</code> to anything!</li>
+              <li>Try: <code>"HACKED Store"</code> 😈</li>
+            </ol>
+          </div>
+          </div>
+        </div>
       </div>
-      <div class="pane">
-        <div class="pane-header">MITMproxy Web UI</div>
-        <iframe src="http://localhost:9080/mitmproxy/"></iframe>
+
+      <div class="content-area">
+        <div class="panes">
+          <div class="pane pane-left" id="pane-left">
+            <div class="pane-header">
+              <span>Product Search</span>
+              <span class="pane-badge" id="badge-app">Direct</span>
+            </div>
+            <iframe src="http://localhost:9080/app/" id="app-iframe"></iframe>
+          </div>
+          <div class="resize-handle" id="resize-handle"></div>
+          <div class="pane pane-right" id="pane-right">
+            <div class="pane-header">
+              <span>MITMproxy</span>
+              <span class="pane-badge" id="badge-mitm">Idle</span>
+            </div>
+            <div class="mitm-tabs">
+              <button class="mitm-tab active" id="tab-es" data-target="es">
+                📊 Elasticsearch<span class="badge"></span>
+              </button>
+              <button class="mitm-tab" id="tab-node" data-target="node">
+                🟢 Node API<span class="badge"></span>
+              </button>
+            </div>
+            <div class="mitm-content">
+              <iframe class="mitm-iframe active" id="iframe-es" src="http://localhost:9080/mitmproxy/"></iframe>
+              <iframe class="mitm-iframe" id="iframe-node" src="http://localhost:9080/mitmproxy-node/"></iframe>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+      const API = "http://localhost:9080";
+
+      // DOM
+      const toggleEs = document.getElementById("toggle-es");
+      const toggleNode = document.getElementById("toggle-node");
+      const cardEs = document.getElementById("card-es");
+      const cardNode = document.getElementById("card-node");
+      const flowEs = document.getElementById("flow-es");
+      const flowNode = document.getElementById("flow-node");
+      const flowEsMitm = document.getElementById("flow-es-mitm");
+      const flowNodeMitm = document.getElementById("flow-node-mitm");
+      const badgeApp = document.getElementById("badge-app");
+      const badgeMitm = document.getElementById("badge-mitm");
+      const tabEs = document.getElementById("tab-es");
+      const tabNode = document.getElementById("tab-node");
+      let iframeEs = document.getElementById("iframe-es");
+      let iframeNode = document.getElementById("iframe-node");
+      const toast = document.getElementById("toast");
+
+      let state = { elasticsearch: false, nodeapi: false };
+
+      function showToast(msg, type = "success") {
+        toast.textContent = msg;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.className = "toast", 3000);
+      }
+
+      function updateUI() {
+        const { elasticsearch, nodeapi } = state;
+        const anyEnabled = elasticsearch || nodeapi;
+
+        toggleEs.checked = elasticsearch;
+        toggleNode.checked = nodeapi;
+
+        cardEs.classList.toggle("enabled", elasticsearch);
+        cardNode.classList.toggle("enabled", nodeapi);
+
+        flowEs.classList.toggle("active", elasticsearch);
+        flowNode.classList.toggle("active", nodeapi);
+
+        flowEsMitm.textContent = elasticsearch ? "MITM" : "skip";
+        flowEsMitm.classList.toggle("mitmproxy", elasticsearch);
+        flowEsMitm.classList.toggle("muted", !elasticsearch);
+
+        flowNodeMitm.textContent = nodeapi ? "MITM" : "skip";
+        flowNodeMitm.classList.toggle("mitmproxy", nodeapi);
+        flowNodeMitm.classList.toggle("muted", !nodeapi);
+
+        tabEs.classList.toggle("capturing", elasticsearch);
+        tabNode.classList.toggle("capturing", nodeapi);
+
+        badgeApp.textContent = anyEnabled ? "Proxied" : "Direct";
+        badgeApp.classList.toggle("active", anyEnabled);
+        badgeMitm.textContent = anyEnabled ? "Capturing" : "Idle";
+        badgeMitm.classList.toggle("active", anyEnabled);
+
+        // Update service status text
+        const statusEs = document.querySelector("#status-es .status-text");
+        const statusNode = document.querySelector("#status-node .status-text");
+        if (statusEs) statusEs.textContent = elasticsearch
+          ? "🔍 Intercepting traffic via MITMproxy"
+          : "Direct connection (not intercepting)";
+        if (statusNode) statusNode.textContent = nodeapi
+          ? "🔍 Intercepting traffic via MITMproxy"
+          : "Direct connection (not intercepting)";
+      }
+
+      async function fetchStatus() {
+        try {
+          const res = await fetch(`${API}/api/monitoring/status`);
+          const data = await res.json();
+          state.elasticsearch = data.services?.elasticsearch?.enabled || false;
+          state.nodeapi = data.services?.nodeapi?.enabled || false;
+          updateUI();
+        } catch (e) {
+          console.error("Status fetch failed:", e);
+        }
+      }
+
+      async function toggleService(id, enable) {
+        const toggle = id === "elasticsearch" ? toggleEs : toggleNode;
+        toggle.disabled = true;
+        try {
+          const ep = enable ? `/api/monitoring/enable/${id}` : `/api/monitoring/disable/${id}`;
+          const res = await fetch(`${API}${ep}`, { method: "POST" });
+          const data = await res.json();
+          if (data.success) {
+            state[id] = enable;
+            updateUI();
+            showToast(`${id}: ${enable ? "intercepting" : "direct"}`);
+            // Reload relevant iframe
+            setTimeout(() => {
+              if (id === "elasticsearch") iframeEs.src = iframeEs.src;
+              else iframeNode.src = iframeNode.src;
+            }, 300);
+          }
+        } catch (e) {
+          showToast(`Failed: ${e.message}`, "error");
+          toggle.checked = !enable;
+        } finally {
+          toggle.disabled = false;
+        }
+      }
+
+      async function sendRequest(type) {
+        try {
+          let res;
+          if (type === "es") {
+            res = await fetch(`${API}/es/products/_search`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ query: { match_all: {} }, size: 3 }),
+            });
+          } else if (type === "node-echo") {
+            res = await fetch(`${API}/node/echo`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ test: "hello", ts: Date.now() }),
+            });
+          } else {
+            res = await fetch(`${API}/node/random`);
+          }
+          await res.json();
+          const captured = (type === "es" && state.elasticsearch) || (type !== "es" && state.nodeapi);
+          showToast(captured ? "Request captured! Check panel →" : "Request sent (not captured)");
+        } catch (e) {
+          showToast(`Request failed: ${e.message}`, "error");
+        }
+      }
+
+      function switchTab(target) {
+        document.querySelectorAll(".mitm-tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".mitm-iframe").forEach(f => f.classList.remove("active"));
+        document.querySelector(`.mitm-tab[data-target="${target}"]`).classList.add("active");
+        document.getElementById(`iframe-${target}`).classList.add("active");
+      }
+
+      // Events
+      toggleEs.addEventListener("change", e => toggleService("elasticsearch", e.target.checked));
+      toggleNode.addEventListener("change", e => toggleService("nodeapi", e.target.checked));
+      document.getElementById("test-es").addEventListener("click", () => sendRequest("es"));
+      document.getElementById("test-node-echo").addEventListener("click", () => sendRequest("node-echo"));
+      document.getElementById("test-node-random").addEventListener("click", () => sendRequest("node-random"));
+
+      // Challenge buttons
+      document.getElementById("btn-broken-json").addEventListener("click", async () => {
+        showToast("Sending broken JSON... Fix it in MITMproxy! 🔧");
+        try {
+          const res = await fetch(`${API}/node/broken`);
+          const text = await res.text();
+          try {
+            JSON.parse(text);
+            showToast("JSON was valid! (Maybe you fixed it?) ✅");
+          } catch {
+            showToast("JSON parse error! Check MITMproxy to fix it 🔴", "error");
+          }
+        } catch (e) {
+          showToast("Request failed: " + e.message, "error");
+        }
+      });
+
+      document.getElementById("btn-500-error").addEventListener("click", async () => {
+        showToast("Sending request that returns 500... Change it to 200! 💀");
+        try {
+          const res = await fetch(`${API}/node/error500`);
+          if (res.status === 200) {
+            showToast("Status 200! You fixed it! 🎉");
+          } else {
+            showToast(`Status ${res.status} - Change to 200 in MITMproxy!`, "error");
+          }
+        } catch (e) {
+          showToast("Request failed: " + e.message, "error");
+        }
+      });
+
+      document.getElementById("btn-theme").addEventListener("click", async () => {
+        showToast("Fetching theme config... Intercept & change 'theme' to 'light'! 🎨");
+        try {
+          const res = await fetch(`${API}/node/config`);
+          const config = await res.json();
+          if (config.theme === "light") {
+            showToast("Light theme applied! 🌞");
+          } else {
+            showToast(`Theme: ${config.theme} - Try changing to 'light'!`);
+          }
+          // Refresh the app iframe to pick up new config
+          document.getElementById("app-iframe").contentWindow.location.reload();
+        } catch (e) {
+          showToast("Config failed: " + e.message, "error");
+        }
+      });
+      tabEs.addEventListener("click", () => switchTab("es"));
+      tabNode.addEventListener("click", () => switchTab("node"));
+
+      // Collapsible tips
+      document.getElementById("tips-toggle").addEventListener("click", () => {
+        const content = document.getElementById("tips-content");
+        const arrow = document.getElementById("tips-arrow");
+        content.classList.toggle("collapsed");
+        arrow.classList.toggle("collapsed");
+      });
+
+      window.addEventListener("message", e => {
+        if (e.data?.type === "monitoring-toggled") {
+          fetchStatus();
+          setTimeout(() => { iframeEs.src = iframeEs.src; iframeNode.src = iframeNode.src; }, 300);
+        }
+      });
+
+      fetchStatus();
+      setInterval(fetchStatus, 5000);
+
+      // Resize functionality
+      const resizeHandle = document.getElementById("resize-handle");
+      const paneLeft = document.getElementById("pane-left");
+      const panes = document.querySelector(".panes");
+      let isResizing = false;
+
+      resizeHandle.addEventListener("mousedown", (e) => {
+        isResizing = true;
+        resizeHandle.classList.add("dragging");
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+        // Disable pointer events on iframes during resize
+        document.querySelectorAll("iframe").forEach(f => f.style.pointerEvents = "none");
+      });
+
+      document.addEventListener("mousemove", (e) => {
+        if (!isResizing) return;
+        const containerRect = panes.getBoundingClientRect();
+        const newWidth = e.clientX - containerRect.left;
+        const containerWidth = containerRect.width;
+        const minWidth = 200;
+        const maxWidth = containerWidth - 250; // Leave room for MITMproxy
+        const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+        const percent = (clampedWidth / containerWidth) * 100;
+        paneLeft.style.flex = `0 0 ${percent}%`;
+      });
+
+      document.addEventListener("mouseup", () => {
+        if (isResizing) {
+          isResizing = false;
+          resizeHandle.classList.remove("dragging");
+          document.body.style.cursor = "";
+          document.body.style.userSelect = "";
+          document.querySelectorAll("iframe").forEach(f => f.style.pointerEvents = "");
+        }
+      });
+    </script>
   </body>
 </html>

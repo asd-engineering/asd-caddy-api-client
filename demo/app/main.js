@@ -8,7 +8,6 @@ const API_BASE = window.location.port === "3000" ? "" : "http://localhost:3000";
 // DOM elements
 const statusIndicator = document.getElementById("statusIndicator");
 const statusText = document.getElementById("statusText");
-const toggleBtn = document.getElementById("toggleBtn");
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
 const resultsDiv = document.getElementById("results");
@@ -20,22 +19,16 @@ let monitoringEnabled = false;
 /**
  * Update the UI to reflect monitoring state
  */
-function updateMonitoringUI(enabled) {
-  monitoringEnabled = enabled;
+function updateMonitoringUI(esEnabled) {
+  monitoringEnabled = esEnabled;
 
-  if (enabled) {
+  if (esEnabled) {
     statusIndicator.className = "status-indicator proxied";
-    statusText.textContent = "Monitoring: ENABLED (via MITMproxy)";
-    toggleBtn.textContent = "Disable Monitoring";
-    toggleBtn.className = "btn btn-disable";
+    statusText.textContent = "ES: Capturing via MITMproxy";
   } else {
     statusIndicator.className = "status-indicator direct";
-    statusText.textContent = "Monitoring: DISABLED (direct)";
-    toggleBtn.textContent = "Enable Monitoring";
-    toggleBtn.className = "btn btn-enable";
+    statusText.textContent = "ES: Direct (not capturing)";
   }
-
-  toggleBtn.disabled = false;
 }
 
 /**
@@ -45,37 +38,11 @@ async function fetchStatus() {
   try {
     const response = await fetch(`${API_BASE}/api/monitoring/status`);
     const data = await response.json();
-    updateMonitoringUI(data.enabled);
+    const esEnabled = data.services?.elasticsearch?.enabled || false;
+    updateMonitoringUI(esEnabled);
   } catch (error) {
     console.error("Failed to fetch status:", error);
     statusText.textContent = "Error: Cannot connect to API";
-    toggleBtn.disabled = true;
-  }
-}
-
-/**
- * Toggle monitoring state
- */
-async function toggleMonitoring() {
-  toggleBtn.disabled = true;
-  toggleBtn.textContent = "Updating...";
-
-  const endpoint = monitoringEnabled ? "/api/monitoring/disable" : "/api/monitoring/enable";
-
-  try {
-    const response = await fetch(`${API_BASE}${endpoint}`, { method: "POST" });
-    const data = await response.json();
-
-    if (data.success) {
-      updateMonitoringUI(data.enabled);
-    } else {
-      throw new Error(data.error || "Unknown error");
-    }
-  } catch (error) {
-    console.error("Failed to toggle monitoring:", error);
-    alert(`Failed to toggle monitoring: ${error.message}`);
-    toggleBtn.disabled = false;
-    toggleBtn.textContent = monitoringEnabled ? "Disable Monitoring" : "Enable Monitoring";
   }
 }
 
@@ -158,8 +125,10 @@ function showError(message) {
 
 /**
  * Search products in Elasticsearch
+ * @param {string} query - Search query
+ * @param {string} index - Index name (default: "products", use "nonexistent" to trigger 404)
  */
-async function searchProducts(query) {
+async function searchProducts(query, index = "products") {
   showLoading();
 
   const startTime = performance.now();
@@ -179,7 +148,7 @@ async function searchProducts(query) {
 
     // Note: In production, this would go through Caddy's /es/ route
     // For demo, we'll call the ES endpoint directly through Caddy
-    const response = await fetch(`http://localhost:9080/es/products/_search`, {
+    const response = await fetch(`http://localhost:9080/es/${index}/_search`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(esQuery),
@@ -229,11 +198,27 @@ function handleSearch() {
   const query = searchInput.value.trim();
   if (query) {
     searchProducts(query);
+    // Also call Node API to log the search (generates traffic for Node proxy)
+    logSearchToNode(query);
+  }
+}
+
+/**
+ * Log search query to Node API (demonstrates Node API traffic capture)
+ */
+async function logSearchToNode(query) {
+  try {
+    await fetch("http://localhost:9080/node/echo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "search", query, timestamp: Date.now() }),
+    });
+  } catch (e) {
+    // Silent fail - this is just for demo traffic
   }
 }
 
 // Event listeners
-toggleBtn.addEventListener("click", toggleMonitoring);
 searchBtn.addEventListener("click", handleSearch);
 searchInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
@@ -241,8 +226,72 @@ searchInput.addEventListener("keypress", (e) => {
   }
 });
 
+// Suggestion buttons - click to search
+document.querySelectorAll(".suggestion").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const query = btn.dataset.query;
+    const index = btn.dataset.index || "products";
+    searchInput.value = query === "__error__" ? "nonexistent" : query;
+    searchProducts(query, index);
+    logSearchToNode(query); // Also generates Node API traffic
+  });
+});
+
+// Theme/config state
+let appConfig = {
+  theme: "dark",
+  primaryColor: "#3b82f6",
+  accentColor: "#f59e0b",
+  backgroundColor: "#0f172a",
+  cardColor: "#1e293b",
+  textColor: "#e2e8f0",
+  appName: "Product Search",
+  showPrices: true,
+  currencySymbol: "$",
+};
+
+/**
+ * Fetch and apply config from server (interceptable!)
+ */
+async function fetchConfig() {
+  try {
+    const res = await fetch("http://localhost:9080/node/config");
+    const config = await res.json();
+    appConfig = { ...appConfig, ...config };
+    applyTheme(config);
+  } catch (e) {
+    console.log("Config fetch failed, using defaults");
+  }
+}
+
+/**
+ * Apply theme from config
+ */
+function applyTheme(config) {
+  const root = document.documentElement;
+
+  // Apply colors as CSS variables
+  if (config.backgroundColor) root.style.setProperty("--bg-color", config.backgroundColor);
+  if (config.cardColor) root.style.setProperty("--card-color", config.cardColor);
+  if (config.textColor) root.style.setProperty("--text-color", config.textColor);
+  if (config.primaryColor) root.style.setProperty("--primary-color", config.primaryColor);
+  if (config.accentColor) root.style.setProperty("--accent-color", config.accentColor);
+
+  // Light theme preset
+  if (config.theme === "light") {
+    root.style.setProperty("--bg-color", "#f8fafc");
+    root.style.setProperty("--card-color", "#ffffff");
+    root.style.setProperty("--text-color", "#1e293b");
+  }
+
+  // Update app name
+  const h1 = document.querySelector("h1");
+  if (h1 && config.appName) h1.textContent = config.appName;
+}
+
 // Initialize
 fetchStatus();
+fetchConfig();
 
 // Auto-refresh status every 5 seconds
 setInterval(fetchStatus, 5000);

@@ -13,12 +13,9 @@
         <p class="subtitle">Elasticsearch with Dynamic MITMproxy Monitoring</p>
       </header>
 
-      <div class="monitoring-control">
-        <div class="status">
-          <span class="status-indicator" id="statusIndicator"></span>
-          <span id="statusText">Checking...</span>
-        </div>
-        <button id="toggleBtn" class="btn" disabled>Loading...</button>
+      <div class="monitoring-status">
+        <span class="status-indicator" id="statusIndicator"></span>
+        <span id="statusText">Checking...</span>
       </div>
 
       <div class="search-box">
@@ -26,15 +23,17 @@
         <button id="searchBtn" class="btn btn-primary">Search</button>
       </div>
 
-      <div class="info-box" id="infoBox">
-        <strong>How it works:</strong>
-        <ol>
-          <li>Search queries go through <code>Caddy -> Elasticsearch</code> (direct)</li>
-          <li>Click <strong>"Enable Monitoring"</strong> to insert MITMproxy</li>
-          <li>Traffic now flows: <code>Caddy -> MITMproxy -> Elasticsearch</code></li>
-          <li>Watch requests appear in the MITMproxy panel on the right!</li>
-        </ol>
+      <div class="search-suggestions">
+        <span class="suggestions-label">Try:</span>
+        <button class="suggestion" data-query="laptop">laptop</button>
+        <button class="suggestion" data-query="keyboard">keyboard</button>
+        <button class="suggestion" data-query="monitor">monitor</button>
+        <button class="suggestion" data-query="webcam">webcam</button>
+        <button class="suggestion" data-query="mouse">mouse</button>
+        <button class="suggestion" data-query="USB">USB</button>
+        <button class="suggestion suggestion-error" data-query="__error__" data-index="nonexistent">404 error</button>
       </div>
+
 
       <div class="results" id="results">
         <p class="placeholder">Enter a search term to find products</p>

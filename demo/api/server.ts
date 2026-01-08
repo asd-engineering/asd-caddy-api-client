@@ -3,41 +3,47 @@
  *
  * Showcases @accelerated-software-development/caddy-api-client library for:
  * - Dynamic route management via Caddy Admin API
- * - Hot-swappable MITMproxy traffic interception
- * - Iframe embedding with proper headers
+ * - Hot-swappable MITMproxy traffic interception using MitmproxyManager
+ * - Multiple services with independent monitoring control
  */
 
-import { CaddyClient, buildReverseProxyHandler, buildRewriteHandler } from "../dist/index.js";
-import type { CaddyRoute, CaddyRouteHandler } from "../dist/index.js";
+import {
+  CaddyClient,
+  MitmproxyManager,
+  buildReverseProxyHandler,
+  buildRewriteHandler,
+  buildIframeProxyRoute,
+  buildWebSocketProxyRoute,
+} from "../dist/index.js";
+import type { CaddyRoute } from "../dist/index.js";
 
 const CADDY_ADMIN_URL = process.env.CADDY_ADMIN_URL || "http://localhost:2019";
-const ES_DIRECT = "elasticsearch:9200";
-const ES_PROXIED = "mitmproxy:8080";
 const SERVER_NAME = "srv0";
 
 // Initialize Caddy client from the library
 const caddy = new CaddyClient({ adminUrl: CADDY_ADMIN_URL });
 
-// Track monitoring state
-let monitoringEnabled = false;
+// Initialize MitmproxyManager with two proxy instances
+const mitmManager = new MitmproxyManager(caddy, {
+  default: { host: "mitmproxy", port: 8080, webPort: 8081 },      // For Elasticsearch
+  nodeproxy: { host: "mitmproxy-node", port: 8080, webPort: 8081 }, // For Node API
+});
 
-/**
- * Build route handler with iframe-friendly headers
- * Removes X-Frame-Options and CSP headers from mitmproxy responses
- */
-function buildIframePermissiveHandler(): CaddyRouteHandler {
-  return {
-    handler: "headers",
-    response: {
-      deferred: true,
-      delete: ["X-Frame-Options", "Content-Security-Policy", "X-Xss-Protection"],
-      set: {
-        "Access-Control-Allow-Origin": ["*"],
-        "X-Frame-Options": ["ALLOWALL"],
-      },
-    },
-  } as CaddyRouteHandler;
-}
+// Register Elasticsearch service (uses default proxy)
+mitmManager.register({
+  id: "elasticsearch",
+  serverId: SERVER_NAME,
+  pathPrefix: "/es",
+  backend: { host: "elasticsearch", port: 9200 },
+});
+
+// Register Node API service (uses nodeproxy)
+mitmManager.register({
+  id: "nodeapi",
+  serverId: SERVER_NAME,
+  pathPrefix: "/node",
+  backend: { host: "demo-api", port: 3000 },
+});
 
 /**
  * Setup initial routes using the library
@@ -61,10 +67,50 @@ async function setupRoutes() {
     });
   }
 
+  // Define all route IDs for cleanup
+  const routeIds = [
+    "mitmproxy_ws_route",
+    "mitmproxy_node_ws_route",
+    "api_route",
+    "app_route",
+    "mitmproxy_ui_route",
+    "mitmproxy_node_ui_route",
+    "mitm_elasticsearch",
+    "mitm_nodeapi",
+    "dashboard_route",
+    "root_redirect",
+  ];
+
+  // Remove existing routes first (idempotent setup)
+  console.log("  → Cleaning up existing routes...");
+  for (const id of routeIds) {
+    await caddy.removeRouteById(SERVER_NAME, id);
+  }
+
   // Build routes array
   const routes: CaddyRoute[] = [];
 
-  // 1. API route - proxies to demo-api
+  // 0. MITMproxy WebSocket routes for both proxies
+  routes.push(
+    buildWebSocketProxyRoute({
+      path: "/updates",
+      upstreamHost: "mitmproxy",
+      upstreamPort: 8081,
+      routeId: "mitmproxy_ws_route",
+      overrideHost: "127.0.0.1:8081",
+    })
+  );
+  routes.push(
+    buildWebSocketProxyRoute({
+      path: "/updates-node",
+      upstreamHost: "mitmproxy-node",
+      upstreamPort: 8081,
+      routeId: "mitmproxy_node_ws_route",
+      overrideHost: "127.0.0.1:8081",
+    })
+  );
+
+  // 1. API route - proxies to demo-api (internal, not intercepted)
   routes.push({
     "@id": "api_route",
     match: [{ path: ["/api/*"] }],
@@ -80,40 +126,29 @@ async function setupRoutes() {
     terminal: true,
   });
 
-  // 3. MITMproxy Web UI route - with iframe-permissive headers
-  // Match both /mitmproxy and /mitmproxy/* paths
-  // Set Host header to IP to bypass mitmproxy's DNS rebinding protection
-  routes.push({
-    "@id": "mitmproxy_ui_route",
-    match: [{ path: ["/mitmproxy", "/mitmproxy/*"] }],
-    handle: [
-      buildRewriteHandler("/mitmproxy"),
-      buildIframePermissiveHandler(),
-      {
-        handler: "reverse_proxy",
-        transport: { protocol: "http" },
-        headers: {
-          request: {
-            set: {
-              Host: ["127.0.0.1:8081"],
-            },
-          },
-        },
-        upstreams: [{ dial: "mitmproxy:8081" }],
-      } as CaddyRouteHandler,
-    ],
-    terminal: true,
-  });
+  // 3. MITMproxy Web UI routes for both proxies
+  routes.push(
+    buildIframeProxyRoute({
+      pathPrefix: "/mitmproxy",
+      upstreamHost: "mitmproxy",
+      upstreamPort: 8081,
+      routeId: "mitmproxy_ui_route",
+      iframeEmbed: true,
+      overrideHost: "127.0.0.1:8081",
+    })
+  );
+  routes.push(
+    buildIframeProxyRoute({
+      pathPrefix: "/mitmproxy-node",
+      upstreamHost: "mitmproxy-node",
+      upstreamPort: 8081,
+      routeId: "mitmproxy_node_ui_route",
+      iframeEmbed: true,
+      overrideHost: "127.0.0.1:8081",
+    })
+  );
 
-  // 4. Elasticsearch route - initially direct, can be swapped to proxied
-  routes.push({
-    "@id": "es_route",
-    match: [{ path: ["/es/*"] }],
-    handle: [buildRewriteHandler("/es"), buildReverseProxyHandler(ES_DIRECT)],
-    terminal: true,
-  });
-
-  // 5. Dashboard route
+  // 4. Dashboard route
   routes.push({
     "@id": "dashboard_route",
     match: [{ path: ["/dashboard"] }],
@@ -121,7 +156,7 @@ async function setupRoutes() {
     terminal: true,
   });
 
-  // 6. Root redirect to dashboard
+  // 5. Root redirect to dashboard
   routes.push({
     "@id": "root_redirect",
     match: [{ path: ["/"] }],
@@ -135,64 +170,25 @@ async function setupRoutes() {
     terminal: true,
   });
 
-  // Apply routes via Caddy Admin API
+  // Apply routes using the library's addRoute method
   for (const route of routes) {
-    try {
-      // Try to add each route
-      const routeId = route["@id"] as string;
-      await caddy.request(`/config/apps/http/servers/${SERVER_NAME}/routes`, {
-        method: "POST",
-        body: JSON.stringify(route),
-      });
+    const routeId = route["@id"] as string;
+    const added = await caddy.addRoute(SERVER_NAME, route);
+    if (added) {
       console.log(`  ✓ Added route: ${routeId}`);
-    } catch (error) {
-      const routeId = route["@id"] as string;
-      const errMsg = error instanceof Error ? error.message : String(error);
-      console.log(`  ✗ Failed to add route ${routeId}: ${errMsg}`);
+    } else {
+      console.log(`  ⚠ Route already exists: ${routeId}`);
     }
   }
 
+  // Initialize service routes via MitmproxyManager (start disabled/direct)
+  await mitmManager.disable("elasticsearch");
+  console.log("  ✓ Added route: mitm_elasticsearch (direct)");
+
+  await mitmManager.disable("nodeapi");
+  console.log("  ✓ Added route: mitm_nodeapi (direct)");
+
   console.log("Routes configured!");
-}
-
-/**
- * Update the ES route upstream dynamically
- * This demonstrates hot-swapping routes without restart
- */
-async function updateEsRoute(upstream: string) {
-  // Build new ES route
-  const route: CaddyRoute = {
-    "@id": "es_route",
-    match: [{ path: ["/es/*"] }],
-    handle: [buildRewriteHandler("/es"), buildReverseProxyHandler(upstream)],
-    terminal: true,
-  };
-
-  // Get current routes to find ES route index
-  const config = await caddy.getConfig();
-  const httpApp = (config.apps as Record<string, unknown>)?.http as Record<string, unknown>;
-  const servers = httpApp?.servers as Record<string, unknown>;
-  const server = servers?.[SERVER_NAME] as Record<string, unknown>;
-  const routes = server?.routes as Array<Record<string, unknown>>;
-
-  // Find ES route by @id
-  const esRouteIndex = routes?.findIndex((r) => r["@id"] === "es_route") ?? -1;
-
-  if (esRouteIndex === -1) {
-    // Add new route
-    await caddy.request(`/config/apps/http/servers/${SERVER_NAME}/routes`, {
-      method: "POST",
-      body: JSON.stringify(route),
-    });
-  } else {
-    // Replace existing route
-    await caddy.request(`/config/apps/http/servers/${SERVER_NAME}/routes/${esRouteIndex}`, {
-      method: "PATCH",
-      body: JSON.stringify(route),
-    });
-  }
-
-  console.log(`ES route updated: upstream=${upstream}`);
 }
 
 // Setup routes on server start
@@ -220,36 +216,189 @@ const server = Bun.serve({
     }
 
     try {
-      // API endpoints
-      if (path === "/api/monitoring/status") {
+      // === Node API endpoints (interceptable via /node/*) ===
+      if (path === "/node/echo" || path === "/echo") {
+        const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
         return Response.json(
-          { enabled: monitoringEnabled, upstream: monitoringEnabled ? ES_PROXIED : ES_DIRECT },
+          {
+            service: "node-api",
+            timestamp: new Date().toISOString(),
+            method: req.method,
+            echo: body,
+            headers: Object.fromEntries(req.headers.entries()),
+          },
           { headers: corsHeaders }
         );
       }
 
-      if (path === "/api/monitoring/enable" && req.method === "POST") {
-        await updateEsRoute(ES_PROXIED);
-        monitoringEnabled = true;
+      if (path === "/node/random" || path === "/random") {
+        return Response.json(
+          {
+            service: "node-api",
+            timestamp: new Date().toISOString(),
+            random: Math.random(),
+            uuid: crypto.randomUUID(),
+          },
+          { headers: corsHeaders }
+        );
+      }
+
+      // Challenge endpoints for MITMproxy demos
+      if (path === "/node/broken" || path === "/broken") {
+        // Returns intentionally broken JSON - fix it in MITMproxy!
+        const brokenJson = `{
+  "status": "broken",
+  "message": "Fix me in MITMproxy!"
+  "missing_comma": true,
+  "hint": "Add a comma after the message field"
+  "timestamp": "${new Date().toISOString()}"
+}`;
+        return new Response(brokenJson, {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (path === "/node/error500" || path === "/error500") {
+        // Returns 500 error - change to 200 in MITMproxy!
+        return Response.json(
+          {
+            error: "Internal Server Error",
+            message: "Change my status to 200 in MITMproxy!",
+            hint: "Edit the response status code",
+            timestamp: new Date().toISOString(),
+          },
+          { status: 500, headers: corsHeaders }
+        );
+      }
+
+      // Theme config - intercept and change to see visual effects!
+      if (path === "/node/config" || path === "/config") {
+        return Response.json(
+          {
+            theme: "dark",
+            primaryColor: "#3b82f6",
+            accentColor: "#f59e0b",
+            backgroundColor: "#0f172a",
+            cardColor: "#1e293b",
+            textColor: "#e2e8f0",
+            borderRadius: "0.5rem",
+            appName: "Product Search",
+            showPrices: true,
+            currency: "USD",
+            currencySymbol: "$",
+            maxResults: 20,
+            _hint: "Change theme to 'light' or modify colors!",
+          },
+          { headers: corsHeaders }
+        );
+      }
+
+      // === Monitoring API endpoints ===
+
+      // Get status for all services
+      if (path === "/api/monitoring/status") {
+        const status = mitmManager.getStatus();
+        return Response.json(
+          {
+            services: Object.fromEntries(
+              Object.entries(status).map(([id, s]) => [
+                id,
+                {
+                  enabled: s.enabled,
+                  proxy: s.proxy,
+                  backend: `${s.service.backend.host}:${s.service.backend.port}`,
+                  pathPrefix: s.service.pathPrefix,
+                },
+              ])
+            ),
+          },
+          { headers: corsHeaders }
+        );
+      }
+
+      // Enable monitoring for a specific service
+      if (path.startsWith("/api/monitoring/enable/") && req.method === "POST") {
+        const serviceId = path.split("/").pop();
+        if (!serviceId || !mitmManager.getServiceStatus(serviceId)) {
+          return Response.json(
+            { error: `Unknown service: ${serviceId}` },
+            { status: 404, headers: corsHeaders }
+          );
+        }
+        // Use correct proxy for each service
+        const proxyName = serviceId === "nodeapi" ? "nodeproxy" : "default";
+        await mitmManager.enable(serviceId, { proxy: proxyName });
         return Response.json(
           {
             success: true,
+            service: serviceId,
             enabled: true,
-            message: "Traffic monitoring enabled via caddy-api-client",
+            proxy: proxyName,
+            message: `Traffic monitoring enabled for ${serviceId}`,
           },
+          { headers: corsHeaders }
+        );
+      }
+
+      // Disable monitoring for a specific service
+      if (path.startsWith("/api/monitoring/disable/") && req.method === "POST") {
+        const serviceId = path.split("/").pop();
+        if (!serviceId || !mitmManager.getServiceStatus(serviceId)) {
+          return Response.json(
+            { error: `Unknown service: ${serviceId}` },
+            { status: 404, headers: corsHeaders }
+          );
+        }
+        await mitmManager.disable(serviceId);
+        return Response.json(
+          {
+            success: true,
+            service: serviceId,
+            enabled: false,
+            message: `Traffic monitoring disabled for ${serviceId}`,
+          },
+          { headers: corsHeaders }
+        );
+      }
+
+      // Legacy endpoints for backwards compatibility
+      if (path === "/api/monitoring/enable" && req.method === "POST") {
+        await mitmManager.enable("elasticsearch");
+        return Response.json(
+          { success: true, enabled: true, message: "Traffic monitoring enabled for elasticsearch" },
           { headers: corsHeaders }
         );
       }
 
       if (path === "/api/monitoring/disable" && req.method === "POST") {
-        await updateEsRoute(ES_DIRECT);
-        monitoringEnabled = false;
+        await mitmManager.disable("elasticsearch");
         return Response.json(
-          {
-            success: true,
-            enabled: false,
-            message: "Traffic monitoring disabled via caddy-api-client",
-          },
+          { success: true, enabled: false, message: "Traffic monitoring disabled for elasticsearch" },
+          { headers: corsHeaders }
+        );
+      }
+
+      // Clear MITMproxy flows
+      if (path === "/api/monitoring/clear" && req.method === "POST") {
+        const results: Record<string, boolean> = {};
+
+        // Clear flows from both MITMproxy instances
+        try {
+          await fetch("http://mitmproxy:8081/flows", { method: "DELETE" });
+          results.elasticsearch = true;
+        } catch {
+          results.elasticsearch = false;
+        }
+
+        try {
+          await fetch("http://mitmproxy-node:8081/flows", { method: "DELETE" });
+          results.nodeapi = true;
+        } catch {
+          results.nodeapi = false;
+        }
+
+        return Response.json(
+          { success: true, cleared: results, message: "MITMproxy flows cleared" },
           { headers: corsHeaders }
         );
       }
@@ -257,12 +406,17 @@ const server = Bun.serve({
       // Health check
       if (path === "/api/health") {
         return Response.json(
-          { status: "ok", library: "@asd/caddy-api-client" },
+          {
+            status: "ok",
+            library: "@asd/caddy-api-client",
+            services: mitmManager.getRegisteredServices(),
+            proxies: mitmManager.getAvailableProxies(),
+          },
           { headers: corsHeaders }
         );
       }
 
-      // Serve static files from public directory
+      // Serve static files from public directory (mapped from demo/app/ in Dockerfile)
       if (path === "/" || path === "/index.html") {
         const file = Bun.file("../public/index.html");
         return new Response(file, {
@@ -305,3 +459,4 @@ const server = Bun.serve({
 
 console.log(`Demo API server running on http://localhost:${server.port}`);
 console.log("Using @accelerated-software-development/caddy-api-client library");
+console.log("MitmproxyManager configured with services:", mitmManager.getRegisteredServices());
