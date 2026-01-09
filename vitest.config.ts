@@ -23,6 +23,8 @@ export default defineConfig({
         ".asd/",
         "docs/",
         "docs/api/",
+        "local/",
+        "demo/",
         "**/*.test.ts",
         "**/*.config.ts",
         "**/*.config.mjs",

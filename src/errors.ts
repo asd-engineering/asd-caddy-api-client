@@ -32,14 +32,30 @@ export class ValidationError extends CaddyApiClientError {
 
 /**
  * Error thrown when Caddy API returns an error response
+ *
+ * Includes request context (URL, method) to help with debugging.
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   await client.adapt(content, "caddyfile");
+ * } catch (error) {
+ *   if (error instanceof CaddyApiError) {
+ *     console.error(`${error.method} ${error.url} failed: ${error.statusCode}`);
+ *     console.error(`Response: ${error.responseBody}`);
+ *   }
+ * }
+ * ```
  */
 export class CaddyApiError extends CaddyApiClientError {
   constructor(
     message: string,
     public readonly statusCode: number,
-    public readonly responseBody?: string
+    public readonly responseBody?: string,
+    public readonly url?: string,
+    public readonly method?: string
   ) {
-    super(message, { statusCode, responseBody });
+    super(message, { statusCode, responseBody, url, method });
     this.name = "CaddyApiError";
     Object.setPrototypeOf(this, CaddyApiError.prototype);
   }

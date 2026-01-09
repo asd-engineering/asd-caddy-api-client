@@ -4,6 +4,7 @@
 import type {
   CaddyRoute,
   CaddyRouteHandler,
+  AuthenticationHandler,
   ServiceRouteOptions,
   HealthCheckRouteOptions,
   HostRouteOptions,
@@ -20,14 +21,20 @@ import {
   PathRouteOptionsSchema,
   LoadBalancerRouteOptionsSchema,
 } from "../schemas.js";
+import { validateOrThrow } from "../utils/validation.js";
 
 /**
  * Build routes for a service (host-based and/or path-based)
  * @param options - Service route options
  * @returns Array of Caddy routes
+ * @throws {ValidationError} If options fail validation (e.g., invalid dial address)
  */
 export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
-  const validated = ServiceRouteOptionsSchema.parse(options);
+  const validated = validateOrThrow(
+    ServiceRouteOptionsSchema,
+    options,
+    "buildServiceRoutes options"
+  );
   const routes: CaddyRoute[] = [];
 
   // Build host-based routes
@@ -87,9 +94,14 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
  * Build a health check route
  * @param options - Health check route options
  * @returns Caddy route for health check
+ * @throws {ValidationError} If options fail validation
  */
 export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRoute {
-  const validated = HealthCheckRouteOptionsSchema.parse(options);
+  const validated = validateOrThrow(
+    HealthCheckRouteOptionsSchema,
+    options,
+    "buildHealthCheckRoute options"
+  );
 
   const route: CaddyRoute = {
     match: [
@@ -116,7 +128,7 @@ export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRo
   };
 
   if (validated.priority !== undefined) {
-    (route as CaddyRoute & { priority: number }).priority = validated.priority;
+    route.priority = validated.priority;
   }
 
   return route;
@@ -126,9 +138,10 @@ export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRo
  * Build a host-based route
  * @param options - Host route options
  * @returns Caddy route
+ * @throws {ValidationError} If options fail validation (e.g., invalid dial address)
  */
 export function buildHostRoute(options: HostRouteOptions): CaddyRoute {
-  const validated = HostRouteOptionsSchema.parse(options);
+  const validated = validateOrThrow(HostRouteOptionsSchema, options, "buildHostRoute options");
   const handlers: CaddyRouteHandler[] = [];
 
   // Add security headers if configured
@@ -159,7 +172,7 @@ export function buildHostRoute(options: HostRouteOptions): CaddyRoute {
   };
 
   if (validated.priority !== undefined) {
-    (route as CaddyRoute & { priority: number }).priority = validated.priority;
+    route.priority = validated.priority;
   }
 
   return route;
@@ -169,9 +182,10 @@ export function buildHostRoute(options: HostRouteOptions): CaddyRoute {
  * Build a path-based route
  * @param options - Path route options
  * @returns Caddy route
+ * @throws {ValidationError} If options fail validation (e.g., invalid dial address)
  */
 export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
-  const validated = PathRouteOptionsSchema.parse(options);
+  const validated = validateOrThrow(PathRouteOptionsSchema, options, "buildPathRoute options");
   const handlers: CaddyRouteHandler[] = [];
 
   // Add rewrite handler if stripping prefix
@@ -208,7 +222,7 @@ export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
   };
 
   if (validated.priority !== undefined) {
-    (route as CaddyRoute & { priority: number }).priority = validated.priority;
+    route.priority = validated.priority;
   }
 
   return route;
@@ -218,9 +232,14 @@ export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
  * Build a load balancer route
  * @param options - Load balancer options
  * @returns Caddy route with load balancing
+ * @throws {ValidationError} If options fail validation (e.g., invalid upstreams)
  */
 export function buildLoadBalancerRoute(options: LoadBalancerRouteOptions): CaddyRoute {
-  const validated = LoadBalancerRouteOptionsSchema.parse(options);
+  const validated = validateOrThrow(
+    LoadBalancerRouteOptionsSchema,
+    options,
+    "buildLoadBalancerRoute options"
+  );
 
   const route: CaddyRoute = {
     match: [
@@ -256,7 +275,7 @@ export function buildLoadBalancerRoute(options: LoadBalancerRouteOptions): Caddy
   };
 
   if (validated.priority !== undefined) {
-    (route as CaddyRoute & { priority: number }).priority = validated.priority;
+    route.priority = validated.priority;
   }
 
   return route;
@@ -319,12 +338,10 @@ export function buildReverseProxyHandler(
       tlsConfig.ca = options.tlsTrustedCACerts;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     handler.transport = {
       protocol: "http",
       tls: tlsConfig,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any; // Caddy transport config is extensible beyond our types
+    };
   } else {
     handler.transport = {
       protocol: "http",
@@ -368,6 +385,7 @@ export function buildSecurityHeadersHandler(headers: SecurityHeaders): CaddyRout
  *
  * @param auth - Basic auth configuration
  * @returns Basic auth handler
+ * @throws {Error} If no valid accounts are provided (username + passwordHash or accounts array required)
  *
  * @example
  * // Single account (legacy)
@@ -404,7 +422,7 @@ export function buildBasicAuthHandler(auth: BasicAuthOptions): CaddyRouteHandler
     );
   }
 
-  const handler: CaddyRouteHandler = {
+  const handler: AuthenticationHandler = {
     handler: "authentication",
     providers: {
       http_basic: {
@@ -417,9 +435,8 @@ export function buildBasicAuthHandler(auth: BasicAuthOptions): CaddyRouteHandler
   // Add hash configuration if specified
   // Note: Caddy automatically detects bcrypt from the hash format ($2a$10$...)
   // The hash.algorithm field is only needed if you want to override the default
-  if (auth.hash?.algorithm && auth.hash.algorithm !== "bcrypt") {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-    (handler.providers as any).http_basic.hash = {
+  if (auth.hash?.algorithm && auth.hash.algorithm !== "bcrypt" && handler.providers?.http_basic) {
+    handler.providers.http_basic.hash = {
       algorithm: auth.hash.algorithm,
     };
   }

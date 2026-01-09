@@ -30,6 +30,8 @@ export default defineConfig({
         "node_modules/",
         "dist/",
         ".asd/",
+        "local/",
+        "demo/",
         "**/*.test.ts",
         "**/*.config.ts",
         "**/*.config.mjs",
