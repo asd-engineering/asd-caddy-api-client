@@ -1,0 +1,14 @@
+# Demo Caddyfile - Minimal base configuration
+# Routes are dynamically configured via caddy-api-client library
+
+{
+    # Enable Admin API on all interfaces (for Docker)
+    admin :2019
+
+    # Disable automatic HTTPS for demo
+    auto_https off
+}
+
+:80 {
+    # Base server - routes added dynamically by demo-api via library
+}

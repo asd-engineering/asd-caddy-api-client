@@ -1,0 +1,20 @@
+FROM oven/bun:1.1-alpine
+
+WORKDIR /app
+
+# Copy and build the library first
+COPY package.json bun.lock tsconfig.json tsup.config.ts ./
+COPY src ./src
+RUN bun install --ignore-scripts && bun run build
+
+# Copy demo files
+COPY demo/api/server.ts ./demo/
+COPY demo/app/ ./public/
+
+WORKDIR /app/demo
+
+# Expose port
+EXPOSE 3000
+
+# Start server
+CMD ["bun", "run", "server.ts"]

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ES Search Demo - MITMproxy Traffic Inspection</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Product Search</h1>
+        <p class="subtitle">Elasticsearch with Dynamic MITMproxy Monitoring</p>
+      </header>
+
+      <div class="monitoring-status">
+        <span class="status-indicator" id="statusIndicator"></span>
+        <span id="statusText">Checking...</span>
+      </div>
+
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search products..." autocomplete="off" />
+        <button id="searchBtn" class="btn btn-primary">Search</button>
+      </div>
+
+      <div class="search-suggestions">
+        <span class="suggestions-label">Try:</span>
+        <button class="suggestion" data-query="laptop">laptop</button>
+        <button class="suggestion" data-query="keyboard">keyboard</button>
+        <button class="suggestion" data-query="monitor">monitor</button>
+        <button class="suggestion" data-query="webcam">webcam</button>
+        <button class="suggestion" data-query="mouse">mouse</button>
+        <button class="suggestion" data-query="USB">USB</button>
+        <button class="suggestion suggestion-error" data-query="__error__" data-index="nonexistent">
+          404 error
+        </button>
+      </div>
+
+      <div class="results" id="results">
+        <p class="placeholder">Enter a search term to find products</p>
+      </div>
+
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <script src="main.js"></script>
+  </body>
+</html>

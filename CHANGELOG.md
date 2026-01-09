@@ -5,6 +5,74 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-01-08
+
+### Added
+
+- **MITMproxy Traffic Inspection Demo** - Interactive demo showcasing dynamic route switching via Caddy Admin API
+  - Real-time traffic interception toggle between direct and proxy modes
+  - Visual flow diagram control (`Browser → Caddy → MITM → Service`)
+  - Support for multiple services (Elasticsearch, Node API)
+  - Elasticsearch debugging challenges with guided walkthroughs
+
+- **MitmproxyManager class** (`src/mitm/manager.ts`) - Multi-service traffic interception manager
+  - Enable/disable interception per service dynamically
+  - Route switching without service restarts
+  - Status tracking for multiple proxy endpoints
+
+- **Demo Docker Compose Stack** (`demo/docker-compose.yml`)
+  - Caddy reverse proxy with Admin API
+  - Elasticsearch 8.11 backend with sample product data
+  - MITMproxy instances for ES and Node API traffic
+  - Demo API server (Bun + caddy-api-client)
+  - Automated seed data loading
+
+- **Interactive Dashboard** (`demo/app/dashboard.html`)
+  - Light header with centered flow diagram intercept control
+  - Pulsing green glow effect when intercepting traffic
+  - Tabbed interface for ES and Node API inspection
+  - Collapsible debugging challenges panel
+  - Resizable split-pane layout
+
+- **Elasticsearch Debugging Challenges** (5 automated + 1 guide)
+  - Bulk indexing failures (malformed NDJSON detection)
+  - Zero-hits search debugging (Query DSL field name/case issues)
+  - Mapping type mismatch (`document_parsing_exception`)
+  - Aggregation on text field (fielddata disabled error)
+  - Index not found 404 (typo in index name)
+  - Response modification walkthrough (manual MITMproxy guide)
+
+- **Response Manipulation Challenges** (4 interactive feature flag demos)
+  - Theme Hacking - Intercept `/node/config` to change app colors
+  - Unlock Secret Banner - Inject `secretMessage` to show rainbow banner
+  - Enable Admin Mode - Set `adminMode: true` to reveal debug panel
+  - Apply Fake Discount - Set `discountPercent` to show sale prices
+
+- **Feature Flag System** for demo app manipulation
+  - `showPrices` - Toggle price visibility
+  - `showDescriptions` - Toggle product descriptions
+  - `discountPercent` - Apply percentage discount with strikethrough styling
+  - `secretMessage` - Display animated rainbow banner
+  - `adminMode` - Show terminal-style debug panel
+  - Theme presets: `dark`, `light`, `neon`, `hacker`
+  - `_manipulation_hints` - In-response hints for MITMproxy users
+
+- **Demo API Endpoints** (`demo/api/server.ts`)
+  - `/api/monitoring/enable/:service` - Enable MITMproxy interception
+  - `/api/monitoring/disable/:service` - Disable interception (direct mode)
+  - `/api/monitoring/status` - Get current interception status
+  - `/api/challenge/*` - Debugging challenge triggers
+
+### Changed
+
+- Demo app uses clean, minimal UI design with muted colors
+- Flow diagram replaces toggle switch as primary intercept control
+- Improved panel resize handle with visual feedback (drag indicator, blue highlight)
+- Challenge instructions now include detailed steps for MITMproxy Options → intercept setup
+- Challenge instructions updated with "Resume All" workflow (replaces keyboard shortcut 'a')
+- MITMproxy iframe auto-refreshes when interception is enabled
+- Note: MITMproxy flow list may require manual refresh when accessed through Caddy proxy
+
 ## [0.2.0] - 2026-01-06
 
 ### Added
@@ -119,5 +187,6 @@ Full feature parity with [caddy-api-client](https://github.com/migetapp/caddy-ap
 - ✅ Rich error messages with context
 - ✅ 100% test coverage for route builders and schemas
 
+[0.2.2]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.0...v0.2.2
 [0.2.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/asd-engineering/asd-caddy-api-client/releases/tag/v0.1.0

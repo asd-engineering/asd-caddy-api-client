@@ -1,0 +1,8 @@
+{
+  "name": "mitmproxy-demo",
+  "private": true,
+  "scripts": {
+    "start": "docker compose up -d --build",
+    "stop": "docker compose down -v"
+  }
+}

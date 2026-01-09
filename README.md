@@ -9,7 +9,21 @@ TypeScript client for Caddy Admin API with MITMproxy integration.
 - ✅ **Domain management** - TLS automation with Let's Encrypt
 - ✅ **Load balancing** - Health checks and multiple upstream support
 - ✅ **MITMweb integration** - Traffic inspection for tunnels
-- ✅ **Zero runtime dependencies** - Only peer dependency: `zod`
+- ✅ **Minimal dependencies** - Only peer dependency: `zod` for runtime validation
+
+## Live Demo
+
+Experience the library in action with our interactive demo showing dynamic MITMproxy traffic inspection via Caddy Admin API:
+
+**[Launch Demo Dashboard](https://demo-oha3.cicd.eu1.asd.engineer/dashboard)** ← Hot-swap traffic inspection in real-time
+
+The demo showcases:
+
+- **Split-screen view**: Interactive search UI + MITMproxy Web UI
+- **Zero-downtime route switching**: Toggle monitoring without restarts
+- **Library-powered routing**: All route configuration via `caddy-api-client`
+
+Run locally: `docker compose -f demo/docker-compose.yml up -d` → http://localhost:9080/dashboard
 
 ## Installation
 

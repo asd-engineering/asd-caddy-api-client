@@ -305,3 +305,29 @@ glog:
 # Utility: run Claude Code
 claude:
     claude --allow-dangerously-skip-permissions
+
+# MITMproxy demo: just demo start|stop|url
+[no-cd]
+demo action:
+    #!/usr/bin/env bash
+    cd demo
+    case "{{action}}" in
+        start)
+            docker compose up -d --build
+            echo 'Waiting for services...'
+            sleep 30
+            echo ''
+            echo '======================================================================'
+            echo 'MITMproxy Traffic Inspection Demo'
+            echo '======================================================================'
+            echo ''
+            echo 'Open this URL in your browser:'
+            echo ''
+            echo '   http://localhost:9080/dashboard'
+            echo ''
+            echo '======================================================================'
+            ;;
+        stop)  docker compose down -v ;;
+        url)   echo 'http://localhost:9080/dashboard' ;;
+        *)     echo "Usage: just demo [start|stop|url]" ;;
+    esac

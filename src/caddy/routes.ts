@@ -774,3 +774,280 @@ export function buildMitmproxyRoutePair(options: {
     proxied: proxiedRoute,
   };
 }
+
+/**
+ * Options for building an iframe-embeddable proxy route
+ */
+export interface IframeProxyRouteOptions {
+  /** Path prefix for the route (e.g., "/panel") */
+  pathPrefix: string;
+  /** Upstream host to proxy to */
+  upstreamHost: string;
+  /** Upstream port to proxy to */
+  upstreamPort: number;
+  /** Route ID (optional, auto-generated from pathPrefix if not provided) */
+  routeId?: string;
+  /** Whether to enable iframe embedding headers (default: true) */
+  iframeEmbed?: boolean;
+  /** Custom Host header to send to upstream (for DNS rebinding bypass) */
+  overrideHost?: string;
+}
+
+/**
+ * Build a route for proxying a web UI with iframe embedding support
+ *
+ * This creates a route that proxies a web interface and optionally adds
+ * headers to allow embedding in iframes. Can also override Host/Origin
+ * headers for services with DNS rebinding protection.
+ *
+ * @param options - Iframe proxy route configuration
+ * @returns Caddy route for iframe-embeddable proxy
+ *
+ * @example
+ * ```typescript
+ * // Proxy a web panel at /panel/* to panel-service:8080
+ * const route = buildIframeProxyRoute({
+ *   pathPrefix: "/panel",
+ *   upstreamHost: "panel-service",
+ *   upstreamPort: 8080,
+ *   iframeEmbed: true,
+ * });
+ *
+ * // Proxy with DNS rebinding bypass (e.g., for mitmweb)
+ * const mitmRoute = buildIframeProxyRoute({
+ *   pathPrefix: "/mitmproxy",
+ *   upstreamHost: "mitmproxy",
+ *   upstreamPort: 8081,
+ *   overrideHost: "127.0.0.1:8081",
+ * });
+ * ```
+ */
+export function buildIframeProxyRoute(options: IframeProxyRouteOptions): CaddyRoute {
+  const dial = `${options.upstreamHost}:${options.upstreamPort}`;
+  const routeId = options.routeId ?? `iframe_proxy_${options.pathPrefix.replace(/\//g, "_")}`;
+  const enableIframe = options.iframeEmbed !== false;
+
+  const handlers: CaddyRouteHandler[] = [
+    // Strip path prefix
+    buildRewriteHandler(options.pathPrefix),
+  ];
+
+  // Add iframe-permissive headers if enabled
+  if (enableIframe) {
+    handlers.push(buildIframePermissiveHandler());
+  }
+
+  // Build reverse proxy handler
+  const reverseProxy: CaddyRouteHandler = {
+    handler: "reverse_proxy",
+    transport: { protocol: "http" },
+    upstreams: [{ dial }],
+  } as CaddyRouteHandler;
+
+  // Add Host/Origin override if specified (for DNS rebinding bypass)
+  if (options.overrideHost) {
+    (reverseProxy as Record<string, unknown>).headers = {
+      request: {
+        set: {
+          Host: [options.overrideHost],
+          Origin: [`http://${options.overrideHost}/`],
+        },
+      },
+    };
+  }
+
+  handlers.push(reverseProxy);
+
+  return {
+    "@id": routeId,
+    match: [{ path: [options.pathPrefix, `${options.pathPrefix}/*`] }],
+    handle: handlers,
+    terminal: true,
+  };
+}
+
+/**
+ * @deprecated Use buildIframeProxyRoute instead
+ */
+export function buildMitmproxyWebUiRoute(options: {
+  pathPrefix: string;
+  mitmproxyHost: string;
+  mitmproxyWebPort?: number;
+  routeId?: string;
+  iframeEmbed?: boolean;
+}): CaddyRoute {
+  const webPort = options.mitmproxyWebPort ?? 8081;
+  return buildIframeProxyRoute({
+    pathPrefix: options.pathPrefix,
+    upstreamHost: options.mitmproxyHost,
+    upstreamPort: webPort,
+    routeId: options.routeId,
+    iframeEmbed: options.iframeEmbed,
+    overrideHost: `127.0.0.1:${webPort}`,
+  });
+}
+
+/**
+ * Options for building a WebSocket proxy route
+ */
+export interface WebSocketProxyRouteOptions {
+  /** WebSocket path to match (e.g., "/ws", "/updates") */
+  path: string;
+  /** Upstream host to proxy to */
+  upstreamHost: string;
+  /** Upstream port to proxy to */
+  upstreamPort: number;
+  /** Route ID (optional) */
+  routeId?: string;
+  /** Custom Host header to send to upstream (for DNS rebinding bypass) */
+  overrideHost?: string;
+}
+
+/**
+ * Build a route for WebSocket proxy
+ *
+ * This creates a route that proxies WebSocket connections to an upstream
+ * service. Can optionally override Host/Origin headers for services
+ * with DNS rebinding protection.
+ *
+ * @param options - WebSocket route configuration
+ * @returns Caddy route for WebSocket proxy
+ *
+ * @example
+ * ```typescript
+ * // Simple WebSocket proxy
+ * const route = buildWebSocketProxyRoute({
+ *   path: "/ws",
+ *   upstreamHost: "ws-server",
+ *   upstreamPort: 8080,
+ * });
+ *
+ * // WebSocket with DNS rebinding bypass
+ * const mitmRoute = buildWebSocketProxyRoute({
+ *   path: "/updates",
+ *   upstreamHost: "mitmproxy",
+ *   upstreamPort: 8081,
+ *   overrideHost: "127.0.0.1:8081",
+ * });
+ * ```
+ */
+export function buildWebSocketProxyRoute(options: WebSocketProxyRouteOptions): CaddyRoute {
+  const dial = `${options.upstreamHost}:${options.upstreamPort}`;
+  const routeId = options.routeId ?? `ws_proxy_${options.path.replace(/\//g, "_")}`;
+
+  const reverseProxy: Record<string, unknown> = {
+    handler: "reverse_proxy",
+    transport: { protocol: "http" },
+    upstreams: [{ dial }],
+  };
+
+  // Add Host/Origin override if specified
+  if (options.overrideHost) {
+    reverseProxy.headers = {
+      request: {
+        set: {
+          Host: [options.overrideHost],
+          Origin: [`http://${options.overrideHost}/`],
+        },
+      },
+    };
+  }
+
+  return {
+    "@id": routeId,
+    match: [{ path: [options.path] }],
+    handle: [reverseProxy as CaddyRouteHandler],
+    terminal: true,
+  };
+}
+
+/**
+ * @deprecated Use buildWebSocketProxyRoute instead
+ */
+export function buildMitmproxyWebSocketRoute(options: {
+  path?: string;
+  mitmproxyHost: string;
+  mitmproxyWebPort?: number;
+  routeId?: string;
+}): CaddyRoute {
+  const webPort = options.mitmproxyWebPort ?? 8081;
+  return buildWebSocketProxyRoute({
+    path: options.path ?? "/updates",
+    upstreamHost: options.mitmproxyHost,
+    upstreamPort: webPort,
+    routeId: options.routeId,
+    overrideHost: `127.0.0.1:${webPort}`,
+  });
+}
+
+/**
+ * Build a header handler that removes restrictive headers for iframe embedding
+ *
+ * Removes X-Frame-Options, Content-Security-Policy, and X-Xss-Protection
+ * headers while adding permissive CORS and frame-ancestors headers.
+ *
+ * @param options - Handler options
+ * @returns Headers handler for iframe embedding
+ *
+ * @example
+ * ```typescript
+ * const handler = buildIframePermissiveHandler();
+ * // Use in a route's handle array
+ * ```
+ */
+export function buildIframePermissiveHandler(options?: {
+  /** Headers to delete (default: ["X-Frame-Options", "Content-Security-Policy", "X-Xss-Protection"]) */
+  deleteHeaders?: string[];
+  /** CORS origin (default: "*") */
+  corsOrigin?: string;
+}): CaddyRouteHandler {
+  const deleteHeaders = options?.deleteHeaders ?? [
+    "X-Frame-Options",
+    "Content-Security-Policy",
+    "X-Xss-Protection",
+  ];
+  const corsOrigin = options?.corsOrigin ?? "*";
+
+  return {
+    handler: "headers",
+    response: {
+      deferred: true,
+      delete: deleteHeaders,
+      set: {
+        "Access-Control-Allow-Origin": [corsOrigin],
+        "X-Frame-Options": ["ALLOWALL"],
+      },
+    },
+  } as CaddyRouteHandler;
+}
+
+/**
+ * Build a header handler for DNS rebinding bypass
+ *
+ * Sets Host and Origin headers to bypass MITMproxy's DNS rebinding protection.
+ * Use this when proxying to MITMproxy from a different hostname.
+ *
+ * @param options - Handler options
+ * @returns Headers handler for request modification
+ *
+ * @example
+ * ```typescript
+ * const handler = buildDnsRebindingBypassHandler({
+ *   targetHost: "127.0.0.1:8081",
+ * });
+ * ```
+ */
+export function buildDnsRebindingBypassHandler(options: {
+  /** Target host:port (e.g., "127.0.0.1:8081") */
+  targetHost: string;
+}): CaddyRouteHandler {
+  return {
+    handler: "headers",
+    request: {
+      set: {
+        Host: [options.targetHost],
+        Origin: [`http://${options.targetHost}/`],
+      },
+    },
+  } as CaddyRouteHandler;
+}
