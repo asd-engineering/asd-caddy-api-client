@@ -34,12 +34,12 @@
  */
 
 // Core types (caddy package)
-export * from "./generated/caddy-core";
+export type * from "./generated/caddy-core";
 
 // HTTP types (caddyhttp package)
 // Note: Export with HttpApp alias to avoid conflict with core App type
-export { App as HttpApp } from "./generated/caddy-http";
-export {
+export type { App as HttpApp } from "./generated/caddy-http";
+export type {
   Server,
   Route,
   RouteList,
@@ -72,7 +72,7 @@ export {
 } from "./generated/caddy-http";
 
 // TLS types (caddytls package)
-export {
+export type {
   TLS,
   AutomationConfig,
   AutomationPolicy,
