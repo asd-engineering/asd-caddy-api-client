@@ -74,42 +74,47 @@ async function withRetry<T>(
   options: { maxRetries?: number; delayMs?: number; backoff?: boolean } = {}
 ): Promise<T> {
   const { maxRetries = 3, delayMs = 1000, backoff = true } = options;
-  let lastError: Error | undefined;
+  let lastError: Error = new Error("No attempts made");
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
     } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+
       // Only retry on network/timeout errors
-      if (err instanceof NetworkError || err instanceof TimeoutError) {
-        lastError = err;
+      if (error instanceof NetworkError || error instanceof TimeoutError) {
+        lastError = error;
         if (attempt === maxRetries) {
           console.error(`❌ All ${maxRetries} attempts failed`);
-          throw lastError;
+          throw error;
         }
 
         const delay = backoff ? delayMs * attempt : delayMs;
         console.log(`⚠️  Attempt ${attempt} failed, retrying in ${delay}ms...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
-      } else if (err instanceof Error) {
-        // Don't retry validation or API errors - they won't succeed
-        throw err;
       } else {
-        throw new Error(String(err));
+        // Don't retry validation or API errors - they won't succeed
+        throw error;
       }
     }
   }
 
-  throw lastError ?? new Error("Unexpected: retry loop completed without returning");
+  throw lastError;
 }
 
-async function demonstrateRetry() {
+async function demonstrateRetry(): Promise<void> {
   const client = new CaddyClient({ timeout: 2000 });
 
-  const routes: CaddyRoute[] = await withRetry<CaddyRoute[]>(
-    () => client.getRoutes("https_server"),
-    { maxRetries: 3, delayMs: 500, backoff: true }
-  );
+  async function getRoutes(): Promise<CaddyRoute[]> {
+    return client.getRoutes("https_server");
+  }
+
+  const routes = await withRetry(getRoutes, {
+    maxRetries: 3,
+    delayMs: 500,
+    backoff: true,
+  });
 
   console.log(`✅ Got ${routes.length} routes (with retry support)`);
 }
