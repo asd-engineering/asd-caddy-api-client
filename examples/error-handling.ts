@@ -74,29 +74,33 @@ async function withRetry<T>(
   options: { maxRetries?: number; delayMs?: number; backoff?: boolean } = {}
 ): Promise<T> {
   const { maxRetries = 3, delayMs = 1000, backoff = true } = options;
+  let lastError: Error | undefined;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
-    } catch (error) {
+    } catch (err: unknown) {
       // Only retry on network/timeout errors
-      if (error instanceof NetworkError || error instanceof TimeoutError) {
+      if (err instanceof NetworkError || err instanceof TimeoutError) {
+        lastError = err;
         if (attempt === maxRetries) {
           console.error(`❌ All ${maxRetries} attempts failed`);
-          throw error;
+          throw lastError;
         }
 
         const delay = backoff ? delayMs * attempt : delayMs;
         console.log(`⚠️  Attempt ${attempt} failed, retrying in ${delay}ms...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
-      } else {
+      } else if (err instanceof Error) {
         // Don't retry validation or API errors - they won't succeed
-        throw error;
+        throw err;
+      } else {
+        throw new Error(String(err));
       }
     }
   }
 
-  throw new Error("Unexpected: retry loop completed without returning");
+  throw lastError ?? new Error("Unexpected: retry loop completed without returning");
 }
 
 async function demonstrateRetry() {
