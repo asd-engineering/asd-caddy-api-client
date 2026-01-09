@@ -14,6 +14,7 @@ import {
   AddDomainWithTlsOptionsSchema,
   UpdateDomainOptionsSchema,
   DeleteDomainOptionsSchema,
+  DomainSchema,
 } from "../schemas.js";
 import { CaddyClient } from "./client.js";
 import { DomainNotFoundError, DomainAlreadyExistsError } from "../errors.js";
@@ -484,6 +485,7 @@ export async function getDomainConfig(
   domain: Domain,
   adminUrl?: string
 ): Promise<DomainConfig | null> {
+  const validatedDomain = DomainSchema.parse(domain);
   const client = new CaddyClient({ adminUrl });
 
   try {
@@ -502,7 +504,7 @@ export async function getDomainConfig(
       }
     >;
 
-    const serverConfig = servers[domain];
+    const serverConfig = servers[validatedDomain];
     if (!serverConfig) {
       return null;
     }
@@ -555,7 +557,7 @@ export async function getDomainConfig(
     const autoTls = serverConfig.automatic_https?.disable !== true;
 
     return {
-      domain,
+      domain: validatedDomain,
       target,
       targetPort,
       tlsEnabled: true, // Assume TLS if server exists on :443
@@ -588,12 +590,13 @@ export async function rotateCertificate(
   newKeyFile: string,
   adminUrl?: string
 ): Promise<string> {
+  const validatedDomain = DomainSchema.parse(domain);
   const client = new CaddyClient({ adminUrl });
 
   // Check if domain exists
-  const existing = await getDomainConfig(domain, adminUrl);
+  const existing = await getDomainConfig(validatedDomain, adminUrl);
   if (!existing) {
-    throw new DomainNotFoundError(domain);
+    throw new DomainNotFoundError(validatedDomain);
   }
 
   // Get current TLS configuration
@@ -617,7 +620,7 @@ export async function rotateCertificate(
   const certBlocks = splitCertificateBundle(certPem);
   const mainCert = certBlocks[0];
   const serialNumber = extractSerialNumber(mainCert);
-  const newCertTag = generateCertTag(domain, serialNumber);
+  const newCertTag = generateCertTag(validatedDomain, serialNumber);
 
   // Parse certificate info for validation
   parseCertificate(mainCert); // Validates certificate is parseable
@@ -657,6 +660,7 @@ export async function removeOldCertificates(
   keepCertTag: string,
   adminUrl?: string
 ): Promise<number> {
+  const validatedDomain = DomainSchema.parse(domain);
   const client = new CaddyClient({ adminUrl });
 
   // Get current TLS configuration
@@ -683,7 +687,7 @@ export async function removeOldCertificates(
   // Keep only the specified certificate tag for this domain
   config.apps.tls.certificates.load_files = config.apps.tls.certificates.load_files.filter(
     (cert) => {
-      const hasDomainTag = cert.tags?.some((tag) => tag.includes(domain));
+      const hasDomainTag = cert.tags?.some((tag) => tag.includes(validatedDomain));
       const isKeepCert = cert.tags?.includes(keepCertTag);
 
       // Keep if: not a domain cert OR is the cert to keep

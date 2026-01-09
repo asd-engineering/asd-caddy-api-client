@@ -8,6 +8,7 @@ import {
   CaddyClientOptionsSchema,
   CaddyRouteSchema,
   UpstreamStatusArraySchema,
+  AdaptOptionsSchema,
 } from "../schemas.js";
 import {
   configSchema,
@@ -490,18 +491,19 @@ export class CaddyClient {
    * Adapt a configuration from one format to another
    * Commonly used to convert Caddyfile to JSON configuration.
    * @param config - The configuration content to adapt
-   * @param adapter - The adapter to use (e.g., "caddyfile")
+   * @param adapter - The adapter to use (e.g., "caddyfile", "json", "yaml", "nginx", "apache")
    * @returns The adapted configuration as validated JSON
    */
   async adapt(config: string, adapter = "caddyfile"): Promise<Config & Record<string, unknown>> {
+    const validated = AdaptOptionsSchema.parse({ config, adapter });
     const response = await this.request(`/adapt`, {
       method: "POST",
       headers: {
         "Content-Type": "text/caddyfile",
       },
       body: JSON.stringify({
-        config,
-        adapter,
+        config: validated.config,
+        adapter: validated.adapter,
       }),
     });
     const data = await response.json();

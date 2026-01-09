@@ -156,6 +156,19 @@ export const CaddyClientOptionsSchema = z.object({
   timeout: z.number().int().positive().optional().default(5000),
 });
 
+/**
+ * Caddy adapter schema - valid adapters for config conversion
+ */
+export const CaddyAdapterSchema = z.enum(["caddyfile", "json", "yaml", "nginx", "apache"]);
+
+/**
+ * Adapt configuration options schema
+ */
+export const AdaptOptionsSchema = z.object({
+  config: z.string().min(1, "Config cannot be empty"),
+  adapter: CaddyAdapterSchema.optional().default("caddyfile"),
+});
+
 // ============================================================================
 // Domain Management Schemas
 // ============================================================================

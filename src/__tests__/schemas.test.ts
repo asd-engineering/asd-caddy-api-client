@@ -8,6 +8,8 @@ import {
   ServiceRouteOptionsSchema,
   AddDomainWithAutoTlsOptionsSchema,
   LoadBalancerRouteOptionsSchema,
+  CaddyAdapterSchema,
+  AdaptOptionsSchema,
   validate,
 } from "../schemas.js";
 
@@ -39,6 +41,49 @@ describe("DialAddressSchema", () => {
     expect(() => DialAddressSchema.parse(":3000")).toThrow();
     expect(() => DialAddressSchema.parse("localhost")).toThrow();
     expect(() => DialAddressSchema.parse("localhost:")).toThrow();
+  });
+});
+
+describe("CaddyAdapterSchema", () => {
+  test("validates correct adapter names", () => {
+    expect(() => CaddyAdapterSchema.parse("caddyfile")).not.toThrow();
+    expect(() => CaddyAdapterSchema.parse("json")).not.toThrow();
+    expect(() => CaddyAdapterSchema.parse("yaml")).not.toThrow();
+    expect(() => CaddyAdapterSchema.parse("nginx")).not.toThrow();
+    expect(() => CaddyAdapterSchema.parse("apache")).not.toThrow();
+  });
+
+  test("rejects invalid adapter names", () => {
+    expect(() => CaddyAdapterSchema.parse("invalid")).toThrow();
+    expect(() => CaddyAdapterSchema.parse("")).toThrow();
+    expect(() => CaddyAdapterSchema.parse("CADDYFILE")).toThrow();
+  });
+});
+
+describe("AdaptOptionsSchema", () => {
+  test("validates config with default adapter", () => {
+    const result = AdaptOptionsSchema.parse({ config: "example.com { respond OK }" });
+    expect(result.config).toBe("example.com { respond OK }");
+    expect(result.adapter).toBe("caddyfile");
+  });
+
+  test("validates config with explicit adapter", () => {
+    const result = AdaptOptionsSchema.parse({
+      config: '{"apps":{}}',
+      adapter: "json",
+    });
+    expect(result.config).toBe('{"apps":{}}');
+    expect(result.adapter).toBe("json");
+  });
+
+  test("rejects empty config", () => {
+    expect(() => AdaptOptionsSchema.parse({ config: "" })).toThrow();
+  });
+
+  test("rejects invalid adapter", () => {
+    expect(() =>
+      AdaptOptionsSchema.parse({ config: "example.com {}", adapter: "invalid" })
+    ).toThrow();
   });
 });
 
