@@ -6,6 +6,7 @@
  * 2. Retry patterns for network errors
  * 3. Idempotent vs non-idempotent operations
  */
+import type { CaddyRoute } from "@accelerated-software-development/caddy-api-client";
 import {
   CaddyClient,
   buildServiceRoutes,
@@ -101,11 +102,10 @@ async function withRetry<T>(
 async function demonstrateRetry() {
   const client = new CaddyClient({ timeout: 2000 });
 
-  const routes = await withRetry(() => client.getRoutes("https_server"), {
-    maxRetries: 3,
-    delayMs: 500,
-    backoff: true,
-  });
+  const routes: CaddyRoute[] = await withRetry<CaddyRoute[]>(
+    () => client.getRoutes("https_server"),
+    { maxRetries: 3, delayMs: 500, backoff: true }
+  );
 
   console.log(`✅ Got ${routes.length} routes (with retry support)`);
 }
