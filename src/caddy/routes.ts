@@ -20,6 +20,7 @@ import {
   PathRouteOptionsSchema,
   LoadBalancerRouteOptionsSchema,
 } from "../schemas.js";
+import { validateOrThrow } from "../utils/validation.js";
 
 /**
  * Build routes for a service (host-based and/or path-based)
@@ -27,7 +28,11 @@ import {
  * @returns Array of Caddy routes
  */
 export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
-  const validated = ServiceRouteOptionsSchema.parse(options);
+  const validated = validateOrThrow(
+    ServiceRouteOptionsSchema,
+    options,
+    "buildServiceRoutes options"
+  );
   const routes: CaddyRoute[] = [];
 
   // Build host-based routes
@@ -89,7 +94,11 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
  * @returns Caddy route for health check
  */
 export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRoute {
-  const validated = HealthCheckRouteOptionsSchema.parse(options);
+  const validated = validateOrThrow(
+    HealthCheckRouteOptionsSchema,
+    options,
+    "buildHealthCheckRoute options"
+  );
 
   const route: CaddyRoute = {
     match: [
@@ -128,7 +137,7 @@ export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRo
  * @returns Caddy route
  */
 export function buildHostRoute(options: HostRouteOptions): CaddyRoute {
-  const validated = HostRouteOptionsSchema.parse(options);
+  const validated = validateOrThrow(HostRouteOptionsSchema, options, "buildHostRoute options");
   const handlers: CaddyRouteHandler[] = [];
 
   // Add security headers if configured
@@ -171,7 +180,7 @@ export function buildHostRoute(options: HostRouteOptions): CaddyRoute {
  * @returns Caddy route
  */
 export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
-  const validated = PathRouteOptionsSchema.parse(options);
+  const validated = validateOrThrow(PathRouteOptionsSchema, options, "buildPathRoute options");
   const handlers: CaddyRouteHandler[] = [];
 
   // Add rewrite handler if stripping prefix
@@ -220,7 +229,11 @@ export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
  * @returns Caddy route with load balancing
  */
 export function buildLoadBalancerRoute(options: LoadBalancerRouteOptions): CaddyRoute {
-  const validated = LoadBalancerRouteOptionsSchema.parse(options);
+  const validated = validateOrThrow(
+    LoadBalancerRouteOptionsSchema,
+    options,
+    "buildLoadBalancerRoute options"
+  );
 
   const route: CaddyRoute = {
     match: [

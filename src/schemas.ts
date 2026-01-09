@@ -25,6 +25,7 @@
  * ```
  */
 import { z } from "zod";
+import { ValidationError } from "./errors.js";
 
 // ============================================================================
 // Re-exported Generated Schemas (from Caddy Go source)
@@ -52,7 +53,21 @@ export {
 // ============================================================================
 
 /**
- * Domain name schema
+ * Domain name schema - validates domain name format
+ *
+ * @example
+ * ```typescript
+ * import { DomainSchema } from "@accelerated-software-development/caddy-api-client";
+ *
+ * // Validate domain name
+ * const domain = DomainSchema.parse("api.example.com");
+ *
+ * // Safe parsing (doesn't throw)
+ * const result = DomainSchema.safeParse(userInput);
+ * if (!result.success) {
+ *   console.error("Invalid domain:", result.error.message);
+ * }
+ * ```
  */
 export const DomainSchema = z
   .string()
@@ -63,7 +78,20 @@ export const DomainSchema = z
   );
 
 /**
- * Dial address schema (host:port format)
+ * Dial address schema - validates host:port format for upstream targets
+ *
+ * @example
+ * ```typescript
+ * import { DialAddressSchema } from "@accelerated-software-development/caddy-api-client";
+ *
+ * // Valid addresses
+ * DialAddressSchema.parse("localhost:3000");     // OK
+ * DialAddressSchema.parse("192.168.1.1:8080");  // OK
+ * DialAddressSchema.parse("api-server:443");     // OK
+ *
+ * // Invalid - missing port
+ * DialAddressSchema.parse("localhost");  // throws
+ * ```
  */
 export const DialAddressSchema = z
   .string()
@@ -135,7 +163,22 @@ export const CaddyRouteHandlerSchema: z.ZodType<{
   .passthrough();
 
 /**
- * Caddy route schema
+ * Caddy route schema - validates Caddy JSON route structure
+ *
+ * @example
+ * ```typescript
+ * import { CaddyRouteSchema } from "@accelerated-software-development/caddy-api-client";
+ *
+ * // Validate a route before adding to Caddy
+ * const route = CaddyRouteSchema.parse({
+ *   "@id": "my-api-route",
+ *   match: [{ host: ["api.example.com"] }],
+ *   handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "localhost:3000" }] }],
+ *   terminal: true
+ * });
+ *
+ * await client.addRoute("https_server", route);
+ * ```
  */
 export const CaddyRouteSchema = z.object({
   "@id": z.string().optional(),
@@ -158,6 +201,27 @@ export const CaddyClientOptionsSchema = z.object({
 
 /**
  * Caddy adapter schema - valid adapters for config conversion
+ *
+ * Supported adapters:
+ * - `caddyfile` - Native Caddyfile format (default)
+ * - `json` - Raw Caddy JSON config
+ * - `yaml` - YAML configuration
+ * - `nginx` - Nginx configuration (requires caddy-nginx-adapter)
+ * - `apache` - Apache configuration (requires caddy-apache-adapter)
+ *
+ * @example
+ * ```typescript
+ * import { CaddyAdapterSchema } from "@accelerated-software-development/caddy-api-client";
+ *
+ * // Validate user input before calling adapt()
+ * const adapter = CaddyAdapterSchema.parse(userInput);
+ * const config = await client.adapt(content, adapter);
+ *
+ * // Type-safe check
+ * if (CaddyAdapterSchema.safeParse("caddyfile").success) {
+ *   // valid adapter
+ * }
+ * ```
  */
 export const CaddyAdapterSchema = z.enum(["caddyfile", "json", "yaml", "nginx", "apache"]);
 
@@ -515,12 +579,213 @@ export const ReverseProxyHandlerSchema = z.object({
     .optional(),
 });
 
+/**
+ * Headers handler schema - set/modify request/response headers
+ *
+ * @example
+ * ```typescript
+ * const handler = HeadersHandlerSchema.parse({
+ *   handler: "headers",
+ *   response: {
+ *     set: { "X-Frame-Options": ["DENY"] },
+ *     delete: ["Server"],
+ *   },
+ * });
+ * ```
+ */
+export const HeadersHandlerSchema = z.object({
+  handler: z.literal("headers"),
+  response: z
+    .object({
+      deferred: z.boolean().optional(),
+      set: z.record(z.string(), z.array(z.string())).optional(),
+      add: z.record(z.string(), z.array(z.string())).optional(),
+      delete: z.array(z.string()).optional(),
+    })
+    .optional(),
+  request: z
+    .object({
+      set: z.record(z.string(), z.array(z.string())).optional(),
+      add: z.record(z.string(), z.array(z.string())).optional(),
+      delete: z.array(z.string()).optional(),
+    })
+    .optional(),
+});
+
+/**
+ * Static response handler schema - return static content
+ *
+ * @example
+ * ```typescript
+ * const healthCheck = StaticResponseHandlerSchema.parse({
+ *   handler: "static_response",
+ *   status_code: 200,
+ *   body: '{"status":"ok"}',
+ *   headers: { "Content-Type": ["application/json"] },
+ * });
+ * ```
+ */
+export const StaticResponseHandlerSchema = z.object({
+  handler: z.literal("static_response"),
+  status_code: z.union([z.number().int().min(100).max(599), z.string()]).optional(),
+  body: z.string().optional(),
+  headers: z.record(z.string(), z.array(z.string())).optional(),
+  close: z.boolean().optional(),
+  abort: z.boolean().optional(),
+});
+
+/**
+ * Authentication handler schema - HTTP basic auth
+ *
+ * @example
+ * ```typescript
+ * const authHandler = AuthenticationHandlerSchema.parse({
+ *   handler: "authentication",
+ *   providers: {
+ *     http_basic: {
+ *       accounts: [{ username: "admin", password: "$2a$..." }],
+ *       realm: "Admin Area",
+ *     },
+ *   },
+ * });
+ * ```
+ */
+export const AuthenticationHandlerSchema = z.object({
+  handler: z.literal("authentication"),
+  providers: z
+    .object({
+      http_basic: z
+        .object({
+          accounts: z
+            .array(
+              z.object({
+                username: z.string(),
+                password: z.string(),
+              })
+            )
+            .optional(),
+          realm: z.string().optional(),
+          hash: z
+            .object({
+              algorithm: z.string().optional(),
+            })
+            .optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+/**
+ * Rewrite handler schema - URI rewriting
+ *
+ * @example
+ * ```typescript
+ * const rewrite = RewriteHandlerSchema.parse({
+ *   handler: "rewrite",
+ *   strip_path_prefix: "/api",
+ * });
+ * ```
+ */
+export const RewriteHandlerSchema = z.object({
+  handler: z.literal("rewrite"),
+  uri: z.string().optional(),
+  strip_path_prefix: z.string().optional(),
+  strip_path_suffix: z.string().optional(),
+  uri_substring: z
+    .array(
+      z.object({
+        find: z.string(),
+        replace: z.string(),
+        limit: z.number().int().optional(),
+      })
+    )
+    .optional(),
+});
+
+/**
+ * Encode handler schema - response compression
+ *
+ * @example
+ * ```typescript
+ * const compression = EncodeHandlerSchema.parse({
+ *   handler: "encode",
+ *   encodings: { gzip: {}, zstd: {} },
+ * });
+ * ```
+ */
+export const EncodeHandlerSchema = z.object({
+  handler: z.literal("encode"),
+  encodings: z
+    .object({
+      gzip: z.object({}).passthrough().optional(),
+      zstd: z.object({}).passthrough().optional(),
+      br: z.object({}).passthrough().optional(),
+    })
+    .passthrough()
+    .optional(),
+  prefer: z.array(z.string()).optional(),
+  minimum_length: z.number().int().positive().optional(),
+});
+
+/**
+ * Known handler schemas with specific validation - uses discriminated union
+ * for efficient parsing based on the `handler` field
+ */
+export const KnownCaddyHandlerSchema = z.discriminatedUnion("handler", [
+  ReverseProxyHandlerSchema,
+  HeadersHandlerSchema,
+  StaticResponseHandlerSchema,
+  AuthenticationHandlerSchema,
+  RewriteHandlerSchema,
+  EncodeHandlerSchema,
+]);
+
+/**
+ * Combined handler schema - validates known handlers strictly,
+ * allows unknown handlers through for extensibility
+ *
+ * @example
+ * ```typescript
+ * // Known handler - validated strictly
+ * CaddyHandlerSchema.parse({ handler: "headers", response: { set: {...} } });
+ *
+ * // Unknown handler - passes through
+ * CaddyHandlerSchema.parse({ handler: "file_server", root: "/var/www" });
+ * ```
+ */
+export const CaddyHandlerSchema = z.union([
+  KnownCaddyHandlerSchema,
+  CaddyRouteHandlerSchema, // Fallback for unknown handlers
+]);
+
+// Handler types inferred from schemas
+export type HeadersHandler = z.infer<typeof HeadersHandlerSchema>;
+export type StaticResponseHandler = z.infer<typeof StaticResponseHandlerSchema>;
+export type AuthenticationHandler = z.infer<typeof AuthenticationHandlerSchema>;
+export type RewriteHandler = z.infer<typeof RewriteHandlerSchema>;
+export type EncodeHandler = z.infer<typeof EncodeHandlerSchema>;
+
 // ============================================================================
 // Caddy Admin API Response Schemas
 // ============================================================================
 
 /**
- * Upstream server status schema for /reverse_proxy/upstreams endpoint
+ * Upstream server status schema - validates response from /reverse_proxy/upstreams endpoint
+ *
+ * @example
+ * ```typescript
+ * import { UpstreamStatusSchema } from "@accelerated-software-development/caddy-api-client";
+ *
+ * // Get and validate upstream status
+ * const upstreams = await client.getUpstreams();
+ *
+ * // Check for unhealthy upstreams
+ * const unhealthy = upstreams.filter(u => !u.healthy);
+ * if (unhealthy.length > 0) {
+ *   console.warn("Unhealthy upstreams:", unhealthy.map(u => u.address));
+ * }
+ * ```
  */
 export const UpstreamStatusSchema = z.object({
   /** Upstream address (host:port) */
@@ -563,12 +828,25 @@ export const MitmwebOptionsSchema = z.object({
  * @param schema - Zod schema
  * @param data - Data to validate
  * @returns Parsed and validated data
- * @throws ValidationError if validation fails
+ * @throws {ValidationError} If validation fails
+ *
+ * @example
+ * ```typescript
+ * import { validate, DomainSchema } from "@accelerated-software-development/caddy-api-client";
+ *
+ * try {
+ *   const domain = validate(DomainSchema, userInput);
+ * } catch (error) {
+ *   if (error instanceof ValidationError) {
+ *     console.error("Invalid input:", error.errors);
+ *   }
+ * }
+ * ```
  */
 export function validate<T>(schema: z.ZodType<T>, data: unknown): T {
   const result = schema.safeParse(data);
   if (!result.success) {
-    throw new Error(`Validation failed: ${JSON.stringify(result.error.errors)}`);
+    throw new ValidationError(`Validation failed: ${result.error.message}`, result.error.errors);
   }
   return result.data;
 }

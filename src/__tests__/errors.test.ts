@@ -79,6 +79,43 @@ describe("CaddyApiError", () => {
     expect(new CaddyApiError("Forbidden", 403).statusCode).toBe(403);
     expect(new CaddyApiError("Bad request", 400).statusCode).toBe(400);
   });
+
+  test("includes URL in error", () => {
+    const error = new CaddyApiError(
+      "Request failed",
+      500,
+      "Error body",
+      "http://127.0.0.1:2019/config/"
+    );
+    expect(error.url).toBe("http://127.0.0.1:2019/config/");
+    expect(error.context?.url).toBe("http://127.0.0.1:2019/config/");
+  });
+
+  test("includes method in error", () => {
+    const error = new CaddyApiError(
+      "Request failed",
+      500,
+      "Error body",
+      "http://127.0.0.1:2019/config/",
+      "POST"
+    );
+    expect(error.method).toBe("POST");
+    expect(error.context?.method).toBe("POST");
+  });
+
+  test("includes full request context", () => {
+    const error = new CaddyApiError(
+      "POST http://127.0.0.1:2019/load - 400 Bad Request",
+      400,
+      '{"error":"invalid config"}',
+      "http://127.0.0.1:2019/load",
+      "POST"
+    );
+    expect(error.statusCode).toBe(400);
+    expect(error.url).toBe("http://127.0.0.1:2019/load");
+    expect(error.method).toBe("POST");
+    expect(error.responseBody).toBe('{"error":"invalid config"}');
+  });
 });
 
 describe("NetworkError", () => {

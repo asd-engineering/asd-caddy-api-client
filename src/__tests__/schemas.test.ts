@@ -538,3 +538,405 @@ describe("ReverseProxyHandlerSchema", () => {
     ).toThrow();
   });
 });
+
+// ============================================================================
+// Handler-Specific Schema Tests
+// ============================================================================
+
+import {
+  HeadersHandlerSchema,
+  StaticResponseHandlerSchema,
+  AuthenticationHandlerSchema,
+  RewriteHandlerSchema,
+  EncodeHandlerSchema,
+  KnownCaddyHandlerSchema,
+  CaddyHandlerSchema,
+} from "../schemas.js";
+
+describe("HeadersHandlerSchema", () => {
+  test("validates security headers", () => {
+    const result = HeadersHandlerSchema.parse({
+      handler: "headers",
+      response: {
+        set: {
+          "X-Frame-Options": ["DENY"],
+          "X-Content-Type-Options": ["nosniff"],
+        },
+      },
+    });
+    expect(result.handler).toBe("headers");
+    expect(result.response?.set?.["X-Frame-Options"]).toEqual(["DENY"]);
+  });
+
+  test("validates request headers", () => {
+    const result = HeadersHandlerSchema.parse({
+      handler: "headers",
+      request: {
+        set: { "X-Custom-Header": ["value"] },
+        add: { "X-Another": ["added"] },
+        delete: ["X-Remove-Me"],
+      },
+    });
+    expect(result.request?.set?.["X-Custom-Header"]).toEqual(["value"]);
+    expect(result.request?.delete).toEqual(["X-Remove-Me"]);
+  });
+
+  test("validates deferred response headers", () => {
+    const result = HeadersHandlerSchema.parse({
+      handler: "headers",
+      response: {
+        deferred: true,
+        set: { "Cache-Control": ["no-store"] },
+      },
+    });
+    expect(result.response?.deferred).toBe(true);
+  });
+
+  test("rejects wrong handler type", () => {
+    expect(() =>
+      HeadersHandlerSchema.parse({
+        handler: "reverse_proxy",
+      })
+    ).toThrow();
+  });
+});
+
+describe("StaticResponseHandlerSchema", () => {
+  test("validates health check response", () => {
+    const result = StaticResponseHandlerSchema.parse({
+      handler: "static_response",
+      status_code: 200,
+      body: "OK",
+    });
+    expect(result.status_code).toBe(200);
+    expect(result.body).toBe("OK");
+  });
+
+  test("validates JSON response with headers", () => {
+    const result = StaticResponseHandlerSchema.parse({
+      handler: "static_response",
+      status_code: 200,
+      body: '{"status": "healthy"}',
+      headers: {
+        "Content-Type": ["application/json"],
+      },
+    });
+    expect(result.headers?.["Content-Type"]).toEqual(["application/json"]);
+  });
+
+  test("validates status_code as string", () => {
+    const result = StaticResponseHandlerSchema.parse({
+      handler: "static_response",
+      status_code: "204",
+    });
+    expect(result.status_code).toBe("204");
+  });
+
+  test("validates close and abort options", () => {
+    const closeResult = StaticResponseHandlerSchema.parse({
+      handler: "static_response",
+      close: true,
+    });
+    expect(closeResult.close).toBe(true);
+
+    const abortResult = StaticResponseHandlerSchema.parse({
+      handler: "static_response",
+      abort: true,
+    });
+    expect(abortResult.abort).toBe(true);
+  });
+
+  test("rejects invalid status code", () => {
+    expect(() =>
+      StaticResponseHandlerSchema.parse({
+        handler: "static_response",
+        status_code: 999,
+      })
+    ).toThrow();
+
+    expect(() =>
+      StaticResponseHandlerSchema.parse({
+        handler: "static_response",
+        status_code: 50,
+      })
+    ).toThrow();
+  });
+
+  test("rejects wrong handler type", () => {
+    expect(() =>
+      StaticResponseHandlerSchema.parse({
+        handler: "headers",
+      })
+    ).toThrow();
+  });
+});
+
+describe("AuthenticationHandlerSchema", () => {
+  test("validates basic auth with accounts", () => {
+    const result = AuthenticationHandlerSchema.parse({
+      handler: "authentication",
+      providers: {
+        http_basic: {
+          accounts: [
+            { username: "admin", password: "$2a$14$..." },
+            { username: "user", password: "$2a$14$..." },
+          ],
+        },
+      },
+    });
+    expect(result.providers?.http_basic?.accounts).toHaveLength(2);
+    expect(result.providers?.http_basic?.accounts?.[0].username).toBe("admin");
+  });
+
+  test("validates basic auth with realm", () => {
+    const result = AuthenticationHandlerSchema.parse({
+      handler: "authentication",
+      providers: {
+        http_basic: {
+          accounts: [{ username: "admin", password: "hash" }],
+          realm: "Restricted Area",
+        },
+      },
+    });
+    expect(result.providers?.http_basic?.realm).toBe("Restricted Area");
+  });
+
+  test("validates basic auth with hash algorithm", () => {
+    const result = AuthenticationHandlerSchema.parse({
+      handler: "authentication",
+      providers: {
+        http_basic: {
+          accounts: [{ username: "admin", password: "hash" }],
+          hash: { algorithm: "bcrypt" },
+        },
+      },
+    });
+    expect(result.providers?.http_basic?.hash?.algorithm).toBe("bcrypt");
+  });
+
+  test("validates minimal authentication handler", () => {
+    const result = AuthenticationHandlerSchema.parse({
+      handler: "authentication",
+    });
+    expect(result.handler).toBe("authentication");
+  });
+
+  test("rejects wrong handler type", () => {
+    expect(() =>
+      AuthenticationHandlerSchema.parse({
+        handler: "static_response",
+      })
+    ).toThrow();
+  });
+});
+
+describe("RewriteHandlerSchema", () => {
+  test("validates URI rewrite", () => {
+    const result = RewriteHandlerSchema.parse({
+      handler: "rewrite",
+      uri: "/new-path{http.request.uri.query}",
+    });
+    expect(result.uri).toBe("/new-path{http.request.uri.query}");
+  });
+
+  test("validates strip_path_prefix", () => {
+    const result = RewriteHandlerSchema.parse({
+      handler: "rewrite",
+      strip_path_prefix: "/api/v1",
+    });
+    expect(result.strip_path_prefix).toBe("/api/v1");
+  });
+
+  test("validates strip_path_suffix", () => {
+    const result = RewriteHandlerSchema.parse({
+      handler: "rewrite",
+      strip_path_suffix: ".html",
+    });
+    expect(result.strip_path_suffix).toBe(".html");
+  });
+
+  test("validates uri_substring replacement", () => {
+    const result = RewriteHandlerSchema.parse({
+      handler: "rewrite",
+      uri_substring: [
+        { find: "/old/", replace: "/new/" },
+        { find: ".php", replace: "", limit: 1 },
+      ],
+    });
+    expect(result.uri_substring).toHaveLength(2);
+    expect(result.uri_substring?.[0].find).toBe("/old/");
+    expect(result.uri_substring?.[1].limit).toBe(1);
+  });
+
+  test("rejects wrong handler type", () => {
+    expect(() =>
+      RewriteHandlerSchema.parse({
+        handler: "headers",
+      })
+    ).toThrow();
+  });
+});
+
+describe("EncodeHandlerSchema", () => {
+  test("validates gzip encoding", () => {
+    const result = EncodeHandlerSchema.parse({
+      handler: "encode",
+      encodings: {
+        gzip: {},
+      },
+    });
+    expect(result.encodings?.gzip).toBeDefined();
+  });
+
+  test("validates multiple encodings with preference", () => {
+    const result = EncodeHandlerSchema.parse({
+      handler: "encode",
+      encodings: {
+        gzip: {},
+        zstd: {},
+        br: {},
+      },
+      prefer: ["zstd", "br", "gzip"],
+    });
+    expect(result.prefer).toEqual(["zstd", "br", "gzip"]);
+  });
+
+  test("validates minimum_length option", () => {
+    const result = EncodeHandlerSchema.parse({
+      handler: "encode",
+      encodings: { gzip: {} },
+      minimum_length: 1024,
+    });
+    expect(result.minimum_length).toBe(1024);
+  });
+
+  test("rejects non-positive minimum_length", () => {
+    expect(() =>
+      EncodeHandlerSchema.parse({
+        handler: "encode",
+        minimum_length: 0,
+      })
+    ).toThrow();
+
+    expect(() =>
+      EncodeHandlerSchema.parse({
+        handler: "encode",
+        minimum_length: -100,
+      })
+    ).toThrow();
+  });
+
+  test("rejects wrong handler type", () => {
+    expect(() =>
+      EncodeHandlerSchema.parse({
+        handler: "reverse_proxy",
+      })
+    ).toThrow();
+  });
+});
+
+describe("KnownCaddyHandlerSchema", () => {
+  test("validates reverse_proxy handler", () => {
+    const result = KnownCaddyHandlerSchema.parse({
+      handler: "reverse_proxy",
+      upstreams: [{ dial: "localhost:3000" }],
+    });
+    expect(result.handler).toBe("reverse_proxy");
+  });
+
+  test("validates headers handler", () => {
+    const result = KnownCaddyHandlerSchema.parse({
+      handler: "headers",
+      response: { set: { "X-Test": ["value"] } },
+    });
+    expect(result.handler).toBe("headers");
+  });
+
+  test("validates static_response handler", () => {
+    const result = KnownCaddyHandlerSchema.parse({
+      handler: "static_response",
+      status_code: 200,
+      body: "Hello",
+    });
+    expect(result.handler).toBe("static_response");
+  });
+
+  test("validates authentication handler", () => {
+    const result = KnownCaddyHandlerSchema.parse({
+      handler: "authentication",
+      providers: { http_basic: { accounts: [] } },
+    });
+    expect(result.handler).toBe("authentication");
+  });
+
+  test("validates rewrite handler", () => {
+    const result = KnownCaddyHandlerSchema.parse({
+      handler: "rewrite",
+      uri: "/new",
+    });
+    expect(result.handler).toBe("rewrite");
+  });
+
+  test("validates encode handler", () => {
+    const result = KnownCaddyHandlerSchema.parse({
+      handler: "encode",
+      encodings: { gzip: {} },
+    });
+    expect(result.handler).toBe("encode");
+  });
+
+  test("rejects unknown handler types", () => {
+    expect(() =>
+      KnownCaddyHandlerSchema.parse({
+        handler: "file_server",
+        root: "/var/www",
+      })
+    ).toThrow();
+  });
+});
+
+describe("CaddyHandlerSchema", () => {
+  test("validates known handlers strictly", () => {
+    const result = CaddyHandlerSchema.parse({
+      handler: "headers",
+      response: { set: { "X-Test": ["value"] } },
+    });
+    expect(result.handler).toBe("headers");
+  });
+
+  test("allows unknown handlers through fallback", () => {
+    const result = CaddyHandlerSchema.parse({
+      handler: "file_server",
+      root: "/var/www",
+      index_names: ["index.html"],
+    });
+    expect(result.handler).toBe("file_server");
+  });
+
+  test("allows templates handler", () => {
+    const result = CaddyHandlerSchema.parse({
+      handler: "templates",
+      file_root: "/var/www/templates",
+    });
+    expect(result.handler).toBe("templates");
+  });
+
+  test("allows vars handler", () => {
+    const result = CaddyHandlerSchema.parse({
+      handler: "vars",
+      root: "/var/www",
+    });
+    expect(result.handler).toBe("vars");
+  });
+
+  test("validates multiple handlers in sequence", () => {
+    const handlers = [
+      { handler: "headers", response: { set: { "X-Test": ["1"] } } },
+      { handler: "reverse_proxy", upstreams: [{ dial: "localhost:3000" }] },
+    ];
+
+    for (const h of handlers) {
+      expect(() => CaddyHandlerSchema.parse(h)).not.toThrow();
+    }
+  });
+});

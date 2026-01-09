@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-01-09
+
+### Added
+
+- **Config File Loading Utilities** (`src/caddy/config-loader.ts`)
+  - `loadConfig(path, adapter?, options?)` - Load and adapt config files with auto-detection
+  - `loadCaddyfile(path, options?)` - Convenience function for Caddyfile format
+  - `detectAdapter(path)` - Auto-detect adapter from file extension (.json, .yaml, .nginx, etc.)
+  - `CaddyAdapter` type and `LoadConfigOptions` interface exported
+
+- **New CaddyClient Method**
+  - `applyConfig(config)` - Apply full configuration to running Caddy via `/load` endpoint
+  - Enables full workflow: load → modify → apply
+
+- **Validation Error Wrapper** (`src/utils/validation.ts`)
+  - `validateOrThrow(schema, data, context?)` - Wraps Zod errors in `ValidationError`
+  - All user-facing validation now throws `ValidationError` instead of raw `ZodError`
+  - Contextual error messages (e.g., "buildHostRoute options: dial: Invalid format")
+
+- **Enhanced CaddyApiError**
+  - Added `url` and `method` properties for debugging
+  - Error messages include full request context: `POST http://127.0.0.1:2019/load - 400 Bad Request`
+
+- **JSDoc Documentation**
+  - Added `@throws` documentation to key CaddyClient methods
+  - Added `@example` to user-facing schemas: `DomainSchema`, `DialAddressSchema`, `CaddyAdapterSchema`, `CaddyRouteSchema`, `UpstreamStatusSchema`
+  - Updated `validate()` helper to throw `ValidationError` with example
+
+- **New Tests**
+  - `config-loader.test.ts` - Tests for `detectAdapter()` (6 tests)
+  - `validation.test.ts` - Tests for `validateOrThrow()` (10 tests)
+  - Added 3 tests for `CaddyApiError` URL/method properties
+  - Added 45 tests for handler-specific schemas
+
+- **Handler-Specific Zod Schemas** (`src/schemas.ts`)
+  - `HeadersHandlerSchema` - Request/response header manipulation
+  - `StaticResponseHandlerSchema` - Static content responses with status code validation
+  - `AuthenticationHandlerSchema` - HTTP basic auth with accounts, realm, hash algorithm
+  - `RewriteHandlerSchema` - URI rewriting, path prefix/suffix stripping
+  - `EncodeHandlerSchema` - Response compression (gzip, zstd, brotli)
+  - `KnownCaddyHandlerSchema` - Discriminated union for strict validation of 6 core handlers
+  - `CaddyHandlerSchema` - Union with fallback for unknown handlers (backwards compatible)
+  - Inferred types exported: `HeadersHandler`, `StaticResponseHandler`, `AuthenticationHandler`, `RewriteHandler`, `EncodeHandler`
+
+### Changed
+
+- **Consistent Error Types** - All user-facing validation now throws `ValidationError`
+  - `CaddyClient` constructor, `addRoute()`, `patchRoutes()`, `insertRoute()`, `replaceRouteById()`, `adapt()`, `applyConfig()`
+  - Domain functions: `addDomainWithAutoTls()`, `addDomainWithTls()`, `updateDomain()`, `deleteDomain()`, etc.
+  - Route builders: `buildServiceRoutes()`, `buildHostRoute()`, `buildPathRoute()`, `buildLoadBalancerRoute()`, etc.
+
+- **Improved Error Messages** - Validation errors include context about which parameter failed
+
 ## [0.3.0] - 2026-01-09
 
 ### Added
@@ -259,6 +312,7 @@ Full feature parity with [caddy-api-client](https://github.com/migetapp/caddy-ap
 - ✅ Rich error messages with context
 - ✅ 100% test coverage for route builders and schemas
 
+[0.3.1]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.0...v0.2.2
 [0.2.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.1.0...v0.2.0

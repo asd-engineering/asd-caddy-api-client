@@ -18,6 +18,7 @@ import {
 } from "../schemas.js";
 import { CaddyClient } from "./client.js";
 import { DomainNotFoundError, DomainAlreadyExistsError } from "../errors.js";
+import { validateOrThrow } from "../utils/validation.js";
 import {
   extractSerialNumber,
   generateCertTag,
@@ -34,7 +35,11 @@ import { buildRedirectRoute, buildCompressionHandler, buildWwwRedirect } from ".
 export async function addDomainWithAutoTls(
   options: AddDomainWithAutoTlsOptions
 ): Promise<DomainConfig> {
-  const validated = AddDomainWithAutoTlsOptionsSchema.parse(options);
+  const validated = validateOrThrow(
+    AddDomainWithAutoTlsOptionsSchema,
+    options,
+    "addDomainWithAutoTls options"
+  );
   const client = new CaddyClient({ adminUrl: validated.adminUrl });
 
   // Check if domain already exists
@@ -168,7 +173,11 @@ export async function addDomainWithAutoTls(
  * @returns Domain configuration
  */
 export async function addDomainWithTls(options: AddDomainWithTlsOptions): Promise<DomainConfig> {
-  const validated = AddDomainWithTlsOptionsSchema.parse(options);
+  const validated = validateOrThrow(
+    AddDomainWithTlsOptionsSchema,
+    options,
+    "addDomainWithTls options"
+  );
   const client = new CaddyClient({ adminUrl: validated.adminUrl });
 
   // Check if domain already exists
@@ -326,7 +335,7 @@ export async function addDomainWithTls(options: AddDomainWithTlsOptions): Promis
  * @returns Updated domain configuration
  */
 export async function updateDomain(options: UpdateDomainOptions): Promise<DomainConfig> {
-  const validated = UpdateDomainOptionsSchema.parse(options);
+  const validated = validateOrThrow(UpdateDomainOptionsSchema, options, "updateDomain options");
 
   // Check if domain exists
   const existing = await getDomainConfig(validated.domain, validated.adminUrl);
@@ -392,7 +401,7 @@ export async function updateDomain(options: UpdateDomainOptions): Promise<Domain
  * @param options - Delete options
  */
 export async function deleteDomain(options: DeleteDomainOptions): Promise<void> {
-  const validated = DeleteDomainOptionsSchema.parse(options);
+  const validated = validateOrThrow(DeleteDomainOptionsSchema, options, "deleteDomain options");
   const client = new CaddyClient({ adminUrl: validated.adminUrl });
 
   // Check if domain exists
@@ -485,7 +494,7 @@ export async function getDomainConfig(
   domain: Domain,
   adminUrl?: string
 ): Promise<DomainConfig | null> {
-  const validatedDomain = DomainSchema.parse(domain);
+  const validatedDomain = validateOrThrow(DomainSchema, domain, "domain");
   const client = new CaddyClient({ adminUrl });
 
   try {
@@ -590,7 +599,7 @@ export async function rotateCertificate(
   newKeyFile: string,
   adminUrl?: string
 ): Promise<string> {
-  const validatedDomain = DomainSchema.parse(domain);
+  const validatedDomain = validateOrThrow(DomainSchema, domain, "domain");
   const client = new CaddyClient({ adminUrl });
 
   // Check if domain exists
@@ -660,7 +669,7 @@ export async function removeOldCertificates(
   keepCertTag: string,
   adminUrl?: string
 ): Promise<number> {
-  const validatedDomain = DomainSchema.parse(domain);
+  const validatedDomain = validateOrThrow(DomainSchema, domain, "domain");
   const client = new CaddyClient({ adminUrl });
 
   // Get current TLS configuration
