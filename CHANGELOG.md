@@ -5,6 +5,78 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-09
+
+### Added
+
+- **Self-contained Caddy Type Generation** - Eliminated external `caddy-json-types` dependency
+  - Types now generated directly from local Caddy Go source (`local/caddy`)
+  - Uses [tygo](https://github.com/gzuidhof/tygo) for Go-to-TypeScript conversion
+  - Automatic Zod schema generation via [ts-to-zod](https://github.com/fabien0102/ts-to-zod)
+  - Generated 3,533 lines of TypeScript types across 3 modules (core, http, tls)
+  - Generated ~700 lines of Zod validation schemas
+
+- **API Response Validation** - All client methods now validate responses with Zod
+  - `getConfig()` → Returns `Config` type, validated against `configSchema`
+  - `getRoutes()` → Validated with `routeResponseListSchema` (preserves `@id` fields)
+  - `getServers()` → Returns `Record<string, Server>`, validated
+  - `getServerConfig()` → Returns `Server` type, validated
+  - `getVersion()` → Typed response with `versionResponseSchema`
+  - `getUpstreams()` → Validated with new `UpstreamStatusArraySchema`
+  - `adapt()` → Returns validated `Config` type
+
+- **New Zod Schemas**
+  - `UpstreamStatusSchema` - Validates upstream server status from `/reverse_proxy/upstreams`
+  - `UpstreamStatusArraySchema` - Array validation for upstream endpoints
+  - Re-exported generated schemas: `configSchema`, `serverSchema`, `routeSchema`, `routeListSchema`, `durationSchema`, `adminConfigSchema`, `loggingSchema`
+
+- **Type Generation Scripts**
+  - `npm run generate:types` - Regenerate TypeScript types and Zod schemas from Go source
+  - `npm run sync:caddy` - Pull latest Caddy source and regenerate types
+
+- **Generated Type Files** (`src/generated/`)
+  - `caddy-core.ts` - Core Caddy configuration types (Config, AdminConfig, Logging, etc.)
+  - `caddy-http.ts` - HTTP module types (Server, Route, matchers, handlers)
+  - `caddy-tls.ts` - TLS module types (TLS, AutomationConfig, ConnectionPolicy, etc.)
+  - `caddy-*.zod.ts` - Corresponding Zod schemas for each module
+
+### Changed
+
+- **Improved Type Safety**
+  - `CaddyRouteHandler.transport` now properly typed with TLS configuration options
+  - `providers.http_basic` includes `hash.algorithm` field
+  - Removed all `as any` casts in routes.ts (2 instances eliminated)
+
+- **Schema Architecture Reorganized** (`src/schemas.ts`)
+  - Clear documentation separating generated vs custom schemas
+  - Generated schemas re-exported for convenience
+  - Custom business logic schemas preserved
+
+- **ESLint Configuration**
+  - Added `src/generated/**` to ignores (auto-generated files)
+  - Added `scripts/**` to ignores (build scripts)
+
+### Removed
+
+- **External dependency**: `caddy-json-types` package no longer required
+  - Types are now self-contained and synced with your local Caddy version
+
+### Migration Guide
+
+**No breaking changes for typical usage.** The public API remains the same.
+
+For advanced users importing from `./caddy-types`:
+
+- Type names are cleaner: `IConfig` → `Config`, `IModulesCaddyhttpRoute` → `Route`
+- Zod schemas now available for runtime validation
+- Types match your exact Caddy version in `local/caddy`
+
+To regenerate types after updating Caddy:
+
+```bash
+npm run sync:caddy
+```
+
 ## [0.2.2] - 2026-01-08
 
 ### Added
@@ -187,6 +259,7 @@ Full feature parity with [caddy-api-client](https://github.com/migetapp/caddy-ap
 - ✅ Rich error messages with context
 - ✅ 100% test coverage for route builders and schemas
 
+[0.3.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.0...v0.2.2
 [0.2.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/asd-engineering/asd-caddy-api-client/releases/tag/v0.1.0

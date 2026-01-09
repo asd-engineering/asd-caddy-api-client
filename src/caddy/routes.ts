@@ -319,12 +319,10 @@ export function buildReverseProxyHandler(
       tlsConfig.ca = options.tlsTrustedCACerts;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     handler.transport = {
       protocol: "http",
       tls: tlsConfig,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any; // Caddy transport config is extensible beyond our types
+    };
   } else {
     handler.transport = {
       protocol: "http",
@@ -417,9 +415,8 @@ export function buildBasicAuthHandler(auth: BasicAuthOptions): CaddyRouteHandler
   // Add hash configuration if specified
   // Note: Caddy automatically detects bcrypt from the hash format ($2a$10$...)
   // The hash.algorithm field is only needed if you want to override the default
-  if (auth.hash?.algorithm && auth.hash.algorithm !== "bcrypt") {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-    (handler.providers as any).http_basic.hash = {
+  if (auth.hash?.algorithm && auth.hash.algorithm !== "bcrypt" && handler.providers?.http_basic) {
+    handler.providers.http_basic.hash = {
       algorithm: auth.hash.algorithm,
     };
   }

@@ -15,6 +15,8 @@ export default tseslint.config(
       ".asd/**",
       "demo/**", // Demo files are standalone
       "docs/api/**", // Generated TypeDoc documentation
+      "src/generated/**", // Generated type files from Caddy Go source
+      "scripts/**", // Build/generation scripts
       "*.config.ts",
       "*.config.js",
       "*.config.mjs",

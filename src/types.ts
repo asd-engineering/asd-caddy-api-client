@@ -92,6 +92,15 @@ export interface CaddyRouteHandler {
   upstreams?: { dial: string }[];
   transport?: {
     protocol?: string;
+    tls?: {
+      server_name?: string;
+      insecure_skip_verify?: boolean;
+      ca?: string;
+      /** Additional TLS options */
+      [key: string]: unknown;
+    };
+    /** Additional transport options */
+    [key: string]: unknown;
   };
   uri?: string;
   strip_path_prefix?: string;
@@ -118,6 +127,9 @@ export interface CaddyRouteHandler {
         password?: string;
       }[];
       realm?: string;
+      hash?: {
+        algorithm?: string;
+      };
     };
   };
   // Allow additional properties for extensibility

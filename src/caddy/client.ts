@@ -1,9 +1,40 @@
 /**
  * Caddy Admin API client
  */
+import { z } from "zod";
 import type { CaddyClientOptions, CaddyRoute, UpstreamStatus } from "../types.js";
 import { CaddyApiError, NetworkError, TimeoutError, CaddyApiClientError } from "../errors.js";
-import { CaddyClientOptionsSchema, CaddyRouteSchema } from "../schemas.js";
+import {
+  CaddyClientOptionsSchema,
+  CaddyRouteSchema,
+  UpstreamStatusArraySchema,
+} from "../schemas.js";
+import {
+  configSchema,
+  serverSchema,
+  routeSchema,
+  type Config,
+  type Server,
+} from "../caddy-types.js";
+
+// Create passthrough versions of schemas to preserve unknown fields from API responses
+// This ensures we don't accidentally strip fields that Caddy returns but aren't in our schema
+// Important: Caddy routes can have @id fields and other custom properties
+const configResponseSchema = configSchema.passthrough();
+const serverResponseSchema = serverSchema.passthrough();
+const serversResponseSchema = z.record(z.string(), serverResponseSchema);
+
+// Route schema with passthrough to preserve @id and other custom fields
+// The base routeListSchema strips unknown fields, so we need to recreate with passthrough
+const routeWithPassthroughSchema = routeSchema.passthrough();
+const routeResponseListSchema = z.array(routeWithPassthroughSchema);
+
+// Schema for version response
+const versionResponseSchema = z
+  .object({
+    version: z.string().optional(),
+  })
+  .passthrough();
 
 /**
  * Client for interacting with Caddy Admin API
@@ -79,11 +110,12 @@ export class CaddyClient {
 
   /**
    * Get current Caddy configuration
-   * @returns Full Caddy configuration as JSON
+   * @returns Full Caddy configuration as JSON, validated against Caddy schema
    */
-  async getConfig(): Promise<unknown> {
+  async getConfig(): Promise<Config & Record<string, unknown>> {
     const response = await this.request("/config/");
-    return response.json();
+    const data = await response.json();
+    return configResponseSchema.parse(data);
   }
 
   /**
@@ -103,18 +135,23 @@ export class CaddyClient {
   /**
    * Get routes for a specific server
    * @param server - Server name (e.g., "https_server")
-   * @returns Array of routes
+   * @returns Array of routes, validated against Caddy route schema
    */
   async getRoutes(server: string): Promise<CaddyRoute[]> {
     const escapedServer = this.escapeServerName(server);
     const response = await this.request(`/config/apps/http/servers/${escapedServer}/routes`);
     const routes = await response.json();
 
-    if (!Array.isArray(routes)) {
-      throw new CaddyApiClientError("Invalid routes response from Caddy");
+    // Validate routes against schema with passthrough to preserve @id and custom fields
+    const validated = routeResponseListSchema.safeParse(routes);
+    if (!validated.success) {
+      throw new CaddyApiClientError(
+        `Invalid routes response from Caddy: ${validated.error.message}`
+      );
     }
 
-    return routes as CaddyRoute[];
+    // Return as CaddyRoute[] for backwards compatibility
+    return validated.data as CaddyRoute[];
   }
 
   /**
@@ -261,30 +298,33 @@ export class CaddyClient {
 
   /**
    * Get information about all servers
-   * @returns Server configurations
+   * @returns Server configurations, validated against Caddy schema
    */
-  async getServers(): Promise<unknown> {
+  async getServers(): Promise<Record<string, Server & Record<string, unknown>>> {
     const response = await this.request("/config/apps/http/servers");
-    return response.json();
+    const data = await response.json();
+    return serversResponseSchema.parse(data);
   }
 
   /**
    * Get configuration for a specific server
    * @param server - Server name
-   * @returns Server configuration object
+   * @returns Server configuration object, validated against Caddy schema
    */
-  async getServerConfig(server: string): Promise<Record<string, unknown>> {
+  async getServerConfig(server: string): Promise<Server & Record<string, unknown>> {
     const escapedServer = this.escapeServerName(server);
     const response = await this.request(`/config/apps/http/servers/${escapedServer}`);
     const config = await response.json();
-    return config as Record<string, unknown>;
+    return serverResponseSchema.parse(config);
   }
 
   /**
    * Patch server configuration
-   * @param serverConfig - Server configuration object
+   * @param serverConfig - Server configuration object (server name -> server config)
    */
-  async patchServer(serverConfig: Record<string, unknown>): Promise<void> {
+  async patchServer(
+    serverConfig: Record<string, Partial<Server> | Record<string, unknown>>
+  ): Promise<void> {
     await this.request("/config/apps/http/servers", {
       method: "PATCH",
       body: JSON.stringify(serverConfig),
@@ -302,11 +342,12 @@ export class CaddyClient {
 
   /**
    * Get Caddy version information
-   * @returns Version information
+   * @returns Version information object with version string and additional metadata
    */
-  async getVersion(): Promise<unknown> {
+  async getVersion(): Promise<{ version?: string } & Record<string, unknown>> {
     const response = await this.request("/");
-    return response.json();
+    const data = await response.json();
+    return versionResponseSchema.parse(data);
   }
 
   /**
@@ -437,12 +478,12 @@ export class CaddyClient {
   /**
    * Get reverse proxy upstream status
    * Returns the current state of all configured upstream servers.
-   * @returns Array of upstream server status objects
+   * @returns Array of upstream server status objects, validated
    */
   async getUpstreams(): Promise<UpstreamStatus[]> {
     const response = await this.request("/reverse_proxy/upstreams");
     const upstreams = await response.json();
-    return upstreams as UpstreamStatus[];
+    return UpstreamStatusArraySchema.parse(upstreams);
   }
 
   /**
@@ -450,9 +491,9 @@ export class CaddyClient {
    * Commonly used to convert Caddyfile to JSON configuration.
    * @param config - The configuration content to adapt
    * @param adapter - The adapter to use (e.g., "caddyfile")
-   * @returns The adapted configuration as JSON
+   * @returns The adapted configuration as validated JSON
    */
-  async adapt(config: string, adapter = "caddyfile"): Promise<unknown> {
+  async adapt(config: string, adapter = "caddyfile"): Promise<Config & Record<string, unknown>> {
     const response = await this.request(`/adapt`, {
       method: "POST",
       headers: {
@@ -463,6 +504,7 @@ export class CaddyClient {
         adapter,
       }),
     });
-    return response.json();
+    const data = await response.json();
+    return configResponseSchema.parse(data);
   }
 }

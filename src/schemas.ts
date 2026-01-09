@@ -1,7 +1,51 @@
 /**
  * Zod schemas for runtime validation
+ *
+ * This module provides two types of schemas:
+ *
+ * 1. **Generated Caddy Schemas** (from `../caddy-types.js`)
+ *    - Low-level Caddy JSON config types generated from Go source
+ *    - Use these for direct Caddy API interaction
+ *    - Examples: configSchema, serverSchema, routeSchema
+ *
+ * 2. **Custom Business Logic Schemas** (defined here)
+ *    - Domain-specific validation (DomainSchema, DialAddressSchema)
+ *    - Route builder options (ServiceRouteOptionsSchema, etc.)
+ *    - Extended Caddy types with additional features
+ *
+ * @example
+ * ```typescript
+ * // Use generated schemas for Caddy API responses
+ * import { configSchema, serverSchema } from "@.../caddy-types";
+ * const config = configSchema.parse(await client.getConfig());
+ *
+ * // Use custom schemas for business logic
+ * import { AddDomainWithAutoTlsOptionsSchema } from "@.../schemas";
+ * const options = AddDomainWithAutoTlsOptionsSchema.parse(userInput);
+ * ```
  */
 import { z } from "zod";
+
+// ============================================================================
+// Re-exported Generated Schemas (from Caddy Go source)
+// ============================================================================
+
+/**
+ * Re-export generated Caddy schemas for convenience.
+ * These schemas are generated from the Caddy Go source code and provide
+ * low-level validation for Caddy JSON configuration.
+ *
+ * For full list of generated schemas, see `./caddy-types.ts`
+ */
+export {
+  configSchema,
+  serverSchema,
+  routeSchema,
+  routeListSchema,
+  durationSchema,
+  adminConfigSchema,
+  loggingSchema,
+} from "./caddy-types.js";
 
 // ============================================================================
 // Basic Schemas
@@ -457,6 +501,29 @@ export const ReverseProxyHandlerSchema = z.object({
     })
     .optional(),
 });
+
+// ============================================================================
+// Caddy Admin API Response Schemas
+// ============================================================================
+
+/**
+ * Upstream server status schema for /reverse_proxy/upstreams endpoint
+ */
+export const UpstreamStatusSchema = z.object({
+  /** Upstream address (host:port) */
+  address: z.string(),
+  /** Number of active requests */
+  num_requests: z.number(),
+  /** Number of failed health checks */
+  fails: z.number(),
+  /** Whether the upstream is currently healthy */
+  healthy: z.boolean(),
+});
+
+/**
+ * Array of upstream status objects
+ */
+export const UpstreamStatusArraySchema = z.array(UpstreamStatusSchema);
 
 // ============================================================================
 // MITMProxy Schemas

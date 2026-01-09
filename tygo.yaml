@@ -1,0 +1,25 @@
+# tygo configuration for generating TypeScript from Caddy Go source
+packages:
+  # Core Caddy types
+  - path: "./local/caddy"
+    output_path: "src/generated/caddy-core.ts"
+    type_mappings:
+      "json.RawMessage": "unknown"
+      "time.Duration": "number | string"
+      "caddy.Duration": "number | string"
+
+  # HTTP module types
+  - path: "./local/caddy/modules/caddyhttp"
+    output_path: "src/generated/caddy-http.ts"
+    type_mappings:
+      "json.RawMessage": "unknown"
+      "time.Duration": "number | string"
+      "caddy.Duration": "number | string"
+
+  # TLS module types
+  - path: "./local/caddy/modules/caddytls"
+    output_path: "src/generated/caddy-tls.ts"
+    type_mappings:
+      "json.RawMessage": "unknown"
+      "time.Duration": "number | string"
+      "caddy.Duration": "number | string"
