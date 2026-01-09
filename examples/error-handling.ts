@@ -157,24 +157,21 @@ async function demonstrateIdempotency() {
 // Example 4: Graceful Degradation
 // ============================================================================
 
-async function demonstrateGracefulDegradation() {
+async function demonstrateGracefulDegradation(): Promise<{ apps: Record<string, unknown> }> {
   const client = new CaddyClient({ timeout: 1000 });
 
   // Try to get config, fall back to cached/default if Caddy is unavailable
-  let config;
   try {
-    config = await client.getConfig();
+    const config = await client.getConfig();
     console.log("✅ Got live config from Caddy");
+    return config as { apps: Record<string, unknown> };
   } catch (error) {
     if (error instanceof NetworkError || error instanceof TimeoutError) {
       console.log("⚠️  Caddy unavailable, using cached config");
-      config = { apps: {} }; // Default/cached config
-    } else {
-      throw error;
+      return { apps: {} }; // Default/cached config
     }
+    throw error;
   }
-
-  return config;
 }
 
 // ============================================================================
