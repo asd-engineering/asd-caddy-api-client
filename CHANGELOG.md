@@ -331,7 +331,6 @@ Full feature parity with [caddy-api-client](https://github.com/migetapp/caddy-ap
 - ✅ Rich error messages with context
 - ✅ 100% test coverage for route builders and schemas
 
-[0.3.1]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.0...v0.2.2
 [0.2.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.1.0...v0.2.0
