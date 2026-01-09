@@ -70,23 +70,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Graceful degradation when Caddy is unavailable
   - Early validation before network calls
 
-### Changed
-
-- **Consistent Error Types** - All user-facing validation now throws `ValidationError`
-  - `CaddyClient` constructor, `addRoute()`, `patchRoutes()`, `insertRoute()`, `replaceRouteById()`, `adapt()`, `applyConfig()`
-  - Domain functions: `addDomainWithAutoTls()`, `addDomainWithTls()`, `updateDomain()`, `deleteDomain()`, etc.
-  - Route builders: `buildServiceRoutes()`, `buildHostRoute()`, `buildPathRoute()`, `buildLoadBalancerRoute()`, etc.
-
-- **Improved Error Messages** - Validation errors include context about which parameter failed
-
-- **Extended `@throws` Documentation**
-  - Route builders: `buildServiceRoutes()`, `buildHealthCheckRoute()`, `buildHostRoute()`, `buildPathRoute()`, `buildLoadBalancerRoute()`, `buildBasicAuthHandler()`
-  - Domain functions: `addDomainWithAutoTls()`, `addDomainWithTls()`, `updateDomain()`, `deleteDomain()`
-
-## [0.3.0] - 2026-01-09
-
-### Added
-
 - **Self-contained Caddy Type Generation** - Eliminated external `caddy-json-types` dependency
   - Types now generated directly from local Caddy Go source (`local/caddy`)
   - Uses [tygo](https://github.com/gzuidhof/tygo) for Go-to-TypeScript conversion
@@ -119,6 +102,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `caddy-*.zod.ts` - Corresponding Zod schemas for each module
 
 ### Changed
+
+- **Consistent Error Types** - All user-facing validation now throws `ValidationError`
+  - `CaddyClient` constructor, `addRoute()`, `patchRoutes()`, `insertRoute()`, `replaceRouteById()`, `adapt()`, `applyConfig()`
+  - Domain functions: `addDomainWithAutoTls()`, `addDomainWithTls()`, `updateDomain()`, `deleteDomain()`, etc.
+  - Route builders: `buildServiceRoutes()`, `buildHostRoute()`, `buildPathRoute()`, `buildLoadBalancerRoute()`, etc.
+
+- **Improved Error Messages** - Validation errors include context about which parameter failed
+
+- **Extended `@throws` Documentation**
+  - Route builders: `buildServiceRoutes()`, `buildHealthCheckRoute()`, `buildHostRoute()`, `buildPathRoute()`, `buildLoadBalancerRoute()`, `buildBasicAuthHandler()`
+  - Domain functions: `addDomainWithAutoTls()`, `addDomainWithTls()`, `updateDomain()`, `deleteDomain()`
 
 - **Improved Type Safety**
   - `CaddyRouteHandler.transport` now properly typed with TLS configuration options
