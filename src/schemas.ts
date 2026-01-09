@@ -140,14 +140,44 @@ export const TlsIssuerSchema = z.enum(["letsencrypt", "zerossl", "acme"]);
 // ============================================================================
 
 /**
+ * Query string matcher - validates URL query parameter matching
+ * @example
+ * ```typescript
+ * import { MatchQuerySchema } from "@accelerated-software-development/caddy-api-client";
+ *
+ * // Match requests with specific query parameters
+ * const query = MatchQuerySchema.parse({
+ *   "search": ["term"],
+ *   "page": ["1", "2"]
+ * });
+ * ```
+ */
+export const MatchQuerySchema = z.record(z.string(), z.array(z.string()));
+
+/**
+ * Header matcher - validates HTTP header matching
+ * @example
+ * ```typescript
+ * import { MatchHeaderSchema } from "@accelerated-software-development/caddy-api-client";
+ *
+ * // Match requests with specific headers
+ * const headers = MatchHeaderSchema.parse({
+ *   "Content-Type": ["application/json"],
+ *   "Accept": ["application/json", "text/plain"]
+ * });
+ * ```
+ */
+export const MatchHeaderSchema = z.record(z.string(), z.array(z.string()));
+
+/**
  * Caddy route matcher schema
  */
 export const CaddyRouteMatcherSchema = z.object({
   host: z.array(z.string()).optional(),
   path: z.array(z.string()).optional(),
   method: z.array(HttpMethodSchema).optional(),
-  header: z.record(z.string(), z.array(z.string())).optional(),
-  query: z.record(z.string(), z.array(z.string())).optional(),
+  header: MatchHeaderSchema.optional(),
+  query: MatchQuerySchema.optional(),
 });
 
 /**
@@ -185,6 +215,7 @@ export const CaddyRouteSchema = z.object({
   match: z.array(CaddyRouteMatcherSchema).optional(),
   handle: z.array(CaddyRouteHandlerSchema).min(1, "Route must have at least one handler"),
   terminal: z.boolean().optional(),
+  priority: z.number().int().optional(),
 });
 
 // ============================================================================

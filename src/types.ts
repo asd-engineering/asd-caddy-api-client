@@ -63,68 +63,107 @@ export interface CaddyRouteMatcher {
   query?: Record<string, string[]>;
 }
 
+// ============================================================================
+// Handler Types (Discriminated Union)
+// ============================================================================
+
 /**
- * Caddy route handler
+ * Reverse proxy handler - forward requests to upstream servers
  */
-export interface CaddyRouteHandler {
-  handler: string;
-  routes?: CaddyRoute[];
-  body?: string;
-  status_code?: number;
-  headers?:
-    | {
-        // For handlers like 'headers'
-        request?: {
-          set?: Record<string, string[]>;
-          add?: Record<string, string[]>;
-          delete?: string[];
-        };
-        response?: {
-          set?: Record<string, string[]>;
-          add?: Record<string, string[]>;
-          delete?: string[];
-          require?: {
-            status_code?: number[];
-          };
-        };
-      }
-    | Record<string, string[]>; // For static_response (direct header mapping)
-  upstreams?: { dial: string }[];
+export interface ReverseProxyHandler {
+  handler: "reverse_proxy";
+  upstreams?: { dial: string; max_requests?: number }[];
   transport?: {
     protocol?: string;
     tls?: {
       server_name?: string;
       insecure_skip_verify?: boolean;
       ca?: string;
-      /** Additional TLS options */
-      [key: string]: unknown;
     };
-    /** Additional transport options */
-    [key: string]: unknown;
   };
-  uri?: string;
-  strip_path_prefix?: string;
-  // Load balancing
   load_balancing?: {
     policy?: string;
     selection_policy?: {
       policy?: string;
     };
+    retries?: number;
+    try_duration?: string;
+    try_interval?: string;
   };
   health_checks?: {
     active?: {
       path?: string;
+      uri?: string;
       interval?: string;
       timeout?: string;
       expect_status?: number;
+      passes?: number;
+      fails?: number;
+    };
+    passive?: {
+      fail_duration?: string;
+      max_fails?: number;
+      unhealthy_status?: number[];
     };
   };
-  // Authentication
+  headers?: {
+    request?: {
+      set?: Record<string, string[]>;
+      add?: Record<string, string[]>;
+      delete?: string[];
+    };
+    response?: {
+      set?: Record<string, string[]>;
+      add?: Record<string, string[]>;
+      delete?: string[];
+    };
+  };
+  flush_interval?: string | number;
+}
+
+/**
+ * Headers handler - modify request/response headers
+ */
+export interface HeadersHandler {
+  handler: "headers";
+  request?: {
+    set?: Record<string, string[]>;
+    add?: Record<string, string[]>;
+    delete?: string[];
+  };
+  response?: {
+    deferred?: boolean;
+    set?: Record<string, string[]>;
+    add?: Record<string, string[]>;
+    delete?: string[];
+    require?: {
+      status_code?: number[];
+    };
+  };
+}
+
+/**
+ * Static response handler - return static content
+ */
+export interface StaticResponseHandler {
+  handler: "static_response";
+  status_code?: number | string;
+  body?: string;
+  headers?: Record<string, string[]>;
+  close?: boolean;
+  abort?: boolean;
+}
+
+/**
+ * Authentication handler - HTTP basic auth
+ */
+export interface AuthenticationHandler {
+  handler: "authentication";
   providers?: {
     http_basic?: {
       accounts?: {
-        username?: string;
-        password?: string;
+        username: string;
+        password: string;
       }[];
       realm?: string;
       hash?: {
@@ -132,9 +171,68 @@ export interface CaddyRouteHandler {
       };
     };
   };
-  // Allow additional properties for extensibility
+}
+
+/**
+ * Rewrite handler - URI rewriting
+ */
+export interface RewriteHandler {
+  handler: "rewrite";
+  uri?: string;
+  strip_path_prefix?: string;
+  strip_path_suffix?: string;
+  uri_substring?: {
+    find: string;
+    replace: string;
+    limit?: number;
+  }[];
+}
+
+/**
+ * Encode handler - response compression
+ */
+export interface EncodeHandler {
+  handler: "encode";
+  encodings?: {
+    gzip?: Record<string, unknown>;
+    zstd?: Record<string, unknown>;
+    br?: Record<string, unknown>;
+  };
+  prefer?: string[];
+  minimum_length?: number;
+}
+
+/**
+ * Subroute handler - nested routes
+ */
+export interface SubrouteHandler {
+  handler: "subroute";
+  routes?: CaddyRoute[];
+}
+
+/**
+ * Generic handler - extensibility fallback for unknown handlers
+ */
+export interface GenericHandler {
+  handler: string;
   [key: string]: unknown;
 }
+
+/**
+ * Caddy route handler - discriminated union of known handlers with generic fallback
+ *
+ * Known handlers get strict type checking. Unknown handlers use GenericHandler
+ * which allows any properties for extensibility.
+ */
+export type CaddyRouteHandler =
+  | ReverseProxyHandler
+  | HeadersHandler
+  | StaticResponseHandler
+  | AuthenticationHandler
+  | RewriteHandler
+  | EncodeHandler
+  | SubrouteHandler
+  | GenericHandler;
 
 /**
  * Caddy route definition

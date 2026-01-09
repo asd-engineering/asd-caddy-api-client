@@ -4,6 +4,7 @@
 import type {
   CaddyRoute,
   CaddyRouteHandler,
+  AuthenticationHandler,
   ServiceRouteOptions,
   HealthCheckRouteOptions,
   HostRouteOptions,
@@ -26,6 +27,7 @@ import { validateOrThrow } from "../utils/validation.js";
  * Build routes for a service (host-based and/or path-based)
  * @param options - Service route options
  * @returns Array of Caddy routes
+ * @throws {ValidationError} If options fail validation (e.g., invalid dial address)
  */
 export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
   const validated = validateOrThrow(
@@ -92,6 +94,7 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
  * Build a health check route
  * @param options - Health check route options
  * @returns Caddy route for health check
+ * @throws {ValidationError} If options fail validation
  */
 export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRoute {
   const validated = validateOrThrow(
@@ -125,7 +128,7 @@ export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRo
   };
 
   if (validated.priority !== undefined) {
-    (route as CaddyRoute & { priority: number }).priority = validated.priority;
+    route.priority = validated.priority;
   }
 
   return route;
@@ -135,6 +138,7 @@ export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRo
  * Build a host-based route
  * @param options - Host route options
  * @returns Caddy route
+ * @throws {ValidationError} If options fail validation (e.g., invalid dial address)
  */
 export function buildHostRoute(options: HostRouteOptions): CaddyRoute {
   const validated = validateOrThrow(HostRouteOptionsSchema, options, "buildHostRoute options");
@@ -168,7 +172,7 @@ export function buildHostRoute(options: HostRouteOptions): CaddyRoute {
   };
 
   if (validated.priority !== undefined) {
-    (route as CaddyRoute & { priority: number }).priority = validated.priority;
+    route.priority = validated.priority;
   }
 
   return route;
@@ -178,6 +182,7 @@ export function buildHostRoute(options: HostRouteOptions): CaddyRoute {
  * Build a path-based route
  * @param options - Path route options
  * @returns Caddy route
+ * @throws {ValidationError} If options fail validation (e.g., invalid dial address)
  */
 export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
   const validated = validateOrThrow(PathRouteOptionsSchema, options, "buildPathRoute options");
@@ -217,7 +222,7 @@ export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
   };
 
   if (validated.priority !== undefined) {
-    (route as CaddyRoute & { priority: number }).priority = validated.priority;
+    route.priority = validated.priority;
   }
 
   return route;
@@ -227,6 +232,7 @@ export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
  * Build a load balancer route
  * @param options - Load balancer options
  * @returns Caddy route with load balancing
+ * @throws {ValidationError} If options fail validation (e.g., invalid upstreams)
  */
 export function buildLoadBalancerRoute(options: LoadBalancerRouteOptions): CaddyRoute {
   const validated = validateOrThrow(
@@ -269,7 +275,7 @@ export function buildLoadBalancerRoute(options: LoadBalancerRouteOptions): Caddy
   };
 
   if (validated.priority !== undefined) {
-    (route as CaddyRoute & { priority: number }).priority = validated.priority;
+    route.priority = validated.priority;
   }
 
   return route;
@@ -379,6 +385,7 @@ export function buildSecurityHeadersHandler(headers: SecurityHeaders): CaddyRout
  *
  * @param auth - Basic auth configuration
  * @returns Basic auth handler
+ * @throws {Error} If no valid accounts are provided (username + passwordHash or accounts array required)
  *
  * @example
  * // Single account (legacy)
@@ -415,7 +422,7 @@ export function buildBasicAuthHandler(auth: BasicAuthOptions): CaddyRouteHandler
     );
   }
 
-  const handler: CaddyRouteHandler = {
+  const handler: AuthenticationHandler = {
     handler: "authentication",
     providers: {
       http_basic: {

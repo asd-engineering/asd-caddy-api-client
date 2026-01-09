@@ -49,6 +49,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `CaddyHandlerSchema` - Union with fallback for unknown handlers (backwards compatible)
   - Inferred types exported: `HeadersHandler`, `StaticResponseHandler`, `AuthenticationHandler`, `RewriteHandler`, `EncodeHandler`
 
+- **Matcher Schemas** (`src/schemas.ts`)
+  - `MatchQuerySchema` - Query string parameter matching with JSDoc examples
+  - `MatchHeaderSchema` - HTTP header matching with JSDoc examples
+  - `CaddyRouteMatcherSchema` now references these for reusability
+
+- **Discriminated Union Handler Types** (`src/types.ts`)
+  - `CaddyRouteHandler` now uses discriminated union instead of index signature
+  - Individual handler types exported: `ReverseProxyHandler`, `HeadersHandler`, `StaticResponseHandler`, `AuthenticationHandler`, `RewriteHandler`, `EncodeHandler`, `SubrouteHandler`, `GenericHandler`
+  - Strict type checking for known handlers, extensibility via `GenericHandler`
+
+- **Route Priority in Types**
+  - `CaddyRoute.priority` now in base type and schema
+  - Removed type casts in route builders
+
+- **Error Handling Example** (`examples/error-handling.ts`)
+  - Distinguishing error types (ValidationError, CaddyApiError, NetworkError, TimeoutError)
+  - Retry pattern with exponential backoff
+  - Idempotent vs non-idempotent operation patterns
+  - Graceful degradation when Caddy is unavailable
+  - Early validation before network calls
+
 ### Changed
 
 - **Consistent Error Types** - All user-facing validation now throws `ValidationError`
@@ -57,6 +78,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Route builders: `buildServiceRoutes()`, `buildHostRoute()`, `buildPathRoute()`, `buildLoadBalancerRoute()`, etc.
 
 - **Improved Error Messages** - Validation errors include context about which parameter failed
+
+- **Extended `@throws` Documentation**
+  - Route builders: `buildServiceRoutes()`, `buildHealthCheckRoute()`, `buildHostRoute()`, `buildPathRoute()`, `buildLoadBalancerRoute()`, `buildBasicAuthHandler()`
+  - Domain functions: `addDomainWithAutoTls()`, `addDomainWithTls()`, `updateDomain()`, `deleteDomain()`
 
 ## [0.3.0] - 2026-01-09
 

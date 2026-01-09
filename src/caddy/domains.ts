@@ -31,6 +31,9 @@ import { buildRedirectRoute, buildCompressionHandler, buildWwwRedirect } from ".
  * Add a domain with automatic TLS (Let's Encrypt)
  * @param options - Domain configuration
  * @returns Domain configuration
+ * @throws {ValidationError} If options fail validation
+ * @throws {DomainAlreadyExistsError} If domain already exists
+ * @throws {CaddyApiError} If Caddy API returns an error
  */
 export async function addDomainWithAutoTls(
   options: AddDomainWithAutoTlsOptions
@@ -171,6 +174,9 @@ export async function addDomainWithAutoTls(
  * Add a domain with custom TLS certificate
  * @param options - Domain configuration with cert files
  * @returns Domain configuration
+ * @throws {ValidationError} If options fail validation
+ * @throws {DomainAlreadyExistsError} If domain already exists
+ * @throws {CaddyApiError} If Caddy API returns an error
  */
 export async function addDomainWithTls(options: AddDomainWithTlsOptions): Promise<DomainConfig> {
   const validated = validateOrThrow(
@@ -333,6 +339,9 @@ export async function addDomainWithTls(options: AddDomainWithTlsOptions): Promis
  * Update an existing domain
  * @param options - Update options
  * @returns Updated domain configuration
+ * @throws {ValidationError} If options fail validation
+ * @throws {DomainNotFoundError} If domain does not exist
+ * @throws {CaddyApiError} If Caddy API returns an error
  */
 export async function updateDomain(options: UpdateDomainOptions): Promise<DomainConfig> {
   const validated = validateOrThrow(UpdateDomainOptionsSchema, options, "updateDomain options");
@@ -399,6 +408,9 @@ export async function updateDomain(options: UpdateDomainOptions): Promise<Domain
 /**
  * Delete a domain and clean up associated certificates
  * @param options - Delete options
+ * @throws {ValidationError} If options fail validation
+ * @throws {DomainNotFoundError} If domain does not exist
+ * @throws {CaddyApiError} If Caddy API returns an error
  */
 export async function deleteDomain(options: DeleteDomainOptions): Promise<void> {
   const validated = validateOrThrow(DeleteDomainOptionsSchema, options, "deleteDomain options");
