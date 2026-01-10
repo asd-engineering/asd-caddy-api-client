@@ -20,7 +20,7 @@ export type {
   PathRouteOptions,
   RedirectStatusCode,
   UpstreamStatus,
-  // Handler types (discriminated union members)
+  // Handler types (all 20 discriminated union members + generic fallback)
   ReverseProxyHandler,
   HeadersHandler,
   StaticResponseHandler,
@@ -28,6 +28,19 @@ export type {
   RewriteHandler,
   EncodeHandler,
   SubrouteHandler,
+  FileServerHandler,
+  TemplatesHandler,
+  MapHandler,
+  PushHandler,
+  RequestBodyHandler,
+  VarsHandler,
+  InterceptHandler,
+  InvokeHandler,
+  TracingHandler,
+  LogAppendHandler,
+  ErrorHandler,
+  CopyResponseHandler,
+  CopyResponseHeadersHandler,
   GenericHandler,
 } from "./types.js";
 

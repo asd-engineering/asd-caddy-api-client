@@ -69,18 +69,25 @@ function transformFile(filename: string): void {
   // Fix sync.RWMutex -> any (internal Go type)
   content = content.replace(/any \/\* sync\.RWMutex \*\//g, "unknown");
 
-  // Fix Go error type -> Error (TypeScript)
-  content = content.replace(/:\s*error\s*;/g, ": Error;");
-  content = content.replace(/:\s*error\s*\|/g, ": Error |");
-  content = content.replace(/:\s*error\s*\}/g, ": Error}");
+  // Fix Go error type -> Error | null (TypeScript)
+  // Handle various patterns where Go's error type appears
+  content = content.replace(/: error;/g, ": Error | null;");
+  content = content.replace(/: error\|/g, ": Error |");
+  content = content.replace(/: error}/g, ": Error | null}");
+  content = content.replace(/: error\)/g, ": Error | null)");
+  content = content.replace(/: error,/g, ": Error | null,");
 
-  // Fix bigInt -> bigint (lowercase in TypeScript)
+  // Fix bigInt -> BigInt (TypeScript built-in)
   content = content.replace(/bigInt\[\]/g, "bigint[]");
-  content = content.replace(/:\s*bigInt\s*;/g, ": bigint;");
-  content = content.replace(/:\s*bigInt\s*\|/g, ": bigint |");
+  content = content.replace(/: bigInt;/g, ": bigint;");
+  content = content.replace(/: bigInt\|/g, ": bigint |");
+  content = content.replace(/: bigInt\)/g, ": bigint)");
 
-  // Fix invalid `export const X = any;` -> `export const X: any = null;`
-  content = content.replace(/export const (\w+) = any;/g, "export const $1: unknown = null;");
+  // Fix invalid `export const X = any;` -> comment it out (Go context keys)
+  content = content.replace(
+    /export const (\w+) = any;/g,
+    "// export const $1 = any; // Disabled - Go context key"
+  );
 
   // Add imports if needed
   if (importsNeeded.size > 0 && filename !== "caddy-core.ts") {
@@ -126,7 +133,35 @@ function transformFile(filename: string): void {
 
 // Process all generated files
 console.log("Post-processing generated TypeScript files...");
+
+// Core modules
 transformFile("caddy-core.ts");
 transformFile("caddy-http.ts");
 transformFile("caddy-tls.ts");
+
+// Handler modules
+const handlerModules = [
+  "caddy-reverseproxy.ts",
+  "caddy-fileserver.ts",
+  "caddy-encode.ts",
+  "caddy-headers.ts",
+  "caddy-rewrite.ts",
+  "caddy-auth.ts",
+  "caddy-templates.ts",
+  "caddy-map.ts",
+  "caddy-push.ts",
+  "caddy-requestbody.ts",
+  "caddy-intercept.ts",
+  "caddy-tracing.ts",
+  "caddy-logging.ts",
+];
+
+handlerModules.forEach((module) => {
+  try {
+    transformFile(module);
+  } catch {
+    console.log(`  - Skipping ${module} (not found)`);
+  }
+});
+
 console.log("Done!");

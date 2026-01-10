@@ -380,6 +380,11 @@ buildHostRoute(options: HostRouteOptions): CaddyRoute;
 buildPathRoute(options: PathRouteOptions): CaddyRoute;
 buildLoadBalancerRoute(options: LoadBalancerRouteOptions): CaddyRoute;
 
+// New handler routes (v0.3.0)
+buildFileServerRoute(options: FileServerRouteOptions): CaddyRoute;
+buildTemplatesRoute(options: TemplatesRouteOptions): CaddyRoute;
+buildErrorRoute(options: ErrorRouteOptions): CaddyRoute;
+
 // MITMproxy integration
 buildMitmproxyRoute(options: MitmproxyRouteOptions): CaddyRoute;
 buildMitmproxyRoutePair(options: MitmproxyRoutePairOptions): { direct: CaddyRoute; proxied: CaddyRoute };
@@ -389,8 +394,15 @@ buildReverseProxyHandler(dial: DialAddress): CaddyRouteHandler;
 buildSecurityHeadersHandler(headers: SecurityHeaders): CaddyRouteHandler;
 buildBasicAuthHandler(auth: BasicAuthOptions): CaddyRouteHandler;
 buildRewriteHandler(prefix: string): CaddyRouteHandler;
+buildCompressionHandler(options?: CompressionOptions): CaddyRouteHandler;
 buildIngressTagHeadersHandler(tag: string): CaddyRouteHandler;
 buildIframeHeadersHandler(allowedOrigin?: string): CaddyRouteHandler;
+
+// New handlers (v0.3.0)
+buildRequestBodyHandler(options: RequestBodyHandlerOptions): CaddyRouteHandler;
+buildVarsHandler(options: VarsHandlerOptions): CaddyRouteHandler;
+buildMapHandler(options: MapHandlerOptions): CaddyRouteHandler;
+buildTracingHandler(options?: TracingHandlerOptions): CaddyRouteHandler;
 ```
 
 ### MITMweb Functions
@@ -441,6 +453,87 @@ import {
   // Handler
   ReverseProxyHandlerSchema, // Full reverse proxy with health checks + load balancing
 } from "@accelerated-software-development/caddy-api-client";
+```
+
+### Handler Types (v0.3.0)
+
+Full TypeScript support for all 20 Caddy HTTP handlers with Zod validation:
+
+```typescript
+import {
+  // File serving
+  FileServerHandlerSchema,    // Static files with browse, precompressed
+  TemplatesHandlerSchema,     // Server-side template rendering
+
+  // Request manipulation
+  RewriteHandlerSchema,       // URI rewriting
+  RequestBodyHandlerSchema,   // Body size limits
+  VarsHandlerSchema,          // Set request variables
+  MapHandlerSchema,           // Variable mapping
+
+  // Response handling
+  StaticResponseHandlerSchema, // Return static content
+  HeadersHandlerSchema,       // Modify headers
+  EncodeHandlerSchema,        // Compression (gzip, zstd, br)
+  ErrorHandlerSchema,         // Trigger error handling
+
+  // Proxy & routing
+  ReverseProxyHandlerSchema,  // Proxy to upstreams
+  SubrouteHandlerSchema,      // Nested routes
+  InvokeHandlerSchema,        // Call named routes
+
+  // Interception
+  InterceptHandlerSchema,     // Response interception
+  CopyResponseHandlerSchema,  // Copy subrequest response
+  CopyResponseHeadersHandlerSchema, // Copy headers
+
+  // Utilities
+  AuthenticationHandlerSchema, // HTTP basic auth
+  PushHandlerSchema,          // HTTP/2 server push
+  TracingHandlerSchema,       // Distributed tracing
+  LogAppendHandlerSchema,     // Custom log fields
+} from "@accelerated-software-development/caddy-api-client";
+```
+
+**Route builders for common patterns:**
+
+```typescript
+import {
+  buildFileServerRoute,      // Serve static files
+  buildTemplatesRoute,       // Template processing
+  buildErrorRoute,           // Error responses
+  buildRequestBodyHandler,   // Body limits
+  buildVarsHandler,          // Set variables
+  buildMapHandler,           // Variable mapping
+  buildTracingHandler,       // Tracing spans
+} from "@accelerated-software-development/caddy-api-client/caddy";
+
+// Example: Serve static files with browsing
+const fileRoute = buildFileServerRoute({
+  path: "/static/*",
+  root: "/var/www/static",
+  browse: true,
+  hidePatterns: [".git", ".env"],
+  precompressed: true,
+});
+
+// Example: Template rendering
+const templateRoute = buildTemplatesRoute({
+  path: "/*.html",
+  fileRoot: "/var/www/templates",
+  mimeTypes: ["text/html"],
+});
+
+// Example: Variable mapping for routing
+const mapHandler = buildMapHandler({
+  source: "{http.request.uri.path}",
+  destinations: ["{backend}"],
+  mappings: [
+    { input: "/api/*", outputs: ["api-server"] },
+    { input: "/admin/*", outputs: ["admin-server"] },
+  ],
+  defaults: ["default-server"],
+});
 ```
 
 ### Extended Caddy Types

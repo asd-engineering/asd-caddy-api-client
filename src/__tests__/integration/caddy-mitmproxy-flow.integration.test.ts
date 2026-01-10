@@ -384,9 +384,9 @@ describe("Caddy + MITMproxy Integration Flow", () => {
       });
 
       directRoute["@id"] = "test_direct";
-      await client.addRoute("https_server", directRoute);
+      await client.addRoute(CADDY_SERVER_NAME, directRoute);
       proxiedRoute["@id"] = "test_proxied";
-      await client.addRoute("https_server", proxiedRoute);
+      await client.addRoute(CADDY_SERVER_NAME, proxiedRoute);
       await new Promise((resolve) => setTimeout(resolve, DELAY_MEDIUM));
 
       const testPath = `/transparency-${timestamp}`;

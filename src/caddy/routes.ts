@@ -1068,3 +1068,403 @@ export function buildDnsRebindingBypassHandler(options: {
     },
   } as CaddyRouteHandler;
 }
+
+// ============================================================================
+// New Handler Route Builders (v0.3.0)
+// ============================================================================
+
+/**
+ * Options for building a file server route
+ */
+export interface FileServerRouteOptions {
+  /** Path prefix to match (e.g., "/static/*") */
+  path: string;
+  /** Root directory to serve files from */
+  root: string;
+  /** Enable directory browsing */
+  browse?: boolean;
+  /** Custom browse template file path */
+  browseTemplate?: string;
+  /** File patterns to hide (e.g., [".git", ".env"]) */
+  hidePatterns?: string[];
+  /** Index file names (default: ["index.html"]) */
+  indexNames?: string[];
+  /** Enable precompressed file support (gzip, brotli) */
+  precompressed?: boolean;
+  /** Route ID */
+  id?: string;
+  /** Route priority */
+  priority?: number;
+}
+
+/**
+ * Build a file server route for serving static files
+ *
+ * @param options - File server route configuration
+ * @returns Caddy route for static file serving
+ *
+ * @example
+ * ```typescript
+ * // Basic static file serving
+ * const route = buildFileServerRoute({
+ *   path: "/static/*",
+ *   root: "/var/www/static",
+ * });
+ *
+ * // With directory browsing and hidden files
+ * const route = buildFileServerRoute({
+ *   path: "/files/*",
+ *   root: "/var/www/files",
+ *   browse: true,
+ *   hidePatterns: [".git", ".env", "*.secret"],
+ *   precompressed: true,
+ * });
+ * ```
+ */
+export function buildFileServerRoute(options: FileServerRouteOptions): CaddyRoute {
+  const handler: Record<string, unknown> = {
+    handler: "file_server",
+    root: options.root,
+  };
+
+  // Add index names
+  if (options.indexNames && options.indexNames.length > 0) {
+    handler.index_names = options.indexNames;
+  }
+
+  // Enable browsing
+  if (options.browse) {
+    handler.browse = options.browseTemplate
+      ? { template_file: options.browseTemplate }
+      : {};
+  }
+
+  // Add hidden file patterns
+  if (options.hidePatterns && options.hidePatterns.length > 0) {
+    handler.hide = options.hidePatterns;
+  }
+
+  // Enable precompressed file support
+  if (options.precompressed) {
+    handler.precompressed = {
+      gzip: {},
+      br: {},
+    };
+  }
+
+  const route: CaddyRoute = {
+    match: [{ path: [options.path] }],
+    handle: [handler as CaddyRouteHandler],
+    terminal: true,
+  };
+
+  if (options.id) {
+    route["@id"] = options.id;
+  }
+
+  if (options.priority !== undefined) {
+    route.priority = options.priority;
+  }
+
+  return route;
+}
+
+/**
+ * Options for building a templates route
+ */
+export interface TemplatesRouteOptions {
+  /** Path prefix to match (e.g., "/*.html") */
+  path: string;
+  /** Root directory for template files */
+  fileRoot: string;
+  /** MIME types to process as templates */
+  mimeTypes?: string[];
+  /** Custom delimiters (default: ["{{", "}}"]) */
+  delimiters?: [string, string];
+  /** Route ID */
+  id?: string;
+  /** Route priority */
+  priority?: number;
+}
+
+/**
+ * Build a templates route for server-side template rendering
+ *
+ * @param options - Templates route configuration
+ * @returns Caddy route for template processing
+ *
+ * @example
+ * ```typescript
+ * // Process HTML files as templates
+ * const route = buildTemplatesRoute({
+ *   path: "/*.html",
+ *   fileRoot: "/var/www/templates",
+ *   mimeTypes: ["text/html"],
+ * });
+ *
+ * // With custom delimiters
+ * const route = buildTemplatesRoute({
+ *   path: "/*.tmpl",
+ *   fileRoot: "/templates",
+ *   delimiters: ["<%", "%>"],
+ * });
+ * ```
+ */
+export function buildTemplatesRoute(options: TemplatesRouteOptions): CaddyRoute {
+  const templatesHandler: Record<string, unknown> = {
+    handler: "templates",
+    file_root: options.fileRoot,
+  };
+
+  if (options.mimeTypes && options.mimeTypes.length > 0) {
+    templatesHandler.mime_types = options.mimeTypes;
+  }
+
+  if (options.delimiters) {
+    templatesHandler.delimiters = options.delimiters;
+  }
+
+  // Templates handler is typically followed by file_server
+  const fileServerHandler: Record<string, unknown> = {
+    handler: "file_server",
+    root: options.fileRoot,
+  };
+
+  const route: CaddyRoute = {
+    match: [{ path: [options.path] }],
+    handle: [
+      templatesHandler as CaddyRouteHandler,
+      fileServerHandler as CaddyRouteHandler,
+    ],
+    terminal: true,
+  };
+
+  if (options.id) {
+    route["@id"] = options.id;
+  }
+
+  if (options.priority !== undefined) {
+    route.priority = options.priority;
+  }
+
+  return route;
+}
+
+/**
+ * Options for building an error route
+ */
+export interface ErrorRouteOptions {
+  /** Route matchers (optional, applies to all requests if not specified) */
+  match?: { path?: string[]; host?: string[] };
+  /** HTTP status code */
+  statusCode: number;
+  /** Error message body */
+  message?: string;
+  /** Custom headers to include */
+  headers?: Record<string, string[]>;
+  /** Route ID */
+  id?: string;
+  /** Route priority */
+  priority?: number;
+}
+
+/**
+ * Build an error route that returns a static error response
+ *
+ * @param options - Error route configuration
+ * @returns Caddy route for error response
+ *
+ * @example
+ * ```typescript
+ * // Simple 404 handler
+ * const route = buildErrorRoute({
+ *   statusCode: 404,
+ *   message: "Page not found",
+ * });
+ *
+ * // JSON error response for API
+ * const route = buildErrorRoute({
+ *   match: { path: ["/api/*"] },
+ *   statusCode: 500,
+ *   message: '{"error":"Internal server error"}',
+ *   headers: { "Content-Type": ["application/json"] },
+ * });
+ * ```
+ */
+export function buildErrorRoute(options: ErrorRouteOptions): CaddyRoute {
+  const handler: Record<string, unknown> = {
+    handler: "error",
+    status_code: String(options.statusCode),
+  };
+
+  if (options.message) {
+    handler.error = options.message;
+  }
+
+  const route: CaddyRoute = {
+    handle: [handler as CaddyRouteHandler],
+    terminal: true,
+  };
+
+  // Add matchers if specified
+  if (options.match) {
+    const matcher: Record<string, unknown> = {};
+    if (options.match.path) {
+      matcher.path = options.match.path;
+    }
+    if (options.match.host) {
+      matcher.host = options.match.host;
+    }
+    route.match = [matcher as CaddyRoute["match"] extends (infer T)[] ? T : never];
+  }
+
+  if (options.id) {
+    route["@id"] = options.id;
+  }
+
+  if (options.priority !== undefined) {
+    route.priority = options.priority;
+  }
+
+  return route;
+}
+
+/**
+ * Options for building a request body handler
+ */
+export interface RequestBodyHandlerOptions {
+  /** Maximum request body size in bytes */
+  maxSize: number;
+}
+
+/**
+ * Build a request body handler for limiting request body size
+ *
+ * @param options - Request body handler configuration
+ * @returns Request body handler
+ *
+ * @example
+ * ```typescript
+ * // Limit request body to 10MB
+ * const handler = buildRequestBodyHandler({ maxSize: 10 * 1024 * 1024 });
+ * ```
+ */
+export function buildRequestBodyHandler(options: RequestBodyHandlerOptions): CaddyRouteHandler {
+  return {
+    handler: "request_body",
+    max_size: options.maxSize,
+  } as CaddyRouteHandler;
+}
+
+/**
+ * Options for building a vars handler
+ */
+export interface VarsHandlerOptions {
+  /** Variables to set (key-value pairs) */
+  vars: Record<string, string>;
+}
+
+/**
+ * Build a vars handler for setting request variables
+ *
+ * @param options - Vars handler configuration
+ * @returns Vars handler
+ *
+ * @example
+ * ```typescript
+ * // Set custom variables for downstream handlers
+ * const handler = buildVarsHandler({
+ *   vars: {
+ *     root: "/var/www",
+ *     backend: "api-server",
+ *     environment: "production",
+ *   }
+ * });
+ * ```
+ */
+export function buildVarsHandler(options: VarsHandlerOptions): CaddyRouteHandler {
+  return {
+    handler: "vars",
+    ...options.vars,
+  } as CaddyRouteHandler;
+}
+
+/**
+ * Options for building a tracing handler
+ */
+export interface TracingHandlerOptions {
+  /** Span name for tracing */
+  span?: string;
+}
+
+/**
+ * Build a tracing handler for distributed tracing
+ *
+ * @param options - Tracing handler configuration
+ * @returns Tracing handler
+ *
+ * @example
+ * ```typescript
+ * const handler = buildTracingHandler({ span: "http.request" });
+ * ```
+ */
+export function buildTracingHandler(options?: TracingHandlerOptions): CaddyRouteHandler {
+  const handler: Record<string, unknown> = {
+    handler: "tracing",
+  };
+
+  if (options?.span) {
+    handler.span = options.span;
+  }
+
+  return handler as CaddyRouteHandler;
+}
+
+/**
+ * Options for building a map handler
+ */
+export interface MapHandlerOptions {
+  /** Source placeholder (e.g., "{http.request.uri.path}") */
+  source: string;
+  /** Destination placeholder names (e.g., ["{my_var}"]) */
+  destinations: string[];
+  /** Mappings from input patterns to outputs */
+  mappings: { input: string; outputs: string[] }[];
+  /** Default outputs if no mappings match */
+  defaults?: string[];
+}
+
+/**
+ * Build a map handler for variable mapping
+ *
+ * @param options - Map handler configuration
+ * @returns Map handler
+ *
+ * @example
+ * ```typescript
+ * // Map request paths to backend names
+ * const handler = buildMapHandler({
+ *   source: "{http.request.uri.path}",
+ *   destinations: ["{backend}"],
+ *   mappings: [
+ *     { input: "/api/*", outputs: ["api-server"] },
+ *     { input: "/admin/*", outputs: ["admin-server"] },
+ *   ],
+ *   defaults: ["default-server"],
+ * });
+ * ```
+ */
+export function buildMapHandler(options: MapHandlerOptions): CaddyRouteHandler {
+  const handler: Record<string, unknown> = {
+    handler: "map",
+    source: options.source,
+    destinations: options.destinations,
+    mappings: options.mappings,
+  };
+
+  if (options.defaults) {
+    handler.defaults = options.defaults;
+  }
+
+  return handler as CaddyRouteHandler;
+}

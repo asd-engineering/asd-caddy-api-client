@@ -886,10 +886,11 @@ describe("KnownCaddyHandlerSchema", () => {
   });
 
   test("rejects unknown handler types", () => {
+    // Custom plugin handlers are not in KnownCaddyHandlerSchema
     expect(() =>
       KnownCaddyHandlerSchema.parse({
-        handler: "file_server",
-        root: "/var/www",
+        handler: "custom_plugin",
+        config: { key: "value" },
       })
     ).toThrow();
   });

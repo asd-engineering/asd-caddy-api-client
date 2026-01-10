@@ -39,15 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added 3 tests for `CaddyApiError` URL/method properties
   - Added 45 tests for handler-specific schemas
 
-- **Handler-Specific Zod Schemas** (`src/schemas.ts`)
-  - `HeadersHandlerSchema` - Request/response header manipulation
-  - `StaticResponseHandlerSchema` - Static content responses with status code validation
-  - `AuthenticationHandlerSchema` - HTTP basic auth with accounts, realm, hash algorithm
-  - `RewriteHandlerSchema` - URI rewriting, path prefix/suffix stripping
-  - `EncodeHandlerSchema` - Response compression (gzip, zstd, brotli)
-  - `KnownCaddyHandlerSchema` - Discriminated union for strict validation of 6 core handlers
-  - `CaddyHandlerSchema` - Union with fallback for unknown handlers (backwards compatible)
-  - Inferred types exported: `HeadersHandler`, `StaticResponseHandler`, `AuthenticationHandler`, `RewriteHandler`, `EncodeHandler`
+- **Complete Handler Zod Schemas** (`src/schemas.ts`) - 100% Caddy handler coverage (20/20)
+  - Core handlers: `ReverseProxyHandlerSchema`, `HeadersHandlerSchema`, `StaticResponseHandlerSchema`, `AuthenticationHandlerSchema`, `RewriteHandlerSchema`, `EncodeHandlerSchema`, `SubrouteHandlerSchema`
+  - File/template handlers: `FileServerHandlerSchema`, `TemplatesHandlerSchema`
+  - Request manipulation: `MapHandlerSchema`, `PushHandlerSchema`, `RequestBodyHandlerSchema`, `VarsHandlerSchema`, `RewriteHandlerSchema`
+  - Response handling: `InterceptHandlerSchema`, `CopyResponseHandlerSchema`, `CopyResponseHeadersHandlerSchema`, `ErrorHandlerSchema`
+  - Observability: `TracingHandlerSchema`, `LogAppendHandlerSchema`, `InvokeHandlerSchema`
+  - `KnownCaddyHandlerSchema` - Discriminated union for strict validation of all 20 handlers
+  - `CaddyHandlerSchema` - Union with fallback for custom/plugin handlers (backwards compatible)
+  - All handler types exported for TypeScript consumers
 
 - **Matcher Schemas** (`src/schemas.ts`)
   - `MatchQuerySchema` - Query string parameter matching with JSDoc examples
@@ -56,8 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Discriminated Union Handler Types** (`src/types.ts`)
   - `CaddyRouteHandler` now uses discriminated union instead of index signature
-  - Individual handler types exported: `ReverseProxyHandler`, `HeadersHandler`, `StaticResponseHandler`, `AuthenticationHandler`, `RewriteHandler`, `EncodeHandler`, `SubrouteHandler`, `GenericHandler`
-  - Strict type checking for known handlers, extensibility via `GenericHandler`
+  - All 20 handler types exported for TypeScript consumers
+  - Strict type checking for known handlers, extensibility via `GenericHandler` for plugins
 
 - **Route Priority in Types**
   - `CaddyRoute.priority` now in base type and schema
@@ -74,8 +74,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Types now generated directly from local Caddy Go source (`local/caddy`)
   - Uses [tygo](https://github.com/gzuidhof/tygo) for Go-to-TypeScript conversion
   - Automatic Zod schema generation via [ts-to-zod](https://github.com/fabien0102/ts-to-zod)
-  - Generated 3,533 lines of TypeScript types across 3 modules (core, http, tls)
-  - Generated ~700 lines of Zod validation schemas
+  - Generated TypeScript types across 16 modules (core, http, tls + 13 handler modules)
+  - Handler modules: reverseproxy, fileserver, encode, headers, rewrite, auth, templates, map, push, requestbody, intercept, tracing, logging
+  - Post-processing script fixes Go-specific types (`error` → `Error`, `bigInt` → `bigint`)
 
 - **API Response Validation** - All client methods now validate responses with Zod
   - `getConfig()` → Returns `Config` type, validated against `configSchema`
@@ -95,11 +96,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `npm run generate:types` - Regenerate TypeScript types and Zod schemas from Go source
   - `npm run sync:caddy` - Pull latest Caddy source and regenerate types
 
-- **Generated Type Files** (`src/generated/`)
-  - `caddy-core.ts` - Core Caddy configuration types (Config, AdminConfig, Logging, etc.)
-  - `caddy-http.ts` - HTTP module types (Server, Route, matchers, handlers)
-  - `caddy-tls.ts` - TLS module types (TLS, AutomationConfig, ConnectionPolicy, etc.)
-  - `caddy-*.zod.ts` - Corresponding Zod schemas for each module
+- **Generated Type Files** (`src/generated/`) - 32 files total
+  - Core: `caddy-core.ts`, `caddy-http.ts`, `caddy-tls.ts`
+  - Handlers: `caddy-reverseproxy.ts`, `caddy-fileserver.ts`, `caddy-encode.ts`, `caddy-headers.ts`, `caddy-rewrite.ts`, `caddy-auth.ts`, `caddy-templates.ts`, `caddy-map.ts`, `caddy-push.ts`, `caddy-requestbody.ts`, `caddy-intercept.ts`, `caddy-tracing.ts`, `caddy-logging.ts`
+  - Zod schemas: `caddy-*.zod.ts` for each module above
 
 ### Changed
 

@@ -58,7 +58,7 @@
     "verify:publish": "npm publish --dry-run",
     "prepare": "husky",
     "prepublishOnly": "bun run build && bun run test && bun run typecheck && bun run lint",
-    "generate:types": "cd local/caddy && tygo generate && cd ../.. && npx tsx scripts/transform-caddy-types.ts && npx ts-to-zod src/generated/caddy-core.ts src/generated/caddy-core.zod.ts --skipValidation && npx ts-to-zod src/generated/caddy-http.ts src/generated/caddy-http.zod.ts --skipValidation && npx ts-to-zod src/generated/caddy-tls.ts src/generated/caddy-tls.zod.ts --skipValidation",
+    "generate:types": "cd local/caddy && tygo generate && cd ../.. && npx tsx scripts/transform-caddy-types.ts && npx tsx scripts/generate-zod-schemas.ts",
     "sync:caddy": "git -C local/caddy pull && npm run generate:types"
   },
   "keywords": [

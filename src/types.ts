@@ -219,10 +219,10 @@ export interface GenericHandler {
 }
 
 /**
- * Caddy route handler - discriminated union of known handlers with generic fallback
+ * Caddy route handler - discriminated union of all 20 known handlers with generic fallback
  *
- * Known handlers get strict type checking. Unknown handlers use GenericHandler
- * which allows any properties for extensibility.
+ * Known handlers get strict type checking. Unknown handlers (custom plugins)
+ * use GenericHandler which allows any properties for extensibility.
  */
 export type CaddyRouteHandler =
   | ReverseProxyHandler
@@ -232,7 +232,112 @@ export type CaddyRouteHandler =
   | RewriteHandler
   | EncodeHandler
   | SubrouteHandler
+  | FileServerHandler
+  | TemplatesHandler
+  | MapHandler
+  | PushHandler
+  | RequestBodyHandler
+  | VarsHandler
+  | InterceptHandler
+  | InvokeHandler
+  | TracingHandler
+  | LogAppendHandler
+  | ErrorHandler
+  | CopyResponseHandler
+  | CopyResponseHeadersHandler
   | GenericHandler;
+
+// Handler types for new handlers (minimal interfaces for backwards compatibility)
+// Full validation is done via Zod schemas in schemas.ts
+
+export interface FileServerHandler {
+  handler: "file_server";
+  root?: string;
+  index_names?: string[];
+  browse?: Record<string, unknown>;
+  hide?: string[];
+  [key: string]: unknown;
+}
+
+export interface TemplatesHandler {
+  handler: "templates";
+  file_root?: string;
+  mime_types?: string[];
+  delimiters?: string[];
+  [key: string]: unknown;
+}
+
+export interface MapHandler {
+  handler: "map";
+  source?: string;
+  destinations?: string[];
+  mappings?: { input?: string; outputs?: unknown[] }[];
+  defaults?: string[];
+  [key: string]: unknown;
+}
+
+export interface PushHandler {
+  handler: "push";
+  resources?: { target?: string; method?: string }[];
+  headers?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface RequestBodyHandler {
+  handler: "request_body";
+  max_size?: number;
+  [key: string]: unknown;
+}
+
+export interface VarsHandler {
+  handler: "vars";
+  [key: string]: unknown;
+}
+
+export interface InterceptHandler {
+  handler: "intercept";
+  handle_response?: unknown[];
+  [key: string]: unknown;
+}
+
+export interface InvokeHandler {
+  handler: "invoke";
+  name?: string;
+  [key: string]: unknown;
+}
+
+export interface TracingHandler {
+  handler: "tracing";
+  span?: string;
+  [key: string]: unknown;
+}
+
+export interface LogAppendHandler {
+  handler: "log_append";
+  key?: string;
+  value?: string;
+  [key: string]: unknown;
+}
+
+export interface ErrorHandler {
+  handler: "error";
+  error?: string;
+  status_code?: string | number;
+  [key: string]: unknown;
+}
+
+export interface CopyResponseHandler {
+  handler: "copy_response";
+  status_code?: number;
+  [key: string]: unknown;
+}
+
+export interface CopyResponseHeadersHandler {
+  handler: "copy_response_headers";
+  include?: string[];
+  exclude?: string[];
+  [key: string]: unknown;
+}
 
 /**
  * Caddy route definition
