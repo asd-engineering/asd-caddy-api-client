@@ -1,0 +1,158 @@
+{
+  "realm": "saml-test-realm",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Regular user role"
+      },
+      {
+        "name": "admin",
+        "description": "Administrator role"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "name": "employees",
+      "path": "/employees"
+    },
+    {
+      "name": "managers",
+      "path": "/managers"
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "caddy-saml-sp",
+      "name": "Caddy SAML Service Provider",
+      "enabled": true,
+      "protocol": "saml",
+      "fullScopeAllowed": true,
+      "frontchannelLogout": true,
+      "attributes": {
+        "saml.assertion.signature": "true",
+        "saml.force.post.binding": "true",
+        "saml.multivalued.roles": "false",
+        "saml.encrypt": "false",
+        "saml.server.signature": "true",
+        "saml.server.signature.keyinfo.ext": "false",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml_force_name_id_format": "false",
+        "saml_name_id_format": "username",
+        "saml_signature_canonicalization_method": "http://www.w3.org/2001/10/xml-exc-c14n#"
+      },
+      "baseUrl": "http://localhost:8080",
+      "adminUrl": "http://localhost:8080/saml",
+      "redirectUris": ["http://localhost:8080/*", "http://caddy:80/*"],
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "attribute.nameformat": "Basic",
+            "user.attribute": "email",
+            "friendly.name": "email",
+            "attribute.name": "email"
+          }
+        },
+        {
+          "name": "firstName",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "attribute.nameformat": "Basic",
+            "user.attribute": "firstName",
+            "friendly.name": "firstName",
+            "attribute.name": "firstName"
+          }
+        },
+        {
+          "name": "lastName",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "attribute.nameformat": "Basic",
+            "user.attribute": "lastName",
+            "friendly.name": "lastName",
+            "attribute.name": "lastName"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "saml",
+          "protocolMapper": "saml-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "single": "false",
+            "attribute.nameformat": "Basic",
+            "full.path": "false",
+            "friendly.name": "groups",
+            "attribute.name": "groups"
+          }
+        },
+        {
+          "name": "roles",
+          "protocol": "saml",
+          "protocolMapper": "saml-role-list-mapper",
+          "consentRequired": false,
+          "config": {
+            "single": "false",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "roles",
+            "attribute.name": "roles"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "samluser",
+      "email": "samluser@test.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "SAML",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "samlpass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"],
+      "groups": ["/employees"]
+    },
+    {
+      "username": "samladmin",
+      "email": "samladmin@test.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "SAML",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "samladmin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user", "admin"],
+      "groups": ["/employees", "/managers"]
+    }
+  ]
+}
