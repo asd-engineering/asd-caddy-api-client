@@ -1,0 +1,45 @@
+# Caddyfile for Keycloak integration testing
+# Note: Standard Caddy without caddy-security plugin
+# Tests focus on Keycloak OIDC endpoints directly
+
+{
+    admin :2019
+    debug
+}
+
+:80 {
+    # Health check endpoint
+    route /health {
+        respond "OK" 200
+    }
+
+    # Proxy to Keycloak for OIDC endpoints
+    route /auth/* {
+        reverse_proxy keycloak:8081
+    }
+
+    # Test endpoint that would be protected in production
+    route /protected* {
+        respond "Protected content - requires authentication" 200
+    }
+
+    # Callback endpoint for OAuth
+    route /callback* {
+        respond "Callback received" 200
+    }
+
+    # Public endpoint
+    route /public* {
+        respond "Public content - no auth required" 200
+    }
+
+    # Whoami endpoint
+    route /whoami {
+        respond "User info endpoint" 200
+    }
+
+    # Default
+    route {
+        respond "Caddy Keycloak Test Server" 200
+    }
+}
