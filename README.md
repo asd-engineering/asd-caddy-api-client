@@ -13,9 +13,7 @@ TypeScript client for Caddy Admin API with MITMproxy integration.
 
 ## Live Demo
 
-Experience the library in action with our interactive demo showing dynamic MITMproxy traffic inspection via Caddy Admin API:
-
-**[Launch Demo Dashboard](https://demo-oha3.cicd.eu1.asd.engineer/dashboard)** ← Hot-swap traffic inspection in real-time
+Experience the library in action with our interactive demo showing dynamic MITMproxy traffic inspection via Caddy Admin API.
 
 The demo showcases:
 
@@ -462,36 +460,36 @@ Full TypeScript support for all 20 Caddy HTTP handlers with Zod validation:
 ```typescript
 import {
   // File serving
-  FileServerHandlerSchema,    // Static files with browse, precompressed
-  TemplatesHandlerSchema,     // Server-side template rendering
+  FileServerHandlerSchema, // Static files with browse, precompressed
+  TemplatesHandlerSchema, // Server-side template rendering
 
   // Request manipulation
-  RewriteHandlerSchema,       // URI rewriting
-  RequestBodyHandlerSchema,   // Body size limits
-  VarsHandlerSchema,          // Set request variables
-  MapHandlerSchema,           // Variable mapping
+  RewriteHandlerSchema, // URI rewriting
+  RequestBodyHandlerSchema, // Body size limits
+  VarsHandlerSchema, // Set request variables
+  MapHandlerSchema, // Variable mapping
 
   // Response handling
   StaticResponseHandlerSchema, // Return static content
-  HeadersHandlerSchema,       // Modify headers
-  EncodeHandlerSchema,        // Compression (gzip, zstd, br)
-  ErrorHandlerSchema,         // Trigger error handling
+  HeadersHandlerSchema, // Modify headers
+  EncodeHandlerSchema, // Compression (gzip, zstd, br)
+  ErrorHandlerSchema, // Trigger error handling
 
   // Proxy & routing
-  ReverseProxyHandlerSchema,  // Proxy to upstreams
-  SubrouteHandlerSchema,      // Nested routes
-  InvokeHandlerSchema,        // Call named routes
+  ReverseProxyHandlerSchema, // Proxy to upstreams
+  SubrouteHandlerSchema, // Nested routes
+  InvokeHandlerSchema, // Call named routes
 
   // Interception
-  InterceptHandlerSchema,     // Response interception
-  CopyResponseHandlerSchema,  // Copy subrequest response
+  InterceptHandlerSchema, // Response interception
+  CopyResponseHandlerSchema, // Copy subrequest response
   CopyResponseHeadersHandlerSchema, // Copy headers
 
   // Utilities
   AuthenticationHandlerSchema, // HTTP basic auth
-  PushHandlerSchema,          // HTTP/2 server push
-  TracingHandlerSchema,       // Distributed tracing
-  LogAppendHandlerSchema,     // Custom log fields
+  PushHandlerSchema, // HTTP/2 server push
+  TracingHandlerSchema, // Distributed tracing
+  LogAppendHandlerSchema, // Custom log fields
 } from "@accelerated-software-development/caddy-api-client";
 ```
 
@@ -499,13 +497,13 @@ import {
 
 ```typescript
 import {
-  buildFileServerRoute,      // Serve static files
-  buildTemplatesRoute,       // Template processing
-  buildErrorRoute,           // Error responses
-  buildRequestBodyHandler,   // Body limits
-  buildVarsHandler,          // Set variables
-  buildMapHandler,           // Variable mapping
-  buildTracingHandler,       // Tracing spans
+  buildFileServerRoute, // Serve static files
+  buildTemplatesRoute, // Template processing
+  buildErrorRoute, // Error responses
+  buildRequestBodyHandler, // Body limits
+  buildVarsHandler, // Set variables
+  buildMapHandler, // Variable mapping
+  buildTracingHandler, // Tracing spans
 } from "@accelerated-software-development/caddy-api-client/caddy";
 
 // Example: Serve static files with browsing
