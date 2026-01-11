@@ -4,6 +4,11 @@
 
 export { CaddyClient } from "./client.js";
 export * from "./routes.js";
+
+// Config loading utilities
+export { loadConfig, loadCaddyfile, detectAdapter } from "./config-loader.js";
+
+export type { CaddyAdapter, LoadConfigOptions } from "./config-loader.js";
 export {
   addDomainWithAutoTls,
   addDomainWithTls,

@@ -1,9 +1,42 @@
 /**
  * Caddy Admin API client
  */
+import { z } from "zod";
 import type { CaddyClientOptions, CaddyRoute, UpstreamStatus } from "../types.js";
 import { CaddyApiError, NetworkError, TimeoutError, CaddyApiClientError } from "../errors.js";
-import { CaddyClientOptionsSchema, CaddyRouteSchema } from "../schemas.js";
+import {
+  CaddyClientOptionsSchema,
+  CaddyRouteSchema,
+  UpstreamStatusArraySchema,
+  AdaptOptionsSchema,
+} from "../schemas.js";
+import {
+  configSchema,
+  serverSchema,
+  routeSchema,
+  type Config,
+  type Server,
+} from "../caddy-types.js";
+import { validateOrThrow } from "../utils/validation.js";
+
+// Create passthrough versions of schemas to preserve unknown fields from API responses
+// This ensures we don't accidentally strip fields that Caddy returns but aren't in our schema
+// Important: Caddy routes can have @id fields and other custom properties
+const configResponseSchema = configSchema.passthrough();
+const serverResponseSchema = serverSchema.passthrough();
+const serversResponseSchema = z.record(z.string(), serverResponseSchema);
+
+// Route schema with passthrough to preserve @id and other custom fields
+// The base routeListSchema strips unknown fields, so we need to recreate with passthrough
+const routeWithPassthroughSchema = routeSchema.passthrough();
+const routeResponseListSchema = z.array(routeWithPassthroughSchema);
+
+// Schema for version response
+const versionResponseSchema = z
+  .object({
+    version: z.string().optional(),
+  })
+  .passthrough();
 
 /**
  * Client for interacting with Caddy Admin API
@@ -15,9 +48,10 @@ export class CaddyClient {
   /**
    * Create a new Caddy API client
    * @param options - Client configuration options
+   * @throws {ValidationError} If options are invalid (e.g., invalid URL or timeout)
    */
   constructor(options: CaddyClientOptions = {}) {
-    const validated = CaddyClientOptionsSchema.parse(options);
+    const validated = validateOrThrow(CaddyClientOptionsSchema, options, "client options");
     this.adminUrl = validated.adminUrl;
     this.timeout = validated.timeout;
   }
@@ -31,6 +65,7 @@ export class CaddyClient {
    */
   async request(path: string, options: RequestInit = {}): Promise<Response> {
     const url = `${this.adminUrl}${path}`;
+    const method = (options.method ?? "GET").toUpperCase();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
@@ -49,9 +84,11 @@ export class CaddyClient {
       if (!response.ok) {
         const body = await response.text().catch(() => "");
         throw new CaddyApiError(
-          `Caddy API request failed: ${response.status} ${response.statusText}`,
+          `Caddy API request failed: ${method} ${url} - ${response.status} ${response.statusText}`,
           response.status,
-          body
+          body,
+          url,
+          method
         );
       }
 
@@ -79,11 +116,15 @@ export class CaddyClient {
 
   /**
    * Get current Caddy configuration
-   * @returns Full Caddy configuration as JSON
+   * @returns Full Caddy configuration as JSON, validated against Caddy schema
+   * @throws {CaddyApiError} If Caddy API returns an error response
+   * @throws {NetworkError} If unable to connect to Caddy Admin API
+   * @throws {TimeoutError} If the request times out
    */
-  async getConfig(): Promise<unknown> {
+  async getConfig(): Promise<Config & Record<string, unknown>> {
     const response = await this.request("/config/");
-    return response.json();
+    const data = await response.json();
+    return configResponseSchema.parse(data);
   }
 
   /**
@@ -103,18 +144,26 @@ export class CaddyClient {
   /**
    * Get routes for a specific server
    * @param server - Server name (e.g., "https_server")
-   * @returns Array of routes
+   * @returns Array of routes, validated against Caddy route schema
+   * @throws {CaddyApiError} If Caddy API returns an error response
+   * @throws {NetworkError} If unable to connect to Caddy Admin API
+   * @throws {TimeoutError} If the request times out
    */
   async getRoutes(server: string): Promise<CaddyRoute[]> {
     const escapedServer = this.escapeServerName(server);
     const response = await this.request(`/config/apps/http/servers/${escapedServer}/routes`);
     const routes = await response.json();
 
-    if (!Array.isArray(routes)) {
-      throw new CaddyApiClientError("Invalid routes response from Caddy");
+    // Validate routes against schema with passthrough to preserve @id and custom fields
+    const validated = routeResponseListSchema.safeParse(routes);
+    if (!validated.success) {
+      throw new CaddyApiClientError(
+        `Invalid routes response from Caddy: ${validated.error.message}`
+      );
     }
 
-    return routes as CaddyRoute[];
+    // Return as CaddyRoute[] for backwards compatibility
+    return validated.data as CaddyRoute[];
   }
 
   /**
@@ -122,10 +171,14 @@ export class CaddyClient {
    * @param server - Server name
    * @param route - Route configuration
    * @returns True if route was added, false if already exists
+   * @throws {ValidationError} If route configuration is invalid
+   * @throws {CaddyApiError} If Caddy API returns an error response
+   * @throws {NetworkError} If unable to connect to Caddy Admin API
+   * @throws {TimeoutError} If the request times out
    */
   async addRoute(server: string, route: CaddyRoute): Promise<boolean> {
     // Validate route
-    CaddyRouteSchema.parse(route);
+    validateOrThrow(CaddyRouteSchema, route, "route");
 
     // Check if route already exists (idempotency)
     try {
@@ -157,6 +210,10 @@ export class CaddyClient {
    * @param server - Server name
    * @param routes - Array of routes to add
    * @returns Object with counts of added and skipped routes
+   * @throws {ValidationError} If any route configuration is invalid
+   * @throws {CaddyApiError} If Caddy API returns an error response
+   * @throws {NetworkError} If unable to connect to Caddy Admin API
+   * @throws {TimeoutError} If the request times out
    *
    * @example
    * const routes = buildServiceRoutes({ host: "api.localhost", dial: "localhost:3000" });
@@ -207,10 +264,14 @@ export class CaddyClient {
    * Replace all routes for a server (PATCH)
    * @param server - Server name
    * @param routes - Array of routes
+   * @throws {ValidationError} If any route configuration is invalid
+   * @throws {CaddyApiError} If Caddy API returns an error response
+   * @throws {NetworkError} If unable to connect to Caddy Admin API
+   * @throws {TimeoutError} If the request times out
    */
   async patchRoutes(server: string, routes: CaddyRoute[]): Promise<void> {
     // Validate all routes
-    routes.forEach((route) => CaddyRouteSchema.parse(route));
+    routes.forEach((route, index) => validateOrThrow(CaddyRouteSchema, route, `route[${index}]`));
 
     const escapedServer = this.escapeServerName(server);
     await this.request(`/config/apps/http/servers/${escapedServer}/routes`, {
@@ -261,30 +322,39 @@ export class CaddyClient {
 
   /**
    * Get information about all servers
-   * @returns Server configurations
+   * @returns Server configurations, validated against Caddy schema
+   * @throws {CaddyApiError} If Caddy API returns an error response
+   * @throws {NetworkError} If unable to connect to Caddy Admin API
+   * @throws {TimeoutError} If the request times out
    */
-  async getServers(): Promise<unknown> {
+  async getServers(): Promise<Record<string, Server & Record<string, unknown>>> {
     const response = await this.request("/config/apps/http/servers");
-    return response.json();
+    const data = await response.json();
+    return serversResponseSchema.parse(data);
   }
 
   /**
    * Get configuration for a specific server
    * @param server - Server name
-   * @returns Server configuration object
+   * @returns Server configuration object, validated against Caddy schema
+   * @throws {CaddyApiError} If Caddy API returns an error response
+   * @throws {NetworkError} If unable to connect to Caddy Admin API
+   * @throws {TimeoutError} If the request times out
    */
-  async getServerConfig(server: string): Promise<Record<string, unknown>> {
+  async getServerConfig(server: string): Promise<Server & Record<string, unknown>> {
     const escapedServer = this.escapeServerName(server);
     const response = await this.request(`/config/apps/http/servers/${escapedServer}`);
     const config = await response.json();
-    return config as Record<string, unknown>;
+    return serverResponseSchema.parse(config);
   }
 
   /**
    * Patch server configuration
-   * @param serverConfig - Server configuration object
+   * @param serverConfig - Server configuration object (server name -> server config)
    */
-  async patchServer(serverConfig: Record<string, unknown>): Promise<void> {
+  async patchServer(
+    serverConfig: Record<string, Partial<Server> | Record<string, unknown>>
+  ): Promise<void> {
     await this.request("/config/apps/http/servers", {
       method: "PATCH",
       body: JSON.stringify(serverConfig),
@@ -302,11 +372,12 @@ export class CaddyClient {
 
   /**
    * Get Caddy version information
-   * @returns Version information
+   * @returns Version information object with version string and additional metadata
    */
-  async getVersion(): Promise<unknown> {
+  async getVersion(): Promise<{ version?: string } & Record<string, unknown>> {
     const response = await this.request("/");
-    return response.json();
+    const data = await response.json();
+    return versionResponseSchema.parse(data);
   }
 
   /**
@@ -321,7 +392,7 @@ export class CaddyClient {
     route: CaddyRoute,
     position: "beginning" | "end" | "after-health-checks" = "after-health-checks"
   ): Promise<void> {
-    const validated = CaddyRouteSchema.parse(route);
+    const validated = validateOrThrow(CaddyRouteSchema, route, "route");
     const routes = await this.getRoutes(server);
 
     let insertIndex = 0;
@@ -367,7 +438,7 @@ export class CaddyClient {
    */
   async replaceRouteById(server: string, id: string, newRoute: CaddyRoute): Promise<boolean> {
     // Validate route first (will throw if invalid)
-    const validated = CaddyRouteSchema.parse(newRoute);
+    const validated = validateOrThrow(CaddyRouteSchema, newRoute, "route");
 
     // Then check if route exists
     const routes = await this.getRoutes(server);
@@ -426,7 +497,9 @@ export class CaddyClient {
   /**
    * Gracefully stop the Caddy server
    * This triggers a graceful shutdown, allowing active connections to complete.
-   * @throws CaddyApiError if the stop request fails
+   * @throws {CaddyApiError} If Caddy API returns an error response
+   * @throws {NetworkError} If unable to connect to Caddy Admin API
+   * @throws {TimeoutError} If the request times out
    */
   async stop(): Promise<void> {
     await this.request("/stop", {
@@ -437,32 +510,77 @@ export class CaddyClient {
   /**
    * Get reverse proxy upstream status
    * Returns the current state of all configured upstream servers.
-   * @returns Array of upstream server status objects
+   * @returns Array of upstream server status objects, validated
+   * @throws {CaddyApiError} If Caddy API returns an error response
+   * @throws {NetworkError} If unable to connect to Caddy Admin API
+   * @throws {TimeoutError} If the request times out
    */
   async getUpstreams(): Promise<UpstreamStatus[]> {
     const response = await this.request("/reverse_proxy/upstreams");
     const upstreams = await response.json();
-    return upstreams as UpstreamStatus[];
+    return UpstreamStatusArraySchema.parse(upstreams);
   }
 
   /**
    * Adapt a configuration from one format to another
    * Commonly used to convert Caddyfile to JSON configuration.
    * @param config - The configuration content to adapt
-   * @param adapter - The adapter to use (e.g., "caddyfile")
-   * @returns The adapted configuration as JSON
+   * @param adapter - The adapter to use (e.g., "caddyfile", "json", "yaml", "nginx", "apache")
+   * @returns The adapted configuration as validated JSON
+   * @throws {ValidationError} If config or adapter parameters are invalid
+   * @throws {CaddyApiError} If Caddy cannot parse the configuration
+   * @throws {NetworkError} If unable to connect to Caddy Admin API
+   * @throws {TimeoutError} If the request times out
    */
-  async adapt(config: string, adapter = "caddyfile"): Promise<unknown> {
+  async adapt(config: string, adapter = "caddyfile"): Promise<Config & Record<string, unknown>> {
+    const validated = validateOrThrow(AdaptOptionsSchema, { config, adapter }, "adapt options");
     const response = await this.request(`/adapt`, {
       method: "POST",
       headers: {
         "Content-Type": "text/caddyfile",
       },
       body: JSON.stringify({
-        config,
-        adapter,
+        config: validated.config,
+        adapter: validated.adapter,
       }),
     });
-    return response.json();
+    const data = await response.json();
+    return configResponseSchema.parse(data);
+  }
+
+  /**
+   * Apply a full configuration to Caddy
+   *
+   * Replaces the entire running Caddy configuration with the provided config object.
+   * This is the primary method for applying loaded or modified configurations.
+   *
+   * @param config - Full Caddy configuration object
+   * @throws {ValidationError} If config is invalid
+   * @throws {CaddyApiError} If Caddy rejects the configuration
+   * @throws {NetworkError} If unable to connect to Caddy Admin API
+   * @throws {TimeoutError} If the request times out
+   *
+   * @example
+   * ```typescript
+   * // Load, modify, and apply configuration
+   * const config = await loadCaddyfile("./Caddyfile");
+   *
+   * // Modify the config
+   * config.apps.http.servers.srv0.routes.push(
+   *   buildHostRoute({ host: "api.example.com", dial: "localhost:3000" })
+   * );
+   *
+   * // Apply to running Caddy
+   * await client.applyConfig(config);
+   * ```
+   */
+  async applyConfig(config: Config | (Config & Record<string, unknown>)): Promise<void> {
+    // Validate config structure before sending
+    validateOrThrow(configResponseSchema, config, "config");
+
+    await this.request("/load", {
+      method: "POST",
+      body: JSON.stringify(config),
+    });
   }
 }

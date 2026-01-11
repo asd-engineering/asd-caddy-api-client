@@ -5,6 +5,150 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-09
+
+### Added
+
+- **Config File Loading Utilities** (`src/caddy/config-loader.ts`)
+  - `loadConfig(path, adapter?, options?)` - Load and adapt config files with auto-detection
+  - `loadCaddyfile(path, options?)` - Convenience function for Caddyfile format
+  - `detectAdapter(path)` - Auto-detect adapter from file extension (.json, .yaml, .nginx, etc.)
+  - `CaddyAdapter` type and `LoadConfigOptions` interface exported
+
+- **New CaddyClient Method**
+  - `applyConfig(config)` - Apply full configuration to running Caddy via `/load` endpoint
+  - Enables full workflow: load → modify → apply
+
+- **Validation Error Wrapper** (`src/utils/validation.ts`)
+  - `validateOrThrow(schema, data, context?)` - Wraps Zod errors in `ValidationError`
+  - All user-facing validation now throws `ValidationError` instead of raw `ZodError`
+  - Contextual error messages (e.g., "buildHostRoute options: dial: Invalid format")
+
+- **Enhanced CaddyApiError**
+  - Added `url` and `method` properties for debugging
+  - Error messages include full request context: `POST http://127.0.0.1:2019/load - 400 Bad Request`
+
+- **JSDoc Documentation**
+  - Added `@throws` documentation to key CaddyClient methods
+  - Added `@example` to user-facing schemas: `DomainSchema`, `DialAddressSchema`, `CaddyAdapterSchema`, `CaddyRouteSchema`, `UpstreamStatusSchema`
+  - Updated `validate()` helper to throw `ValidationError` with example
+
+- **New Tests**
+  - `config-loader.test.ts` - Tests for `detectAdapter()` (6 tests)
+  - `validation.test.ts` - Tests for `validateOrThrow()` (10 tests)
+  - Added 3 tests for `CaddyApiError` URL/method properties
+  - Added 45 tests for handler-specific schemas
+
+- **Complete Handler Zod Schemas** (`src/schemas.ts`) - 100% Caddy handler coverage (20/20)
+  - Core handlers: `ReverseProxyHandlerSchema`, `HeadersHandlerSchema`, `StaticResponseHandlerSchema`, `AuthenticationHandlerSchema`, `RewriteHandlerSchema`, `EncodeHandlerSchema`, `SubrouteHandlerSchema`
+  - File/template handlers: `FileServerHandlerSchema`, `TemplatesHandlerSchema`
+  - Request manipulation: `MapHandlerSchema`, `PushHandlerSchema`, `RequestBodyHandlerSchema`, `VarsHandlerSchema`, `RewriteHandlerSchema`
+  - Response handling: `InterceptHandlerSchema`, `CopyResponseHandlerSchema`, `CopyResponseHeadersHandlerSchema`, `ErrorHandlerSchema`
+  - Observability: `TracingHandlerSchema`, `LogAppendHandlerSchema`, `InvokeHandlerSchema`
+  - `KnownCaddyHandlerSchema` - Discriminated union for strict validation of all 20 handlers
+  - `CaddyHandlerSchema` - Union with fallback for custom/plugin handlers (backwards compatible)
+  - All handler types exported for TypeScript consumers
+
+- **Matcher Schemas** (`src/schemas.ts`)
+  - `MatchQuerySchema` - Query string parameter matching with JSDoc examples
+  - `MatchHeaderSchema` - HTTP header matching with JSDoc examples
+  - `CaddyRouteMatcherSchema` now references these for reusability
+
+- **Discriminated Union Handler Types** (`src/types.ts`)
+  - `CaddyRouteHandler` now uses discriminated union instead of index signature
+  - All 20 handler types exported for TypeScript consumers
+  - Strict type checking for known handlers, extensibility via `GenericHandler` for plugins
+
+- **Route Priority in Types**
+  - `CaddyRoute.priority` now in base type and schema
+  - Removed type casts in route builders
+
+- **Error Handling Example** (`examples/error-handling.ts`)
+  - Distinguishing error types (ValidationError, CaddyApiError, NetworkError, TimeoutError)
+  - Retry pattern with exponential backoff
+  - Idempotent vs non-idempotent operation patterns
+  - Graceful degradation when Caddy is unavailable
+  - Early validation before network calls
+
+- **Self-contained Caddy Type Generation** - Eliminated external `caddy-json-types` dependency
+  - Types now generated directly from local Caddy Go source (`local/caddy`)
+  - Uses [tygo](https://github.com/gzuidhof/tygo) for Go-to-TypeScript conversion
+  - Automatic Zod schema generation via [ts-to-zod](https://github.com/fabien0102/ts-to-zod)
+  - Generated TypeScript types across 16 modules (core, http, tls + 13 handler modules)
+  - Handler modules: reverseproxy, fileserver, encode, headers, rewrite, auth, templates, map, push, requestbody, intercept, tracing, logging
+  - Post-processing script fixes Go-specific types (`error` → `Error`, `bigInt` → `bigint`)
+
+- **API Response Validation** - All client methods now validate responses with Zod
+  - `getConfig()` → Returns `Config` type, validated against `configSchema`
+  - `getRoutes()` → Validated with `routeResponseListSchema` (preserves `@id` fields)
+  - `getServers()` → Returns `Record<string, Server>`, validated
+  - `getServerConfig()` → Returns `Server` type, validated
+  - `getVersion()` → Typed response with `versionResponseSchema`
+  - `getUpstreams()` → Validated with new `UpstreamStatusArraySchema`
+  - `adapt()` → Returns validated `Config` type
+
+- **New Zod Schemas**
+  - `UpstreamStatusSchema` - Validates upstream server status from `/reverse_proxy/upstreams`
+  - `UpstreamStatusArraySchema` - Array validation for upstream endpoints
+  - Re-exported generated schemas: `configSchema`, `serverSchema`, `routeSchema`, `routeListSchema`, `durationSchema`, `adminConfigSchema`, `loggingSchema`
+
+- **Type Generation Scripts**
+  - `npm run generate:types` - Regenerate TypeScript types and Zod schemas from Go source
+  - `npm run sync:caddy` - Pull latest Caddy source and regenerate types
+
+- **Generated Type Files** (`src/generated/`) - 32 files total
+  - Core: `caddy-core.ts`, `caddy-http.ts`, `caddy-tls.ts`
+  - Handlers: `caddy-reverseproxy.ts`, `caddy-fileserver.ts`, `caddy-encode.ts`, `caddy-headers.ts`, `caddy-rewrite.ts`, `caddy-auth.ts`, `caddy-templates.ts`, `caddy-map.ts`, `caddy-push.ts`, `caddy-requestbody.ts`, `caddy-intercept.ts`, `caddy-tracing.ts`, `caddy-logging.ts`
+  - Zod schemas: `caddy-*.zod.ts` for each module above
+
+### Changed
+
+- **Consistent Error Types** - All user-facing validation now throws `ValidationError`
+  - `CaddyClient` constructor, `addRoute()`, `patchRoutes()`, `insertRoute()`, `replaceRouteById()`, `adapt()`, `applyConfig()`
+  - Domain functions: `addDomainWithAutoTls()`, `addDomainWithTls()`, `updateDomain()`, `deleteDomain()`, etc.
+  - Route builders: `buildServiceRoutes()`, `buildHostRoute()`, `buildPathRoute()`, `buildLoadBalancerRoute()`, etc.
+
+- **Improved Error Messages** - Validation errors include context about which parameter failed
+
+- **Extended `@throws` Documentation**
+  - Route builders: `buildServiceRoutes()`, `buildHealthCheckRoute()`, `buildHostRoute()`, `buildPathRoute()`, `buildLoadBalancerRoute()`, `buildBasicAuthHandler()`
+  - Domain functions: `addDomainWithAutoTls()`, `addDomainWithTls()`, `updateDomain()`, `deleteDomain()`
+
+- **Improved Type Safety**
+  - `CaddyRouteHandler.transport` now properly typed with TLS configuration options
+  - `providers.http_basic` includes `hash.algorithm` field
+  - Removed all `as any` casts in routes.ts (2 instances eliminated)
+
+- **Schema Architecture Reorganized** (`src/schemas.ts`)
+  - Clear documentation separating generated vs custom schemas
+  - Generated schemas re-exported for convenience
+  - Custom business logic schemas preserved
+
+- **ESLint Configuration**
+  - Added `src/generated/**` to ignores (auto-generated files)
+  - Added `scripts/**` to ignores (build scripts)
+
+### Removed
+
+- **External dependency**: `caddy-json-types` package no longer required
+  - Types are now self-contained and synced with your local Caddy version
+
+### Migration Guide
+
+**No breaking changes for typical usage.** The public API remains the same.
+
+For advanced users importing from `./caddy-types`:
+
+- Type names are cleaner: `IConfig` → `Config`, `IModulesCaddyhttpRoute` → `Route`
+- Zod schemas now available for runtime validation
+- Types match your exact Caddy version in `local/caddy`
+
+To regenerate types after updating Caddy:
+
+```bash
+npm run sync:caddy
+```
+
 ## [0.2.2] - 2026-01-08
 
 ### Added
@@ -187,6 +331,7 @@ Full feature parity with [caddy-api-client](https://github.com/migetapp/caddy-ap
 - ✅ Rich error messages with context
 - ✅ 100% test coverage for route builders and schemas
 
+[0.3.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.0...v0.2.2
 [0.2.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/asd-engineering/asd-caddy-api-client/releases/tag/v0.1.0

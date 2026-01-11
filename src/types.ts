@@ -63,64 +63,279 @@ export interface CaddyRouteMatcher {
   query?: Record<string, string[]>;
 }
 
+// ============================================================================
+// Handler Types (Discriminated Union)
+// ============================================================================
+
 /**
- * Caddy route handler
+ * Reverse proxy handler - forward requests to upstream servers
  */
-export interface CaddyRouteHandler {
-  handler: string;
-  routes?: CaddyRoute[];
-  body?: string;
-  status_code?: number;
-  headers?:
-    | {
-        // For handlers like 'headers'
-        request?: {
-          set?: Record<string, string[]>;
-          add?: Record<string, string[]>;
-          delete?: string[];
-        };
-        response?: {
-          set?: Record<string, string[]>;
-          add?: Record<string, string[]>;
-          delete?: string[];
-          require?: {
-            status_code?: number[];
-          };
-        };
-      }
-    | Record<string, string[]>; // For static_response (direct header mapping)
-  upstreams?: { dial: string }[];
+export interface ReverseProxyHandler {
+  handler: "reverse_proxy";
+  upstreams?: { dial: string; max_requests?: number }[];
   transport?: {
     protocol?: string;
+    tls?: {
+      server_name?: string;
+      insecure_skip_verify?: boolean;
+      ca?: string;
+    };
   };
-  uri?: string;
-  strip_path_prefix?: string;
-  // Load balancing
   load_balancing?: {
     policy?: string;
     selection_policy?: {
       policy?: string;
     };
+    retries?: number;
+    try_duration?: string;
+    try_interval?: string;
   };
   health_checks?: {
     active?: {
       path?: string;
+      uri?: string;
       interval?: string;
       timeout?: string;
       expect_status?: number;
+      passes?: number;
+      fails?: number;
+    };
+    passive?: {
+      fail_duration?: string;
+      max_fails?: number;
+      unhealthy_status?: number[];
     };
   };
-  // Authentication
+  headers?: {
+    request?: {
+      set?: Record<string, string[]>;
+      add?: Record<string, string[]>;
+      delete?: string[];
+    };
+    response?: {
+      set?: Record<string, string[]>;
+      add?: Record<string, string[]>;
+      delete?: string[];
+    };
+  };
+  flush_interval?: string | number;
+}
+
+/**
+ * Headers handler - modify request/response headers
+ */
+export interface HeadersHandler {
+  handler: "headers";
+  request?: {
+    set?: Record<string, string[]>;
+    add?: Record<string, string[]>;
+    delete?: string[];
+  };
+  response?: {
+    deferred?: boolean;
+    set?: Record<string, string[]>;
+    add?: Record<string, string[]>;
+    delete?: string[];
+    require?: {
+      status_code?: number[];
+    };
+  };
+}
+
+/**
+ * Static response handler - return static content
+ */
+export interface StaticResponseHandler {
+  handler: "static_response";
+  status_code?: number | string;
+  body?: string;
+  headers?: Record<string, string[]>;
+  close?: boolean;
+  abort?: boolean;
+}
+
+/**
+ * Authentication handler - HTTP basic auth
+ */
+export interface AuthenticationHandler {
+  handler: "authentication";
   providers?: {
     http_basic?: {
       accounts?: {
-        username?: string;
-        password?: string;
+        username: string;
+        password: string;
       }[];
       realm?: string;
+      hash?: {
+        algorithm?: string;
+      };
     };
   };
-  // Allow additional properties for extensibility
+}
+
+/**
+ * Rewrite handler - URI rewriting
+ */
+export interface RewriteHandler {
+  handler: "rewrite";
+  uri?: string;
+  strip_path_prefix?: string;
+  strip_path_suffix?: string;
+  uri_substring?: {
+    find: string;
+    replace: string;
+    limit?: number;
+  }[];
+}
+
+/**
+ * Encode handler - response compression
+ */
+export interface EncodeHandler {
+  handler: "encode";
+  encodings?: {
+    gzip?: Record<string, unknown>;
+    zstd?: Record<string, unknown>;
+    br?: Record<string, unknown>;
+  };
+  prefer?: string[];
+  minimum_length?: number;
+}
+
+/**
+ * Subroute handler - nested routes
+ */
+export interface SubrouteHandler {
+  handler: "subroute";
+  routes?: CaddyRoute[];
+}
+
+/**
+ * Generic handler - extensibility fallback for unknown handlers
+ */
+export interface GenericHandler {
+  handler: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Caddy route handler - discriminated union of all 20 known handlers with generic fallback
+ *
+ * Known handlers get strict type checking. Unknown handlers (custom plugins)
+ * use GenericHandler which allows any properties for extensibility.
+ */
+export type CaddyRouteHandler =
+  | ReverseProxyHandler
+  | HeadersHandler
+  | StaticResponseHandler
+  | AuthenticationHandler
+  | RewriteHandler
+  | EncodeHandler
+  | SubrouteHandler
+  | FileServerHandler
+  | TemplatesHandler
+  | MapHandler
+  | PushHandler
+  | RequestBodyHandler
+  | VarsHandler
+  | InterceptHandler
+  | InvokeHandler
+  | TracingHandler
+  | LogAppendHandler
+  | ErrorHandler
+  | CopyResponseHandler
+  | CopyResponseHeadersHandler
+  | GenericHandler;
+
+// Handler types for new handlers (minimal interfaces for backwards compatibility)
+// Full validation is done via Zod schemas in schemas.ts
+
+export interface FileServerHandler {
+  handler: "file_server";
+  root?: string;
+  index_names?: string[];
+  browse?: Record<string, unknown>;
+  hide?: string[];
+  [key: string]: unknown;
+}
+
+export interface TemplatesHandler {
+  handler: "templates";
+  file_root?: string;
+  mime_types?: string[];
+  delimiters?: string[];
+  [key: string]: unknown;
+}
+
+export interface MapHandler {
+  handler: "map";
+  source?: string;
+  destinations?: string[];
+  mappings?: { input?: string; outputs?: unknown[] }[];
+  defaults?: string[];
+  [key: string]: unknown;
+}
+
+export interface PushHandler {
+  handler: "push";
+  resources?: { target?: string; method?: string }[];
+  headers?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface RequestBodyHandler {
+  handler: "request_body";
+  max_size?: number;
+  [key: string]: unknown;
+}
+
+export interface VarsHandler {
+  handler: "vars";
+  [key: string]: unknown;
+}
+
+export interface InterceptHandler {
+  handler: "intercept";
+  handle_response?: unknown[];
+  [key: string]: unknown;
+}
+
+export interface InvokeHandler {
+  handler: "invoke";
+  name?: string;
+  [key: string]: unknown;
+}
+
+export interface TracingHandler {
+  handler: "tracing";
+  span?: string;
+  [key: string]: unknown;
+}
+
+export interface LogAppendHandler {
+  handler: "log_append";
+  key?: string;
+  value?: string;
+  [key: string]: unknown;
+}
+
+export interface ErrorHandler {
+  handler: "error";
+  error?: string;
+  status_code?: string | number;
+  [key: string]: unknown;
+}
+
+export interface CopyResponseHandler {
+  handler: "copy_response";
+  status_code?: number;
+  [key: string]: unknown;
+}
+
+export interface CopyResponseHeadersHandler {
+  handler: "copy_response_headers";
+  include?: string[];
+  exclude?: string[];
   [key: string]: unknown;
 }
 

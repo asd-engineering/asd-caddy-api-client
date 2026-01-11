@@ -20,6 +20,28 @@ export type {
   PathRouteOptions,
   RedirectStatusCode,
   UpstreamStatus,
+  // Handler types (all 20 discriminated union members + generic fallback)
+  ReverseProxyHandler,
+  HeadersHandler,
+  StaticResponseHandler,
+  AuthenticationHandler,
+  RewriteHandler,
+  EncodeHandler,
+  SubrouteHandler,
+  FileServerHandler,
+  TemplatesHandler,
+  MapHandler,
+  PushHandler,
+  RequestBodyHandler,
+  VarsHandler,
+  InterceptHandler,
+  InvokeHandler,
+  TracingHandler,
+  LogAppendHandler,
+  ErrorHandler,
+  CopyResponseHandler,
+  CopyResponseHeadersHandler,
+  GenericHandler,
 } from "./types.js";
 
 // Caddy module

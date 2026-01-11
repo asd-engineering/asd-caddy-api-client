@@ -1,6 +1,6 @@
 {
   "name": "@accelerated-software-development/caddy-api-client",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "TypeScript client for Caddy Admin API with MITMproxy integration",
   "type": "module",
   "main": "./dist/index.js",
@@ -57,7 +57,9 @@
     "verify:pack": "npm pack --dry-run",
     "verify:publish": "npm publish --dry-run",
     "prepare": "husky",
-    "prepublishOnly": "bun run build && bun run test && bun run typecheck && bun run lint"
+    "prepublishOnly": "bun run build && bun run test && bun run typecheck && bun run lint",
+    "generate:types": "cd local/caddy && tygo generate && cd ../.. && npx tsx scripts/transform-caddy-types.ts && npx tsx scripts/generate-zod-schemas.ts",
+    "sync:caddy": "git -C local/caddy pull && npm run generate:types"
   },
   "keywords": [
     "caddy",
@@ -99,6 +101,7 @@
     "husky": "^9.1.6",
     "prettier": "^3.6.2",
     "standard-version": "^9.5.0",
+    "ts-to-zod": "^5.1.0",
     "tsup": "^8.0.1",
     "typedoc": "^0.28.14",
     "typescript": "^5.3.3",
@@ -110,7 +113,6 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@peculiar/x509": "^1.14.2",
-    "caddy-json-types": "^1.0.4"
+    "@peculiar/x509": "^1.14.2"
   }
 }

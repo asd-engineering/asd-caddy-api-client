@@ -47,7 +47,11 @@ describe("High-Level Helper Functions", () => {
       const responseHandler = route.handle?.find((h) => h.handler === "static_response");
       expect(responseHandler).toBeDefined();
 
-      if (!responseHandler?.body) {
+      if (
+        !responseHandler ||
+        !("body" in responseHandler) ||
+        typeof responseHandler.body !== "string"
+      ) {
         throw new Error("Response handler body is undefined");
       }
       const body = JSON.parse(responseHandler.body);

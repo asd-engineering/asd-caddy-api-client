@@ -82,3 +82,8 @@ services:
 volumes:
   caddy_test_data:
   caddy_test_config:
+
+networks:
+  default:
+    name: caddy-api-client-test-network
+    driver: bridge
