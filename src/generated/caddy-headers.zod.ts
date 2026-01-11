@@ -8,15 +8,17 @@ export const replacementSchema = z.object({
 });
 
 export const headerOpsSchema = z.object({
-  add: z.any().optional(),
-  set: z.any().optional(),
+  add: z.record(z.string(), z.array(z.string())).optional(),
+  set: z.record(z.string(), z.array(z.string())).optional(),
   delete: z.array(z.string()).optional(),
   replace: z.record(z.string(), z.array(replacementSchema)).optional(),
 });
 
+const responseMatcherSchema = z.any();
+
 export const respHeaderOpsSchema = z.object({
   HeaderOps: headerOpsSchema.optional(),
-  require: z.any().optional(),
+  require: responseMatcherSchema.optional(),
   deferred: z.boolean().optional(),
 });
 

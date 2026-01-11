@@ -17,7 +17,14 @@ export const queryOpsSchema = z.object({
   set: z.record(z.string(), z.string()).optional(),
   add: z.record(z.string(), z.array(z.string())).optional(),
   replace: z.record(z.string(), z.array(z.string())).optional(),
-  rename: z.array(z.record(z.string(), z.string())).optional(),
+  rename: z
+    .array(
+      z.object({
+        key: z.string(),
+        val: z.string(),
+      })
+    )
+    .optional(),
 });
 
 export const rewriteSchema = z.object({
@@ -26,6 +33,6 @@ export const rewriteSchema = z.object({
   strip_path_prefix: z.string().optional(),
   strip_path_suffix: z.string().optional(),
   uri_substring: z.array(substrReplacerSchema).optional(),
-  path_regexp: z.array(z.union([regexReplacerSchema, z.undefined()])).optional(),
+  path_regexp: z.array(regexReplacerSchema).optional(),
   query: queryOpsSchema.optional(),
 });

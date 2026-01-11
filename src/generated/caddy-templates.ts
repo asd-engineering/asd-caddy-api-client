@@ -251,11 +251,11 @@ export type CustomFunctions = any;
  * TemplateContext is the TemplateContext with which HTTP templates are executed.
  */
 export interface TemplateContext {
-  Root: any /* http.FileSystem */;
-  Req?: any /* http.Request */;
+  Root: unknown;
+  Req?: unknown;
   Args: any[]; // defined by arguments to funcInclude
   RespHeader: WrappedHeader;
-  CustomFuncs: any /* template.FuncMap */[]; // functions added by plugins
+  CustomFuncs: Record<string, unknown>[]; // functions added by plugins
 }
 /**
  * WrappedHeader wraps niladic functions so that they
@@ -263,5 +263,5 @@ export interface TemplateContext {
  * return a value.)
  */
 export interface WrappedHeader {
-  Header: any /* http.Header */;
+  Header: Record<string, string[]>;
 }

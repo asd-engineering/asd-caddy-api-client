@@ -22,7 +22,7 @@ export interface SingleSignOnProviderConfig {
  * EntityDescriptor TODO.
  */
 export interface EntityDescriptor {
-  XMLName: any /* xml.Name */;
+  XMLName: string;
   ID: string;
   EntityID: string;
 }
@@ -30,21 +30,21 @@ export interface EntityDescriptor {
  * X509Data TODO.
  */
 export interface X509Data {
-  XMLName: any /* xml.Name */;
+  XMLName: string;
   X509Certificate: string;
 }
 /**
  * KeyInfo TODO.
  */
 export interface KeyInfo {
-  XMLName: any /* xml.Name */;
+  XMLName: string;
   X509Data?: X509Data;
 }
 /**
  * KeyDescriptor TODO.
  */
 export interface KeyDescriptor {
-  XMLName: any /* xml.Name */;
+  XMLName: string;
   Use: string;
   KeyInfo: KeyInfo;
 }
@@ -59,14 +59,14 @@ export interface Service {
  * SingleSignOnService TODO.
  */
 export interface SingleSignOnService {
-  XMLName: any /* xml.Name */;
+  XMLName: string;
   Service: Service;
 }
 /**
  * IDPSSODescriptor TODO.
  */
 export interface IDPSSODescriptor {
-  XMLName: any /* xml.Name */;
+  XMLName: string;
   WantAuthnRequestsSigned: boolean;
   ProtocolSupportEnumeration: string;
   KeyDescriptor: KeyDescriptor;

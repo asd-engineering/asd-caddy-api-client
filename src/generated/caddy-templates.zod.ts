@@ -4,7 +4,7 @@ import { z } from "zod";
 export const customFunctionsSchema = z.any();
 
 export const wrappedHeaderSchema = z.object({
-  Header: z.any(),
+  Header: z.record(z.string(), z.array(z.string())),
 });
 
 const moduleMapSchema = z.any();
@@ -17,9 +17,9 @@ export const templatesSchema = z.object({
 });
 
 export const templateContextSchema = z.object({
-  Root: z.any(),
-  Req: z.any().optional(),
+  Root: z.unknown(),
+  Req: z.unknown().optional(),
   Args: z.array(z.any()),
   RespHeader: wrappedHeaderSchema,
-  CustomFuncs: z.array(z.any()),
+  CustomFuncs: z.array(z.record(z.string(), z.unknown())),
 });

@@ -22,6 +22,8 @@ interface PluginConfig {
   name: string;
   localPath: string;
   outputFile: string;
+  /** Multiple output files (e.g., go-authcrunch generates many files) */
+  multiFile?: boolean;
 }
 
 const plugins: PluginConfig[] = [
@@ -29,6 +31,12 @@ const plugins: PluginConfig[] = [
     name: "caddy-security",
     localPath: "caddy-security",
     outputFile: "caddy-security",
+  },
+  {
+    name: "go-authcrunch",
+    localPath: "go-authcrunch",
+    outputFile: "authcrunch-core", // Main file, but generates many
+    multiFile: true, // Generates multiple authcrunch-*.ts files
   },
 ];
 
@@ -102,6 +110,20 @@ function generateZodSchema(plugin: PluginConfig): boolean {
   }
 }
 
+function runScript(scriptPath: string, description: string): boolean {
+  console.log(`\n${description}...`);
+  try {
+    execFileSync("npx", ["tsx", scriptPath], {
+      cwd: ROOT_DIR,
+      stdio: "inherit",
+    });
+    return true;
+  } catch {
+    console.error(`  ✗ Failed: ${description}`);
+    return false;
+  }
+}
+
 // Main execution
 console.log("Generating plugin types...\n");
 
@@ -119,9 +141,21 @@ for (const plugin of plugins) {
   generateTypesForPlugin(plugin, tygoPath);
 }
 
-console.log("\nStep 2: Generate Zod schemas from TypeScript (ts-to-zod)");
+console.log("\nStep 2: Resolve cross-package references");
+if (!runScript(join(__dirname, "resolve-cross-refs.ts"), "Resolving cross-package references")) {
+  process.exit(1);
+}
+
+console.log("\nStep 3: Generate Zod schemas from TypeScript (ts-to-zod)");
 for (const plugin of plugins) {
-  generateZodSchema(plugin);
+  // Skip multiFile plugins - they're handled by generate-zod-schemas.ts
+  if (!plugin.multiFile) {
+    generateZodSchema(plugin);
+  } else {
+    console.log(
+      `  - Skipping ${plugin.name} (multiFile - run generate:types for full Zod generation)`
+    );
+  }
 }
 
 console.log("\nDone!");

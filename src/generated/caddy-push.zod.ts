@@ -6,8 +6,10 @@ export const resourceSchema = z.object({
   target: z.string().optional(),
 });
 
+const headerOpsSchema = z.any();
+
 export const headerConfigSchema = z.object({
-  HeaderOps: z.any(),
+  HeaderOps: headerOpsSchema,
 });
 
 export const handlerSchema = z.object({

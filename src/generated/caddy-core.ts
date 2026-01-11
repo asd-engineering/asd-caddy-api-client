@@ -277,7 +277,7 @@ export interface Event {
    * may choose to use this as a signal to adjust their
    * code path appropriately.
    */
-  Aborted: Error | null;
+  Aborted: Error;
   /**
    * The data associated with the event. Usually the
    * original emitter will be the only one to set or
@@ -438,7 +438,7 @@ export interface Logging {
  * of itself so that operators can understand where
  * the logs are going.
  */
-export type WriterOpener = any /* fmt.Stringer */;
+export type WriterOpener = unknown;
 /**
  * BaseLog contains the common logging parameters for logging.
  */

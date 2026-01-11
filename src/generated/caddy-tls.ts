@@ -49,7 +49,7 @@ export interface ACMEIssuer {
    * If using an ACME CA that requires an external account
    * binding, specify the CA-provided credentials here.
    */
-  external_account?: any /* acme.EAB */;
+  external_account?: { kid?: string; hmacEncoded?: string };
   /**
    * Time to wait before timing out an ACME operation.
    * Default: 0 (no timeout)
@@ -551,7 +551,7 @@ export interface CustomCertSelectionPolicy {
   /**
    * The certificate must have one of these serial numbers.
    */
-  serial_number?: bigint[];
+  serial_number?: string[];
   /**
    * The certificate must have one of these organization names.
    */
@@ -722,7 +722,7 @@ export interface LeafCertClientAuth {
 /**
  * PublicKeyAlgorithm is a JSON-unmarshalable wrapper type.
  */
-export type PublicKeyAlgorithm = any /* x509.PublicKeyAlgorithm */;
+export type PublicKeyAlgorithm = number;
 /**
  * ConnectionMatcher is a type which matches TLS handshakes.
  */
@@ -857,7 +857,7 @@ export interface ECHPublication {
 /**
  * ECHDNSProvider can service DNS entries for ECH purposes.
  */
-export type ECHDNSProvider = any /* libdns.RecordGetter */ & any /* libdns.RecordSetter */;
+export type ECHDNSProvider = unknown & unknown;
 /**
  * ECHDNSPublisher configures how to publish an ECH configuration to
  * DNS records for the specified domains.
@@ -880,7 +880,7 @@ export type ECHPublisher = any;
  * value of this type should never be returned.
  * nolint:errname // The linter wants "Error" convention, but this is a multi-error type.
  */
-export type PublishECHConfigListErrors = { [key: string]: Error | null };
+export type PublishECHConfigListErrors = { [key: string]: Error };
 
 //////////
 // source: fileloader.go
@@ -1293,7 +1293,7 @@ export type CertificateLoader = any;
  * associated with arbitrary tags.
  */
 export interface Certificate {
-  Certificate: any /* tls.Certificate */;
+  Certificate: Certificate;
   Tags: string[];
 }
 /**

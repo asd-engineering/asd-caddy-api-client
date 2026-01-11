@@ -16,6 +16,8 @@ export const matchFileSchema = z.object({
   split_path: z.array(z.string()).optional(),
 });
 
+const weakStringSchema = z.any();
+
 const moduleMapSchema = z.any();
 
 export const fileServerSchema = z.object({
@@ -25,7 +27,7 @@ export const fileServerSchema = z.object({
   index_names: z.array(z.string()).optional(),
   browse: browseSchema.optional(),
   canonical_uris: z.boolean().optional(),
-  status_code: z.any().optional(),
+  status_code: weakStringSchema.optional(),
   pass_thru: z.boolean().optional(),
   precompressed: moduleMapSchema.optional(),
   precompressed_order: z.array(z.string()).optional(),

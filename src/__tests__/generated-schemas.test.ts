@@ -278,7 +278,7 @@ describe("Generated Headers Schemas", () => {
     });
 
     test("accepts set operation", () => {
-      const ops = { set: { "Cache-Control": "no-cache" } };
+      const ops = { set: { "Cache-Control": ["no-cache"] } };
       expect(headerOpsSchema.parse(ops)).toEqual(ops);
     });
 
@@ -295,7 +295,7 @@ describe("Generated Headers Schemas", () => {
       const ops = {
         add: { "X-Request-ID": ["123"] },
         delete: ["X-Powered-By"],
-        set: { "X-Frame-Options": "DENY" },
+        set: { "X-Frame-Options": ["DENY"] },
       };
       expect(headerOpsSchema.parse(ops)).toEqual(ops);
     });
@@ -340,7 +340,7 @@ describe("Generated Headers Schemas", () => {
       const handler = {
         response: {
           deferred: true,
-          HeaderOps: { set: { "X-Frame-Options": "DENY" } },
+          HeaderOps: { set: { "X-Frame-Options": ["DENY"] } },
         },
       };
       expect(headersHandlerSchema.parse(handler)).toEqual(handler);
@@ -426,7 +426,7 @@ describe("Generated Rewrite Schemas", () => {
     });
 
     test("accepts rename operation", () => {
-      const ops = { rename: [{ oldKey: "newKey" }] };
+      const ops = { rename: [{ key: "oldKey", val: "newKey" }] };
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
     });
 

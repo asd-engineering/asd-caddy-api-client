@@ -3,11 +3,6 @@ import { z } from "zod";
 
 export const secretsManagerSchema = z.any();
 
-export const appSchema = z.object({
-  config: z.any().optional(),
-  secrets_managers: z.array(z.unknown()).optional(),
-});
-
 export const authnMiddlewareSchema = z.object({
   route_matcher: z.string().optional(),
   portal_name: z.string().optional(),
@@ -16,4 +11,11 @@ export const authnMiddlewareSchema = z.object({
 export const authzMiddlewareSchema = z.object({
   route_matcher: z.string().optional(),
   gatekeeper_name: z.string().optional(),
+});
+
+const configSchema = z.any();
+
+export const appSchema = z.object({
+  config: configSchema.optional(),
+  secrets_managers: z.array(z.unknown()).optional(),
 });

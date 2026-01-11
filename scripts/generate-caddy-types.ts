@@ -90,8 +90,10 @@ try {
   process.exit(1);
 }
 
-// Step 4: Transform types
-if (!runScript(join(__dirname, "transform-caddy-types.ts"), "Step 2: Transform Caddy types")) {
+// Step 4: Resolve cross-package references
+if (
+  !runScript(join(__dirname, "resolve-cross-refs.ts"), "Step 2: Resolve cross-package references")
+) {
   process.exit(1);
 }
 
