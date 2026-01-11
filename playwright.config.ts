@@ -10,9 +10,10 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: "html",
+  reporter: [["html", { open: "never" }], ["list"]],
+  timeout: 30000,
   use: {
-    baseURL: "http://localhost:8080",
+    baseURL: "http://localhost:9000", // Mock OAuth server
     trace: "on-first-retry",
   },
 

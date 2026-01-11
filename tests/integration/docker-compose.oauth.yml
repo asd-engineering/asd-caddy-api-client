@@ -1,0 +1,59 @@
+services:
+  mock-oauth:
+    image: ghcr.io/navikt/mock-oauth2-server:latest
+    container_name: mock-oauth2-server
+    ports:
+      - "9000:9000"
+    environment:
+      SERVER_PORT: "9000"
+      JSON_CONFIG: |
+        {
+          "interactiveLogin": true,
+          "httpServer": "NettyWrapper",
+          "tokenCallbacks": [
+            {
+              "issuerId": "default",
+              "tokenExpiry": 3600,
+              "requestMappings": [
+                {
+                  "requestParam": "scope",
+                  "match": "openid",
+                  "claims": {
+                    "sub": "test-user",
+                    "email": "test@example.com",
+                    "name": "Test User",
+                    "roles": ["user"]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "-q",
+          "--spider",
+          "http://localhost:9000/default/.well-known/openid-configuration",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy-oauth-test
+    ports:
+      - "8080:80"
+      - "8443:443"
+      - "2019:2019"
+    volumes:
+      - ./Caddyfile.oauth:/etc/caddy/Caddyfile:ro
+    depends_on:
+      mock-oauth:
+        condition: service_healthy
+    environment:
+      OAUTH_CLIENT_ID: test-client
+      OAUTH_CLIENT_SECRET: test-secret
