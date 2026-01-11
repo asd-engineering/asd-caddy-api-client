@@ -26,6 +26,6 @@ export const rewriteSchema = z.object({
   strip_path_prefix: z.string().optional(),
   strip_path_suffix: z.string().optional(),
   uri_substring: z.array(substrReplacerSchema).optional(),
-  path_regexp: z.array(regexReplacerSchema.nullable()).optional(),
+  path_regexp: z.array(z.union([regexReplacerSchema, z.undefined()])).optional(),
   query: queryOpsSchema.optional(),
 });

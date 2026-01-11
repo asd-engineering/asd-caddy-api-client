@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-11
+
+### Added
+
+- **Plugin Framework** - Infrastructure for integrating Caddy plugins with type-safe builders
+  - Plugin type generation pipeline: Go source → tygo → TypeScript → Zod
+  - Scripts: `npm run generate:plugin-types`, `npm run sync:plugins`
+  - Template for adding new plugins documented in DEPENDENCIES.md
+
+- **caddy-security Plugin** (`src/plugins/caddy-security/`) - First official plugin integration
+  - Types generated from Go source (`local/caddy-security` v1.1.31)
+  - `SecurityAuthenticatorHandler` - Portal handler (`handler: "authenticator"`)
+  - `SecurityAuthorizationHandler` - Token validation via authentication handler with authorizer provider
+  - Builder functions: `buildAuthenticatorHandler()`, `buildAuthorizationHandler()`
+  - Zod schemas for runtime validation
+  - Re-exports generated types from `src/generated/plugins/caddy-security.zod.ts`
+
+- **Plugin Type Generation Scripts**
+  - `scripts/generate-plugin-types.ts` - Generate TypeScript from plugin Go source
+  - `scripts/generate-caddy-types.ts` - Unified core type generation script
+  - Plugin modules array in `scripts/generate-zod-schemas.ts`
+
+- **Generated Plugin Files** (`src/generated/plugins/`)
+  - `caddy-security.ts` - TypeScript types from tygo
+  - `caddy-security.zod.ts` - Zod schemas from ts-to-zod
+
+### Changed
+
+- **Type Generation Architecture** - Cleaner separation of generated vs hand-written code
+  - Generated types in `src/generated/` (auto-generated, do not edit)
+  - Hand-written builders in `src/plugins/` (high-level API)
+  - Plugin schemas re-export from generated with handler discriminators added
+
+- **Package Scripts**
+  - `generate:types` now uses `scripts/generate-caddy-types.ts`
+  - Added `generate:plugin-types` for plugin-specific generation
+  - Added `generate:all` to run both core and plugin generation
+  - Added `sync:plugins` to update plugin sources and regenerate
+
+### Fixed
+
+- **Missing Unexported Go Types** - Added `substrReplacer`, `regexReplacer`, `queryOps` to caddy-rewrite types
+  - These types are unexported in Go but referenced by exported types
+  - Post-processing script now injects missing type definitions
+
 ## [0.3.0] - 2026-01-09
 
 ### Added
@@ -331,6 +376,7 @@ Full feature parity with [caddy-api-client](https://github.com/migetapp/caddy-ap
 - ✅ Rich error messages with context
 - ✅ 100% test coverage for route builders and schemas
 
+[0.4.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.3.1...v0.4.0
 [0.3.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.0...v0.2.2
 [0.2.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.1.0...v0.2.0

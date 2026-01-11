@@ -2,15 +2,15 @@
 import { z } from "zod";
 
 export const resourceSchema = z.object({
-    method: z.string().optional(),
-    target: z.string().optional()
+  method: z.string().optional(),
+  target: z.string().optional(),
 });
 
 export const headerConfigSchema = z.object({
-    HeaderOps: z.any()
+  HeaderOps: z.any(),
 });
 
 export const handlerSchema = z.object({
-    resources: z.array(resourceSchema).optional(),
-    headers: headerConfigSchema.optional()
+  resources: z.array(resourceSchema).optional(),
+  headers: headerConfigSchema.optional(),
 });

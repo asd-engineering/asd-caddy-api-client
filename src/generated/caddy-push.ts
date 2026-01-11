@@ -49,4 +49,3 @@ export interface HeaderConfig {
 
 //////////
 // source: link.go
-

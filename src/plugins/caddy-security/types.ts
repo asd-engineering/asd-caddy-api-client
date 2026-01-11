@@ -12,13 +12,24 @@
  * @example
  * ```typescript
  * import type {
- *   SecurityAuthenticationHandler,
+ *   SecurityAuthenticatorHandler,
  *   SecurityAuthorizationHandler
  * } from "@accelerated-software-development/caddy-api-client/plugins/caddy-security";
  *
- * const authHandler: SecurityAuthenticationHandler = {
- *   handler: "authentication",
+ * // Portal handler (serves login UI)
+ * const portalHandler: SecurityAuthenticatorHandler = {
+ *   handler: "authenticator",
  *   portal_name: "myportal",
+ * };
+ *
+ * // Authorization handler (validates tokens)
+ * const authzHandler: SecurityAuthorizationHandler = {
+ *   handler: "authentication",
+ *   providers: {
+ *     authorizer: {
+ *       gatekeeper_name: "mygatekeeper",
+ *     },
+ *   },
  * };
  * ```
  */
@@ -33,21 +44,19 @@
  * Serves the authentication portal UI and handles credential validation.
  * Issues JWT tokens upon successful authentication.
  *
- * **Module ID:** `http.handlers.authentication` (caddy-security override)
- * **Note:** This overrides Caddy's built-in authentication handler with
- * caddy-security's portal-based authentication.
+ * **Module ID:** `http.handlers.authenticator`
  *
  * @example
  * ```typescript
- * const handler: SecurityAuthenticationHandler = {
- *   handler: "authentication",
+ * const handler: SecurityAuthenticatorHandler = {
+ *   handler: "authenticator",
  *   portal_name: "myportal",
  *   route_matcher: "example.com",
  * };
  * ```
  */
-export interface SecurityAuthenticationHandler {
-  handler: "authentication";
+export interface SecurityAuthenticatorHandler {
+  handler: "authenticator";
   /**
    * Name of the authentication portal defined in the security app config.
    * References a portal in `/config/apps/security/config/authentication_portals`
@@ -61,32 +70,67 @@ export interface SecurityAuthenticationHandler {
 }
 
 /**
- * Authorization gateway middleware handler
+ * Authorizer provider configuration
  *
- * Validates JWT/PASETO tokens and enforces access control policies.
- * Must be configured after the authentication handler in the request chain.
+ * This is the configuration for the `authorizer` provider within Caddy's
+ * `authentication` handler. It validates JWT/PASETO tokens and enforces
+ * access control policies.
  *
- * **Module ID:** `http.handlers.authorization`
+ * **Module ID:** `http.authentication.providers.authorizer`
+ *
+ * Note: This is NOT a standalone handler - it's used as a provider within
+ * the `authentication` handler via the `providers.authorizer` field.
  *
  * @example
  * ```typescript
- * const handler: SecurityAuthorizationHandler = {
- *   handler: "authorization",
+ * const provider: SecurityAuthorizerProvider = {
  *   gatekeeper_name: "mygatekeeper",
+ *   route_matcher: "*",
  * };
  * ```
  */
-export interface SecurityAuthorizationHandler {
-  handler: "authorization";
+export interface SecurityAuthorizerProvider {
   /**
    * Name of the gatekeeper/policy defined in the security app config.
    * References a policy in `/config/apps/security/config/authorization_policies`
    */
   gatekeeper_name?: string;
   /**
-   * Route matcher pattern for this handler.
+   * Route matcher pattern for this provider.
    */
   route_matcher?: string;
+}
+
+/**
+ * Authorization handler using Caddy's authentication handler with the authorizer provider
+ *
+ * The `authorize` directive in Caddyfile creates a standard Caddy `authentication` handler
+ * with the caddy-security `authorizer` provider configured.
+ *
+ * **Module ID:** `http.handlers.authentication` (Caddy core)
+ * **Provider Module ID:** `http.authentication.providers.authorizer` (caddy-security)
+ *
+ * @example
+ * ```typescript
+ * const handler: SecurityAuthorizationHandler = {
+ *   handler: "authentication",
+ *   providers: {
+ *     authorizer: {
+ *       gatekeeper_name: "mygatekeeper",
+ *       route_matcher: "*",
+ *     },
+ *   },
+ * };
+ * ```
+ */
+export interface SecurityAuthorizationHandler {
+  handler: "authentication";
+  /**
+   * Authentication providers - for authorization, use the `authorizer` provider
+   */
+  providers: {
+    authorizer: SecurityAuthorizerProvider;
+  };
 }
 
 // ============================================================================
@@ -305,4 +349,4 @@ export interface SecurityApp {
 /**
  * Union of all caddy-security handler types
  */
-export type SecurityHandler = SecurityAuthenticationHandler | SecurityAuthorizationHandler;
+export type SecurityHandler = SecurityAuthenticatorHandler | SecurityAuthorizationHandler;

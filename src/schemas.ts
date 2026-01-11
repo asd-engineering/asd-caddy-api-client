@@ -778,7 +778,7 @@ import {
 } from "./generated/caddy-reverseproxy.zod.js";
 
 // Plugin schemas
-import { SecurityAuthorizationHandlerSchema } from "./plugins/caddy-security/schemas.js";
+import { SecurityAuthenticatorHandlerSchema } from "./plugins/caddy-security/schemas.js";
 
 /**
  * File server handler schema - serves static files from disk
@@ -1062,12 +1062,11 @@ export const SubrouteHandlerSchema = z.object({
  *
  * Includes:
  * - 20 core Caddy handlers
- * - Plugin handlers (caddy-security authorization)
+ * - Plugin handlers (caddy-security authenticator)
  *
- * Note: SecurityAuthenticationHandler uses handler: "authentication" which
- * conflicts with core AuthenticationHandler. Use AuthenticationHandlerSchema
- * for both - caddy-security's version adds portal_name/route_matcher fields
- * which passthrough validation allows.
+ * Note: caddy-security's SecurityAuthorizationHandler uses handler: "authentication"
+ * which is Caddy's core AuthenticationHandler with the "authorizer" provider.
+ * It's not in this union since it shares the discriminator - use AuthenticationHandlerSchema.
  */
 export const KnownCaddyHandlerSchema = z.discriminatedUnion("handler", [
   // Core Caddy handlers
@@ -1092,7 +1091,8 @@ export const KnownCaddyHandlerSchema = z.discriminatedUnion("handler", [
   CopyResponseHeadersHandlerSchema,
   SubrouteHandlerSchema,
   // Plugin handlers (caddy-security)
-  SecurityAuthorizationHandlerSchema,
+  // SecurityAuthenticatorHandler: Portal handler with unique handler: "authenticator"
+  SecurityAuthenticatorHandlerSchema,
 ]);
 
 /**

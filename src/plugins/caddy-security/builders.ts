@@ -9,9 +9,9 @@
  */
 import { validateOrThrow } from "../../utils/validation.js";
 import {
-  SecurityAuthenticationHandlerSchema,
+  SecurityAuthenticatorHandlerSchema,
   SecurityAuthorizationHandlerSchema,
-  type SecurityAuthenticationHandler,
+  type SecurityAuthenticatorHandler,
   type SecurityAuthorizationHandler,
 } from "./schemas.js";
 import type { CaddyRoute } from "../../types.js";
@@ -21,9 +21,9 @@ import type { CaddyRoute } from "../../types.js";
 // ============================================================================
 
 /**
- * Options for building an authentication handler
+ * Options for building an authenticator handler
  */
-export interface BuildAuthenticationHandlerOptions {
+export interface BuildAuthenticatorHandlerOptions {
   /**
    * Name of the authentication portal defined in security app config
    */
@@ -35,19 +35,19 @@ export interface BuildAuthenticationHandlerOptions {
 }
 
 /**
- * Build an authentication portal handler
+ * Build an authenticator portal handler
  *
- * Creates a caddy-security authentication handler that serves the login portal
+ * Creates a caddy-security authenticator handler that serves the login portal
  * and handles credential validation.
  *
  * @param options - Handler options
- * @returns Validated authentication handler configuration
+ * @returns Validated authenticator handler configuration
  *
  * @example
  * ```typescript
- * import { buildAuthenticationHandler } from "@.../caddy-api-client/plugins/caddy-security";
+ * import { buildAuthenticatorHandler } from "@.../caddy-api-client/plugins/caddy-security";
  *
- * const handler = buildAuthenticationHandler({
+ * const handler = buildAuthenticatorHandler({
  *   portalName: "myportal",
  * });
  *
@@ -59,20 +59,16 @@ export interface BuildAuthenticationHandlerOptions {
  * };
  * ```
  */
-export function buildAuthenticationHandler(
-  options: BuildAuthenticationHandlerOptions
-): SecurityAuthenticationHandler {
+export function buildAuthenticatorHandler(
+  options: BuildAuthenticatorHandlerOptions
+): SecurityAuthenticatorHandler {
   const handler = {
-    handler: "authentication" as const,
+    handler: "authenticator" as const,
     portal_name: options.portalName,
     ...(options.routeMatcher && { route_matcher: options.routeMatcher }),
   };
 
-  return validateOrThrow(
-    SecurityAuthenticationHandlerSchema,
-    handler,
-    "buildAuthenticationHandler"
-  );
+  return validateOrThrow(SecurityAuthenticatorHandlerSchema, handler, "buildAuthenticatorHandler");
 }
 
 /**
@@ -90,10 +86,13 @@ export interface BuildAuthorizationHandlerOptions {
 }
 
 /**
- * Build an authorization gateway handler
+ * Build an authorization handler
  *
  * Creates a caddy-security authorization handler that validates JWT/PASETO
  * tokens and enforces access control policies.
+ *
+ * This uses Caddy's built-in `authentication` handler with the caddy-security
+ * `authorizer` provider.
  *
  * @param options - Handler options
  * @returns Validated authorization handler configuration
@@ -121,9 +120,13 @@ export function buildAuthorizationHandler(
   options: BuildAuthorizationHandlerOptions
 ): SecurityAuthorizationHandler {
   const handler = {
-    handler: "authorization" as const,
-    gatekeeper_name: options.gatekeeperName,
-    ...(options.routeMatcher && { route_matcher: options.routeMatcher }),
+    handler: "authentication" as const,
+    providers: {
+      authorizer: {
+        gatekeeper_name: options.gatekeeperName,
+        ...(options.routeMatcher && { route_matcher: options.routeMatcher }),
+      },
+    },
   };
 
   return validateOrThrow(SecurityAuthorizationHandlerSchema, handler, "buildAuthorizationHandler");
@@ -166,9 +169,9 @@ export interface BuildAuthenticationRouteOptions {
  *
  * @example
  * ```typescript
- * import { buildAuthenticationRoute } from "@.../caddy-api-client/plugins/caddy-security";
+ * import { buildAuthenticatorRoute } from "@.../caddy-api-client/plugins/caddy-security";
  *
- * const route = buildAuthenticationRoute({
+ * const route = buildAuthenticatorRoute({
  *   hosts: ["auth.example.com"],
  *   portalName: "myportal",
  *   routeId: "auth-portal",
@@ -177,8 +180,8 @@ export interface BuildAuthenticationRouteOptions {
  * await client.addRoute("https_server", route);
  * ```
  */
-export function buildAuthenticationRoute(options: BuildAuthenticationRouteOptions): CaddyRoute {
-  const handler = buildAuthenticationHandler({
+export function buildAuthenticatorRoute(options: BuildAuthenticationRouteOptions): CaddyRoute {
+  const handler = buildAuthenticatorHandler({
     portalName: options.portalName,
   });
 

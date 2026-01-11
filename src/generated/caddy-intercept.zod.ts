@@ -2,5 +2,5 @@
 import { z } from "zod";
 
 export const interceptSchema = z.object({
-    handle_response: z.array(z.any()).optional()
+  handle_response: z.array(z.any()).optional(),
 });

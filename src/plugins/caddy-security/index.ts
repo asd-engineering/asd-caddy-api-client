@@ -10,14 +10,14 @@
  * @example
  * ```typescript
  * import {
- *   buildAuthenticationHandler,
+ *   buildAuthenticatorHandler,
  *   buildAuthorizationHandler,
  *   buildProtectedRoute,
- *   SecurityAuthenticationHandlerSchema,
+ *   SecurityAuthenticatorHandlerSchema,
  * } from "@accelerated-software-development/caddy-api-client/plugins/caddy-security";
  *
  * // Build handlers with validation
- * const authHandler = buildAuthenticationHandler({ portalName: "myportal" });
+ * const authHandler = buildAuthenticatorHandler({ portalName: "myportal" });
  * const authzHandler = buildAuthorizationHandler({ gatekeeperName: "mypolicy" });
  *
  * // Or build complete protected routes
@@ -31,9 +31,10 @@
  * @packageDocumentation
  */
 
-// Types (re-export from both sources for flexibility)
+// Types
 export type {
-  SecurityAuthenticationHandler,
+  SecurityAuthenticatorHandler,
+  SecurityAuthorizerProvider,
   SecurityAuthorizationHandler,
   SecurityHandler,
   SecurityApp,
@@ -49,7 +50,8 @@ export type {
 
 // Schemas
 export {
-  SecurityAuthenticationHandlerSchema,
+  SecurityAuthenticatorHandlerSchema,
+  SecurityAuthorizerProviderSchema,
   SecurityAuthorizationHandlerSchema,
   SecurityHandlerSchema,
   SecurityAppSchema,
@@ -65,11 +67,11 @@ export {
 
 // Builders
 export {
-  buildAuthenticationHandler,
+  buildAuthenticatorHandler,
   buildAuthorizationHandler,
-  buildAuthenticationRoute,
+  buildAuthenticatorRoute,
   buildProtectedRoute,
-  type BuildAuthenticationHandlerOptions,
+  type BuildAuthenticatorHandlerOptions,
   type BuildAuthorizationHandlerOptions,
   type BuildAuthenticationRouteOptions,
   type BuildProtectedRouteOptions,

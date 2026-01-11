@@ -2,25 +2,25 @@
 import { z } from "zod";
 
 export const replacementSchema = z.object({
-    search: z.string().optional(),
-    search_regexp: z.string().optional(),
-    replace: z.string().optional()
+  search: z.string().optional(),
+  search_regexp: z.string().optional(),
+  replace: z.string().optional(),
 });
 
 export const headerOpsSchema = z.object({
-    add: z.any().optional(),
-    set: z.any().optional(),
-    delete: z.array(z.string()).optional(),
-    replace: z.record(z.string(), z.array(replacementSchema)).optional()
+  add: z.any().optional(),
+  set: z.any().optional(),
+  delete: z.array(z.string()).optional(),
+  replace: z.record(z.string(), z.array(replacementSchema)).optional(),
 });
 
 export const respHeaderOpsSchema = z.object({
-    HeaderOps: headerOpsSchema.optional(),
-    require: z.any().optional(),
-    deferred: z.boolean().optional()
+  HeaderOps: headerOpsSchema.optional(),
+  require: z.any().optional(),
+  deferred: z.boolean().optional(),
 });
 
 export const handlerSchema = z.object({
-    request: headerOpsSchema.optional(),
-    response: respHeaderOpsSchema.optional()
+  request: headerOpsSchema.optional(),
+  response: respHeaderOpsSchema.optional(),
 });

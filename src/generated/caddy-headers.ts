@@ -42,7 +42,7 @@ export interface HeaderOps {
    * Keys are the field names on which to perform the associated replacements.
    * If the field name is `*`, the replacements are performed on all header fields.
    */
-  replace?: { [key: string]: Replacement[]};
+  replace?: { [key: string]: Replacement[] };
 }
 /**
  * Replacement describes a string replacement,

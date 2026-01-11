@@ -21,7 +21,5 @@ export interface Tracing {
 //////////
 // source: tracer.go
 
-
 //////////
 // source: tracerprovider.go
-

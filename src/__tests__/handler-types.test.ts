@@ -168,10 +168,7 @@ describe("Caddy JSON Config Validation", () => {
     it("should validate push config", () => {
       const config = {
         handler: "push",
-        resources: [
-          { target: "/css/style.css" },
-          { target: "/js/app.js" },
-        ],
+        resources: [{ target: "/css/style.css" }, { target: "/js/app.js" }],
         headers: {
           "X-Push": ["true"],
         },

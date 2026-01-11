@@ -2,5 +2,5 @@
 import { z } from "zod";
 
 export const tracingSchema = z.object({
-    span: z.string()
+  span: z.string(),
 });

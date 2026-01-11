@@ -5,6 +5,7 @@
  * 1. `any` with caddy.Duration comment -> `Duration` (uses the Duration type alias)
  * 2. `any` with caddytls comment -> imports from caddy-tls module
  * 3. Ensures proper cross-module imports
+ * 4. Adds missing unexported Go type definitions
  */
 
 import { readFileSync, writeFileSync } from "fs";
@@ -15,6 +16,32 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const GENERATED_DIR = join(__dirname, "../src/generated");
 
+// Missing types that need to be added to specific files
+// These are unexported Go types that tygo doesn't generate but are referenced
+const MISSING_TYPES: Record<string, string> = {
+  "caddy-rewrite.ts": `
+// Types for unexported Go structs (approximated from Caddy source)
+export interface substrReplacer {
+  find?: string;
+  replace?: string;
+  limit?: number;
+}
+
+export interface regexReplacer {
+  find?: string;
+  replace?: string;
+}
+
+export interface queryOps {
+  delete?: string[];
+  set?: Record<string, string>;
+  add?: Record<string, string[]>;
+  replace?: Record<string, string[]>;
+  rename?: { [key: string]: string }[];
+}
+`,
+};
+
 function transformFile(filename: string): void {
   const filepath = join(GENERATED_DIR, filename);
   let content = readFileSync(filepath, "utf-8");
@@ -22,6 +49,19 @@ function transformFile(filename: string): void {
 
   // Track what imports we need to add
   const importsNeeded = new Set<string>();
+
+  // Add missing types for this file if needed
+  if (MISSING_TYPES[filename] && !content.includes("// Types for unexported Go structs")) {
+    // Insert after the first source comment block
+    const sourceCommentEnd = content.indexOf("\n\n", content.indexOf("// source:"));
+    if (sourceCommentEnd !== -1) {
+      content =
+        content.slice(0, sourceCommentEnd) +
+        "\n" +
+        MISSING_TYPES[filename] +
+        content.slice(sourceCommentEnd);
+    }
+  }
 
   // Fix caddy.Duration -> Duration (already defined in caddy-core.ts)
   // Pattern: any /* caddy.Duration */

@@ -8,11 +8,16 @@
 
 // caddy-security plugin handlers
 import type {
-  SecurityAuthenticationHandler,
+  SecurityAuthenticatorHandler,
   SecurityAuthorizationHandler,
+  SecurityAuthorizerProvider,
 } from "./plugins/caddy-security/types.js";
 
-export type { SecurityAuthenticationHandler, SecurityAuthorizationHandler };
+export type {
+  SecurityAuthenticatorHandler,
+  SecurityAuthorizationHandler,
+  SecurityAuthorizerProvider,
+};
 
 // ============================================================================
 // Basic Types
@@ -240,7 +245,10 @@ export interface GenericHandler {
  * Built-in Caddy HTTP handlers generated from Go source.
  *
  * ## Plugin Handlers
- * - **caddy-security**: SecurityAuthenticationHandler, SecurityAuthorizationHandler
+ * - **caddy-security**: SecurityAuthenticatorHandler (portal), SecurityAuthorizationHandler (uses core authentication handler)
+ *
+ * Note: SecurityAuthorizationHandler uses Caddy's built-in `authentication` handler with the
+ * caddy-security `authorizer` provider. It's a type alias, not in the union (same discriminator).
  */
 export type CaddyRouteHandler =
   // Core Caddy handlers
@@ -265,10 +273,11 @@ export type CaddyRouteHandler =
   | CopyResponseHandler
   | CopyResponseHeadersHandler
   // Plugin handlers (caddy-security)
-  // Note: SecurityAuthenticationHandler uses handler: "authentication" which
-  // conflicts with core AuthenticationHandler. caddy-security overrides this
-  // handler when the plugin is loaded. Use portal_name to distinguish.
-  | SecurityAuthorizationHandler
+  // SecurityAuthenticatorHandler: Portal handler with handler: "authenticator"
+  // Note: SecurityAuthorizationHandler uses handler: "authentication" which is
+  // Caddy's core authentication handler with the "authorizer" provider configured.
+  // It's not in the union since it shares the same discriminator as AuthenticationHandler.
+  | SecurityAuthenticatorHandler
   // Generic fallback for unknown handlers
   | GenericHandler;
 

@@ -285,7 +285,7 @@ describe("Generated Headers Schemas", () => {
     test("accepts replace operation", () => {
       const ops = {
         replace: {
-          "Authorization": [{ search: "Bearer", replace: "Token" }],
+          Authorization: [{ search: "Bearer", replace: "Token" }],
         },
       };
       expect(headerOpsSchema.parse(ops)).toEqual(ops);

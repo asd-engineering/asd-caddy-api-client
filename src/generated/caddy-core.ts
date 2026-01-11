@@ -288,7 +288,7 @@ export interface Event {
    * goroutines; instead, copy the map to use it in a
    * goroutine. Data may be nil.
    */
-  Data: { [key: string]: any};
+  Data: { [key: string]: any };
 }
 /**
  * CloudEvent is a JSON-serializable structure that
@@ -301,7 +301,7 @@ export interface CloudEvent {
   source: string;
   specversion: string;
   type: string;
-  time: any /* time.Time */;
+  time: string;
   datacontenttype?: string;
   data?: unknown;
 }
@@ -330,7 +330,7 @@ export const ImportPath = "github.com/caddyserver/caddy/v2";
  * not actually need to do this).
  */
 export interface Context {
-  Context: any /* context.Context */;
+  Context: unknown;
 }
 
 //////////
@@ -341,10 +341,8 @@ export type FileSystems = any;
 //////////
 // source: listen_unix.go
 
-
 //////////
 // source: listen_unix_setopt.go
-
 
 //////////
 // source: listeners.go
@@ -432,7 +430,7 @@ export interface Logging {
    * a log called "default". You can further define other logs
    * and filter what kinds of entries they accept.
    */
-  logs?: { [key: string]: CustomLog | undefined};
+  logs?: { [key: string]: CustomLog | undefined };
 }
 /**
  * WriterOpener is a module that can open a log writer.
@@ -440,8 +438,7 @@ export interface Logging {
  * of itself so that operators can understand where
  * the logs are going.
  */
-export type WriterOpener = 
-    any /* fmt.Stringer */;
+export type WriterOpener = any /* fmt.Stringer */;
 /**
  * BaseLog contains the common logging parameters for logging.
  */
@@ -547,18 +544,15 @@ export interface LogSampling {
 /**
  * StdoutWriter writes logs to standard out.
  */
-export interface StdoutWriter {
-}
+export interface StdoutWriter {}
 /**
  * StderrWriter writes logs to standard error.
  */
-export interface StderrWriter {
-}
+export interface StderrWriter {}
 /**
  * DiscardWriter discards all writes.
  */
-export interface DiscardWriter {
-}
+export interface DiscardWriter {}
 /**
  * ConfiguresFormatterDefault is an optional interface that
  * encoder modules can implement to configure the default
@@ -571,7 +565,6 @@ export const DefaultLoggerName = "default";
 
 //////////
 // source: metrics.go
-
 
 //////////
 // source: modules.go
@@ -649,7 +642,7 @@ export type ModuleID = string;
  * module map, the name does not have to be given in the
  * json.RawMessage.
  */
-export type ModuleMap = { [key: string]: unknown};
+export type ModuleMap = { [key: string]: unknown };
 /**
  * Provisioner is implemented by modules which may need to perform
  * some additional "setup" steps immediately after being loaded.
@@ -694,8 +687,7 @@ export type ProxyFuncProducer = any;
  * A default/empty Replacer is not valid;
  * use NewReplacer to make one.
  */
-export interface Replacer {
-}
+export interface Replacer {}
 /**
  * ReplacerFunc is a function that returns a replacement for the
  * given key along with true if the function is able to service
@@ -793,7 +785,7 @@ export type StorageConverter = any;
  * NewUsagePool() to make a new one.
  */
 export interface UsagePool {
-  RWMutex: any /* sync.RWMutex */;
+  RWMutex: unknown;
 }
 /**
  * Constructor is a function that returns a new value

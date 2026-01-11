@@ -3,58 +3,99 @@
  *
  * Provides runtime validation for caddy-security handler configurations.
  *
+ * Base types are generated from Go source via tygo + ts-to-zod.
+ * Handler schemas extend these with the `handler` discriminator field
+ * that Caddy adds based on the module namespace.
+ *
  * @see https://github.com/greenpau/caddy-security
- * @see local/plugins/caddy-security/README.md
+ * @see src/generated/plugins/caddy-security.ts (generated types)
+ * @see src/generated/plugins/caddy-security.zod.ts (generated schemas)
  */
 import { z } from "zod";
+
+// Re-export generated base schemas for reference
+export {
+  authnMiddlewareSchema as GeneratedAuthnMiddlewareSchema,
+  authzMiddlewareSchema as GeneratedAuthzMiddlewareSchema,
+  appSchema as GeneratedSecurityAppSchema,
+} from "../../generated/plugins/caddy-security.zod.js";
 
 // ============================================================================
 // HTTP Handler Schemas
 // ============================================================================
 
 /**
- * Authentication portal handler schema
+ * Authenticator portal handler schema
  *
- * Validates the caddy-security authentication handler configuration.
+ * Extends the generated AuthnMiddleware with the handler discriminator.
+ * Module ID: `http.handlers.authenticator`
  *
  * @example
  * ```typescript
- * const handler = SecurityAuthenticationHandlerSchema.parse({
- *   handler: "authentication",
+ * const handler = SecurityAuthenticatorHandlerSchema.parse({
+ *   handler: "authenticator",
  *   portal_name: "myportal",
  * });
  * ```
  */
-export const SecurityAuthenticationHandlerSchema = z.object({
-  handler: z.literal("authentication"),
+export const SecurityAuthenticatorHandlerSchema = z.object({
+  handler: z.literal("authenticator"),
   portal_name: z.string().optional(),
   route_matcher: z.string().optional(),
 });
 
 /**
- * Authorization gateway handler schema
+ * Authorizer provider schema
  *
- * Validates the caddy-security authorization handler configuration.
+ * Based on generated AuthzMiddleware (without handler field since it's a provider).
+ * Module ID: `http.authentication.providers.authorizer`
  *
  * @example
  * ```typescript
- * const handler = SecurityAuthorizationHandlerSchema.parse({
- *   handler: "authorization",
+ * const provider = SecurityAuthorizerProviderSchema.parse({
  *   gatekeeper_name: "mygatekeeper",
+ *   route_matcher: "*",
  * });
  * ```
  */
-export const SecurityAuthorizationHandlerSchema = z.object({
-  handler: z.literal("authorization"),
+export const SecurityAuthorizerProviderSchema = z.object({
   gatekeeper_name: z.string().optional(),
   route_matcher: z.string().optional(),
 });
 
 /**
+ * Authorization handler schema
+ *
+ * Uses Caddy's built-in `authentication` handler with the `authorizer` provider.
+ * The provider config is based on the generated AuthzMiddleware.
+ *
+ * @example
+ * ```typescript
+ * const handler = SecurityAuthorizationHandlerSchema.parse({
+ *   handler: "authentication",
+ *   providers: {
+ *     authorizer: {
+ *       gatekeeper_name: "mygatekeeper",
+ *     },
+ *   },
+ * });
+ * ```
+ */
+export const SecurityAuthorizationHandlerSchema = z.object({
+  handler: z.literal("authentication"),
+  providers: z.object({
+    authorizer: SecurityAuthorizerProviderSchema,
+  }),
+});
+
+/**
  * Combined security handler schema (discriminated union)
+ *
+ * - `authenticator` - Portal handler that serves login UI
+ * - `authentication` - Caddy's handler with the authorizer provider for token validation
  */
 export const SecurityHandlerSchema = z.discriminatedUnion("handler", [
-  SecurityAuthenticationHandlerSchema,
+  SecurityAuthenticatorHandlerSchema,
   SecurityAuthorizationHandlerSchema,
 ]);
 
@@ -239,7 +280,8 @@ export const SecurityAppSchema = z.object({
 // Type Exports (inferred from schemas)
 // ============================================================================
 
-export type SecurityAuthenticationHandler = z.infer<typeof SecurityAuthenticationHandlerSchema>;
+export type SecurityAuthenticatorHandler = z.infer<typeof SecurityAuthenticatorHandlerSchema>;
+export type SecurityAuthorizerProvider = z.infer<typeof SecurityAuthorizerProviderSchema>;
 export type SecurityAuthorizationHandler = z.infer<typeof SecurityAuthorizationHandlerSchema>;
 export type SecurityHandler = z.infer<typeof SecurityHandlerSchema>;
 export type LocalIdentityStore = z.infer<typeof LocalIdentityStoreSchema>;

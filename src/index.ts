@@ -43,7 +43,8 @@ export type {
   CopyResponseHeadersHandler,
   GenericHandler,
   // Plugin handler types
-  SecurityAuthenticationHandler,
+  SecurityAuthenticatorHandler,
+  SecurityAuthorizerProvider,
   SecurityAuthorizationHandler,
 } from "./types.js";
 

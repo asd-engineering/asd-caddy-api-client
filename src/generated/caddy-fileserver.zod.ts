@@ -2,30 +2,32 @@
 import { z } from "zod";
 
 export const browseSchema = z.object({
-    template_file: z.string().optional(),
-    reveal_symlinks: z.boolean().optional(),
-    sort: z.array(z.string()).optional(),
-    file_limit: z.number().optional()
+  template_file: z.string().optional(),
+  reveal_symlinks: z.boolean().optional(),
+  sort: z.array(z.string()).optional(),
+  file_limit: z.number().optional(),
 });
 
 export const matchFileSchema = z.object({
-    fs: z.string().optional(),
-    root: z.string().optional(),
-    try_files: z.array(z.string()).optional(),
-    try_policy: z.string().optional(),
-    split_path: z.array(z.string()).optional()
+  fs: z.string().optional(),
+  root: z.string().optional(),
+  try_files: z.array(z.string()).optional(),
+  try_policy: z.string().optional(),
+  split_path: z.array(z.string()).optional(),
 });
 
+const moduleMapSchema = z.any();
+
 export const fileServerSchema = z.object({
-    fs: z.string().optional(),
-    root: z.string().optional(),
-    hide: z.array(z.string()).optional(),
-    index_names: z.array(z.string()).optional(),
-    browse: browseSchema.optional(),
-    canonical_uris: z.boolean().optional(),
-    status_code: z.any().optional(),
-    pass_thru: z.boolean().optional(),
-    precompressed: z.any().optional(),
-    precompressed_order: z.array(z.string()).optional(),
-    etag_file_extensions: z.array(z.string()).optional()
+  fs: z.string().optional(),
+  root: z.string().optional(),
+  hide: z.array(z.string()).optional(),
+  index_names: z.array(z.string()).optional(),
+  browse: browseSchema.optional(),
+  canonical_uris: z.boolean().optional(),
+  status_code: z.any().optional(),
+  pass_thru: z.boolean().optional(),
+  precompressed: moduleMapSchema.optional(),
+  precompressed_order: z.array(z.string()).optional(),
+  etag_file_extensions: z.array(z.string()).optional(),
 });
