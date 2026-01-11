@@ -31,6 +31,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `caddy-security.ts` - TypeScript types from tygo
   - `caddy-security.zod.ts` - Zod schemas from ts-to-zod
 
+- **Authcrunch Type Generation** - Full type coverage for go-authcrunch (caddy-security dependency)
+  - 22 authcrunch modules: core, authn, authz, oauth, saml, sso, acl, ids, idp, kms, etc.
+  - Cross-package type references automatically resolved
+  - Name conflict handling with type aliases (e.g., `Config as OauthConfig`)
+
+- **Cross-Reference Resolver** (`scripts/resolve-cross-refs.ts`)
+  - Resolves tygo's `any /* package.Type */` patterns to proper imports
+  - Maps Go stdlib types (error, time.Time, big.Int) to TypeScript equivalents
+  - Adds missing unexported Go types automatically
+  - Handles 130+ cross-package references
+
+- **AGENTS.md** - AI agent guidelines for type safety
+  - Strict `no-any` rule enforcement
+  - ESLint `@typescript-eslint/no-explicit-any` set to error
+
 ### Changed
 
 - **Type Generation Architecture** - Cleaner separation of generated vs hand-written code
