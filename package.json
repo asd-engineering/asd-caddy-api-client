@@ -1,6 +1,6 @@
 {
   "name": "@accelerated-software-development/caddy-api-client",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "TypeScript client for Caddy Admin API with MITMproxy integration",
   "type": "module",
   "main": "./dist/index.js",
