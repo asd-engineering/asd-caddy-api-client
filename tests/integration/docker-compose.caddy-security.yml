@@ -1,0 +1,19 @@
+services:
+  caddy-security:
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy-security
+    container_name: caddy-security-test
+    ports:
+      - "8443:443"
+      - "8084:80"
+      - "2020:2019"
+    volumes:
+      - ./Caddyfile.caddy-security:/etc/caddy/Caddyfile:ro
+      - ./fixtures/local-users.json:/data/users.json
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
