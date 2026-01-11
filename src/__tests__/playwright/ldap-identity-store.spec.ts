@@ -31,25 +31,19 @@ const LDAP_ADMIN_DN = "cn=admin,dc=test,dc=local";
 const LDAP_ADMIN_PASSWORD = "admin";
 const PHPLDAPADMIN_URL = "http://localhost:8083";
 
-// Test users from LDIF
+// Test users created by setup-ldap.sh
 const TEST_USERS = {
   testuser: {
-    dn: "cn=testuser,ou=users,dc=test,dc=local",
-    password: "password",
+    dn: "uid=testuser,ou=users,dc=test,dc=local",
+    password: "testpass",
     email: "test@test.local",
-    groups: ["users", "developers"],
+    groups: ["users"],
   },
   adminuser: {
-    dn: "cn=adminuser,ou=users,dc=test,dc=local",
-    password: "admin123",
+    dn: "uid=adminuser,ou=users,dc=test,dc=local",
+    password: "adminpass",
     email: "admin@test.local",
     groups: ["users", "admins"],
-  },
-  devuser: {
-    dn: "cn=devuser,ou=users,dc=test,dc=local",
-    password: "dev123",
-    email: "dev@test.local",
-    groups: ["developers"],
   },
 };
 
@@ -147,7 +141,7 @@ test.describe("LDAP User Search", () => {
       LDAP_ADMIN_PASSWORD
     );
 
-    expect(result).toContain("cn: testuser");
+    expect(result).toContain("cn: Test User");
     expect(result).toContain("mail: test@test.local");
   });
 
@@ -159,7 +153,7 @@ test.describe("LDAP User Search", () => {
       LDAP_ADMIN_PASSWORD
     );
 
-    expect(result).toContain("cn: adminuser");
+    expect(result).toContain("cn: Admin User");
     expect(result).toContain("uid: adminuser");
   });
 
@@ -173,19 +167,17 @@ test.describe("LDAP User Search", () => {
 
     expect(result).toContain("uid: testuser");
     expect(result).toContain("uid: adminuser");
-    expect(result).toContain("uid: devuser");
   });
 
   test("users organizational unit exists", async () => {
     const result = await ldapsearch(
       "(&(objectClass=organizationalUnit)(ou=users))",
-      ["ou", "description"],
+      ["ou"],
       LDAP_ADMIN_DN,
       LDAP_ADMIN_PASSWORD
     );
 
     expect(result).toContain("ou: users");
-    expect(result).toContain("description: User accounts");
   });
 });
 
@@ -205,17 +197,12 @@ test.describe("LDAP Simple Bind Authentication", () => {
   });
 
   test("rejects non-existent user", async () => {
-    const result = await ldapwhoami("cn=nonexistent,ou=users,dc=test,dc=local", "password");
+    const result = await ldapwhoami("uid=nonexistent,ou=users,dc=test,dc=local", "password");
     expect(result).toBe(false);
   });
 
   test("admin user can authenticate", async () => {
     const result = await ldapwhoami(TEST_USERS.adminuser.dn, TEST_USERS.adminuser.password);
-    expect(result).toBe(true);
-  });
-
-  test("developer user can authenticate", async () => {
-    const result = await ldapwhoami(TEST_USERS.devuser.dn, TEST_USERS.devuser.password);
     expect(result).toBe(true);
   });
 });
@@ -227,51 +214,38 @@ test.describe("LDAP Group Membership", () => {
 
   test("users group contains expected members", async () => {
     const result = await ldapsearch(
-      "(&(objectClass=groupOfNames)(cn=users))",
-      ["member"],
+      "(&(objectClass=posixGroup)(cn=users))",
+      ["memberUid"],
       LDAP_ADMIN_DN,
       LDAP_ADMIN_PASSWORD
     );
 
-    expect(result).toContain("member: cn=testuser,ou=users,dc=test,dc=local");
-    expect(result).toContain("member: cn=adminuser,ou=users,dc=test,dc=local");
+    expect(result).toContain("memberUid: testuser");
+    expect(result).toContain("memberUid: adminuser");
   });
 
   test("admins group contains only admin users", async () => {
     const result = await ldapsearch(
-      "(&(objectClass=groupOfNames)(cn=admins))",
-      ["member"],
+      "(&(objectClass=posixGroup)(cn=admins))",
+      ["memberUid"],
       LDAP_ADMIN_DN,
       LDAP_ADMIN_PASSWORD
     );
 
-    expect(result).toContain("member: cn=adminuser,ou=users,dc=test,dc=local");
-    expect(result).not.toContain("member: cn=testuser,ou=users,dc=test,dc=local");
-  });
-
-  test("developers group contains dev users", async () => {
-    const result = await ldapsearch(
-      "(&(objectClass=groupOfNames)(cn=developers))",
-      ["member"],
-      LDAP_ADMIN_DN,
-      LDAP_ADMIN_PASSWORD
-    );
-
-    expect(result).toContain("member: cn=testuser,ou=users,dc=test,dc=local");
-    expect(result).toContain("member: cn=devuser,ou=users,dc=test,dc=local");
+    expect(result).toContain("memberUid: adminuser");
+    expect(result).not.toContain("memberUid: testuser");
   });
 
   test("finds groups for specific user", async () => {
-    // Search for groups that have testuser as a member
+    // Search for posixGroups that have testuser as a member
     const result = await ldapsearch(
-      `(&(objectClass=groupOfNames)(member=${TEST_USERS.testuser.dn}))`,
+      "(&(objectClass=posixGroup)(memberUid=testuser))",
       ["cn"],
       LDAP_ADMIN_DN,
       LDAP_ADMIN_PASSWORD
     );
 
     expect(result).toContain("cn: users");
-    expect(result).toContain("cn: developers");
     expect(result).not.toContain("cn: admins");
   });
 });
@@ -289,9 +263,8 @@ test.describe("LDAP Service Account", () => {
     expect(result).toBe(true);
   });
 
-  test.skip("service account can search users", async () => {
-    // Note: Default OpenLDAP ACLs don't allow service accounts to search users
-    // This would require custom ACL configuration which is beyond basic testing scope
+  test("service account can search users", async () => {
+    // Requires ACLs to be configured via setup-ldap.sh script
     const serviceAccountDn = "cn=ldapbind,ou=services,dc=test,dc=local";
     const serviceAccountPassword = "bindpassword";
 
@@ -315,19 +288,16 @@ test.describe("LDAP Configuration Validation", () => {
   test("caddy-security LDAP config generates correct filter", () => {
     // This test validates that our config would generate correct LDAP filters
     const userFilter = "(uid={username})";
-    const groupFilter = "(&(objectClass=groupOfNames)(member={dn}))";
+    const groupFilter = "(&(objectClass=posixGroup)(memberUid={uid}))";
 
     // Test filter interpolation logic
     const username = "testuser";
-    const dn = TEST_USERS.testuser.dn;
 
     const interpolatedUserFilter = userFilter.replace("{username}", username);
-    const interpolatedGroupFilter = groupFilter.replace("{dn}", dn);
+    const interpolatedGroupFilter = groupFilter.replace("{uid}", username);
 
     expect(interpolatedUserFilter).toBe("(uid=testuser)");
-    expect(interpolatedGroupFilter).toBe(
-      `(&(objectClass=groupOfNames)(member=${TEST_USERS.testuser.dn}))`
-    );
+    expect(interpolatedGroupFilter).toBe("(&(objectClass=posixGroup)(memberUid=testuser))");
   });
 
   test("base DN structure matches expected hierarchy", async () => {
