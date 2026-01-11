@@ -5,6 +5,7 @@
 **GitHub:** {url}
 **Docs:** {url}
 **Plugin Version:** {version}
+**Caddy Compatibility:** v2.x
 **Last Analyzed:** {date}
 
 ## Overview

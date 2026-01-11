@@ -1,7 +1,12 @@
 # caddy-security Plugin
 
-GitHub: https://github.com/greenpau/caddy-security
-Docs: https://docs.authcrunch.com
+> **Status**: Integrated
+
+**GitHub:** https://github.com/greenpau/caddy-security
+**Docs:** https://docs.authcrunch.com
+**Plugin Version:** v1.1.31
+**Caddy Compatibility:** v2.x
+**Last Analyzed:** 2026-01-11
 
 ## Overview
 
