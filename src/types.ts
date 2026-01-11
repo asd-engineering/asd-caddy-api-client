@@ -3,6 +3,18 @@
  */
 
 // ============================================================================
+// Plugin Handler Types (re-exported for discriminated union)
+// ============================================================================
+
+// caddy-security plugin handlers
+import type {
+  SecurityAuthenticationHandler,
+  SecurityAuthorizationHandler,
+} from "./plugins/caddy-security/types.js";
+
+export type { SecurityAuthenticationHandler, SecurityAuthorizationHandler };
+
+// ============================================================================
 // Basic Types
 // ============================================================================
 
@@ -219,12 +231,19 @@ export interface GenericHandler {
 }
 
 /**
- * Caddy route handler - discriminated union of all 20 known handlers with generic fallback
+ * Caddy route handler - discriminated union of all known handlers with generic fallback
  *
  * Known handlers get strict type checking. Unknown handlers (custom plugins)
  * use GenericHandler which allows any properties for extensibility.
+ *
+ * ## Core Handlers (20)
+ * Built-in Caddy HTTP handlers generated from Go source.
+ *
+ * ## Plugin Handlers
+ * - **caddy-security**: SecurityAuthenticationHandler, SecurityAuthorizationHandler
  */
 export type CaddyRouteHandler =
+  // Core Caddy handlers
   | ReverseProxyHandler
   | HeadersHandler
   | StaticResponseHandler
@@ -245,6 +264,12 @@ export type CaddyRouteHandler =
   | ErrorHandler
   | CopyResponseHandler
   | CopyResponseHeadersHandler
+  // Plugin handlers (caddy-security)
+  // Note: SecurityAuthenticationHandler uses handler: "authentication" which
+  // conflicts with core AuthenticationHandler. caddy-security overrides this
+  // handler when the plugin is loaded. Use portal_name to distinguish.
+  | SecurityAuthorizationHandler
+  // Generic fallback for unknown handlers
   | GenericHandler;
 
 // Handler types for new handlers (minimal interfaces for backwards compatibility)

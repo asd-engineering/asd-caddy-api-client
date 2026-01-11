@@ -772,7 +772,13 @@ import { interceptSchema } from "./generated/caddy-intercept.zod.js";
 import { tracingSchema } from "./generated/caddy-tracing.zod.js";
 import { logAppendSchema } from "./generated/caddy-logging.zod.js";
 import { invokeSchema, staticErrorSchema } from "./generated/caddy-http.zod.js";
-import { copyResponseHandlerSchema, copyResponseHeadersHandlerSchema } from "./generated/caddy-reverseproxy.zod.js";
+import {
+  copyResponseHandlerSchema,
+  copyResponseHeadersHandlerSchema,
+} from "./generated/caddy-reverseproxy.zod.js";
+
+// Plugin schemas
+import { SecurityAuthorizationHandlerSchema } from "./plugins/caddy-security/schemas.js";
 
 /**
  * File server handler schema - serves static files from disk
@@ -886,9 +892,11 @@ export const RequestBodyHandlerSchema = requestBodySchema.extend({
  * });
  * ```
  */
-export const VarsHandlerSchema = z.object({
-  handler: z.literal("vars"),
-}).passthrough();
+export const VarsHandlerSchema = z
+  .object({
+    handler: z.literal("vars"),
+  })
+  .passthrough();
 
 /**
  * Intercept handler schema - response interception
@@ -1051,8 +1059,18 @@ export const SubrouteHandlerSchema = z.object({
 /**
  * Known handler schemas with specific validation - uses discriminated union
  * for efficient parsing based on the `handler` field
+ *
+ * Includes:
+ * - 20 core Caddy handlers
+ * - Plugin handlers (caddy-security authorization)
+ *
+ * Note: SecurityAuthenticationHandler uses handler: "authentication" which
+ * conflicts with core AuthenticationHandler. Use AuthenticationHandlerSchema
+ * for both - caddy-security's version adds portal_name/route_matcher fields
+ * which passthrough validation allows.
  */
 export const KnownCaddyHandlerSchema = z.discriminatedUnion("handler", [
+  // Core Caddy handlers
   ReverseProxyHandlerSchema,
   HeadersHandlerSchema,
   StaticResponseHandlerSchema,
@@ -1073,6 +1091,8 @@ export const KnownCaddyHandlerSchema = z.discriminatedUnion("handler", [
   CopyResponseHandlerSchema,
   CopyResponseHeadersHandlerSchema,
   SubrouteHandlerSchema,
+  // Plugin handlers (caddy-security)
+  SecurityAuthorizationHandlerSchema,
 ]);
 
 /**

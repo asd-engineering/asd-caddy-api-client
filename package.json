@@ -26,6 +26,16 @@
       "types": "./dist/caddy-types.d.ts",
       "import": "./dist/caddy-types.js",
       "require": "./dist/caddy-types.cjs"
+    },
+    "./plugins": {
+      "types": "./dist/plugins/index.d.ts",
+      "import": "./dist/plugins/index.js",
+      "require": "./dist/plugins/index.cjs"
+    },
+    "./plugins/caddy-security": {
+      "types": "./dist/plugins/caddy-security/index.d.ts",
+      "import": "./dist/plugins/caddy-security/index.js",
+      "require": "./dist/plugins/caddy-security/index.cjs"
     }
   },
   "files": [
