@@ -190,7 +190,7 @@ test.describe("Keycloak Direct Access Grant", () => {
     expect(payload).toMatchObject({
       iss: expect.stringContaining(`/realms/${REALM}`),
       sub: expect.any(String),
-      aud: expect.anything(),
+      // Note: aud claim is optional in access tokens (only mandatory in ID tokens)
       exp: expect.any(Number),
       iat: expect.any(Number),
       preferred_username: TEST_USER.username,

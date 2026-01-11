@@ -1,0 +1,44 @@
+# Create groups organizational unit
+dn: ou=groups,dc=test,dc=local
+objectClass: organizationalUnit
+ou: groups
+description: Groups organizational unit
+
+# Create services organizational unit
+dn: ou=services,dc=test,dc=local
+objectClass: organizationalUnit
+ou: services
+description: Service accounts
+
+# Users group
+dn: cn=users,ou=groups,dc=test,dc=local
+objectClass: groupOfNames
+cn: users
+description: All users group
+member: cn=testuser,ou=users,dc=test,dc=local
+member: cn=adminuser,ou=users,dc=test,dc=local
+
+# Admins group
+dn: cn=admins,ou=groups,dc=test,dc=local
+objectClass: groupOfNames
+cn: admins
+description: Administrators group
+member: cn=adminuser,ou=users,dc=test,dc=local
+
+# Developers group
+dn: cn=developers,ou=groups,dc=test,dc=local
+objectClass: groupOfNames
+cn: developers
+description: Developers group
+member: cn=testuser,ou=users,dc=test,dc=local
+member: cn=devuser,ou=users,dc=test,dc=local
+
+# LDAP bind service account
+dn: cn=ldapbind,ou=services,dc=test,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+cn: ldapbind
+sn: Service Account
+userPassword: bindpassword
+description: Service account for LDAP bind operations

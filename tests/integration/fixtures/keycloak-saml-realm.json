@@ -49,7 +49,8 @@
         "saml.client.signature": "false",
         "saml_force_name_id_format": "false",
         "saml_name_id_format": "username",
-        "saml_signature_canonicalization_method": "http://www.w3.org/2001/10/xml-exc-c14n#"
+        "saml_signature_canonicalization_method": "http://www.w3.org/2001/10/xml-exc-c14n#",
+        "saml_idp_initiated_sso_url_name": "caddy-saml-sp"
       },
       "baseUrl": "http://localhost:8080",
       "adminUrl": "http://localhost:8080/saml",

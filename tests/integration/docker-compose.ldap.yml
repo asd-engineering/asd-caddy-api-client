@@ -10,8 +10,12 @@ services:
       LDAP_CONFIG_PASSWORD: "config"
       LDAP_TLS: "false"
       LDAP_TLS_VERIFY_CLIENT: "never"
+      LDAP_REMOVE_CONFIG_AFTER_SETUP: "false"
     volumes:
-      - ./fixtures/ldap-bootstrap.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/bootstrap.ldif:ro
+      - ldap-data:/var/lib/ldap
+      - ldap-config:/etc/ldap/slapd.d
+      - ./fixtures/ldap-bootstrap.ldif:/ldif/bootstrap.ldif:ro
+    command: --copy-service --loglevel debug
     ports:
       - "389:389"
       - "636:636"
@@ -29,11 +33,12 @@ services:
           "cn=admin,dc=test,dc=local",
           "-w",
           "admin",
+          "(objectClass=*)",
         ]
       interval: 5s
       timeout: 3s
-      retries: 10
-      start_period: 10s
+      retries: 15
+      start_period: 30s
 
   phpldapadmin:
     image: osixia/phpldapadmin:0.9.0
@@ -46,3 +51,7 @@ services:
     depends_on:
       openldap:
         condition: service_healthy
+
+volumes:
+  ldap-data:
+  ldap-config:
