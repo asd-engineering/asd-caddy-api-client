@@ -53,6 +53,7 @@
     "test:coverage:integration": "echo '\n================================================\nRunning Integration Tests (bun)\n================================================\n' && INTEGRATION_TEST=true bun test src/__tests__/integration/",
     "test:integration": "INTEGRATION_TEST=true bun test src/__tests__/integration/ --no-coverage",
     "test:playwright": "playwright test",
+    "test:auth-types": "playwright test src/__tests__/playwright/",
     "test:oauth": "playwright test src/__tests__/playwright/oauth-flow.spec.ts",
     "docker:oauth:up": "docker compose -f tests/integration/docker-compose.oauth.yml up -d",
     "docker:oauth:down": "docker compose -f tests/integration/docker-compose.oauth.yml down",

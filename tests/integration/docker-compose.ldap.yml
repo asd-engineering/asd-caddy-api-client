@@ -42,7 +42,7 @@ services:
       PHPLDAPADMIN_LDAP_HOSTS: openldap
       PHPLDAPADMIN_HTTPS: "false"
     ports:
-      - "8081:80"
+      - "8083:80"
     depends_on:
       openldap:
         condition: service_healthy

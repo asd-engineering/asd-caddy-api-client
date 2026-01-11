@@ -4,319 +4,283 @@
 
 This document outlines the integration testing strategy for caddy-security authentication types using Playwright for browser-based flows and Docker containers for identity providers.
 
-## Test Phases
+## Auth Types vs Identity Providers
 
-| Phase       | Focus                  | Services           | Priority |
-| ----------- | ---------------------- | ------------------ | -------- |
-| **Phase 1** | Quick Wins (No Docker) | None               | P0       |
-| **Phase 2** | Mock OAuth             | mock-oauth2-server | P0       |
-| **Phase 3** | Full OAuth/OIDC        | Keycloak           | P1       |
-| **Phase 4** | LDAP                   | OpenLDAP           | P1       |
-| **Phase 5** | SAML                   | Keycloak SAML      | P2       |
-| **Phase 6** | Advanced               | Authentik, MFA     | P3       |
+caddy-security supports these **authentication types**:
 
----
+| Auth Type  | Protocol       | Identity Store/Provider            |
+| ---------- | -------------- | ---------------------------------- |
+| **Local**  | Form-based     | JSON file (`local` driver)         |
+| **LDAP**   | LDAP bind      | Directory server (`ldap` driver)   |
+| **OAuth2** | OAuth 2.0      | Social providers (`oauth2` driver) |
+| **OIDC**   | OpenID Connect | Any OIDC provider (`oidc` driver)  |
+| **SAML**   | SAML 2.0       | SAML IdP (`saml` driver)           |
 
-## Phase 1: Quick Wins (No External Services)
+Our tests cover each auth **type**, not each **product**. Some phases use the same product (Keycloak) for different protocols.
 
-These tests validate caddy-security configuration generation without running Caddy or identity providers.
+## Test Coverage Matrix
 
-### Tests
+| Phase | Auth Type             | Service    | Unique Coverage                        |
+| ----- | --------------------- | ---------- | -------------------------------------- |
+| 1     | Config validation     | None       | Schema/type correctness                |
+| 2     | **OIDC** (basic)      | Mock OAuth | Protocol compliance, minimal setup     |
+| 3     | **OIDC** (enterprise) | Keycloak   | RBAC: roles, groups, claims mapping    |
+| 4     | **LDAP**              | OpenLDAP   | Directory auth, bind operations        |
+| 5     | **SAML**              | Keycloak   | Federation protocol, attribute mapping |
+| 6     | **MFA/Flows**         | Authentik  | TOTP, WebAuthn, auth flows, outposts   |
 
-| Test                          | Description                           | Playwright? |
-| ----------------------------- | ------------------------------------- | ----------- |
-| `local-identity-store`        | Generate local user store config      | No          |
-| `jwt-validation-config`       | Generate JWT validator config         | No          |
-| `acl-rule-config`             | Generate ACL rules                    | No          |
-| `portal-config`               | Generate authentication portal config | No          |
-| `cookie-config`               | Generate cookie settings              | No          |
-| `oauth-provider-config`       | Generate OAuth provider config        | No          |
-| `authorization-policy-config` | Generate authorization policy         | No          |
+### Why Multiple OIDC Tests?
 
-### Implementation
+- **Mock OAuth (Phase 2)**: Fast, deterministic, validates OIDC protocol basics
+- **Keycloak (Phase 3)**: Enterprise features - role mapping, group membership, custom claims
+- **Authentik (Phase 6)**: Advanced IdP features - MFA enrollment, configurable flows
 
-```typescript
-// src/__tests__/integration/caddy-security-config.integration.test.ts
-describe("caddy-security config generation", () => {
-  test("generates valid local identity store config", () => {
-    const config = buildLocalIdentityStore({
-      name: "local_users",
-      realm: "local",
-      path: "users.json",
-    });
-    expect(config).toMatchSnapshot();
-  });
+## Quick Start
 
-  test("generates valid OAuth provider config", () => {
-    const config = buildOAuthProvider({
-      name: "google",
-      driver: "google",
-      client_id: "xxx",
-      client_secret: "xxx",
-      scopes: ["openid", "email", "profile"],
-    });
-    expect(config).toMatchSnapshot();
-  });
-});
+```bash
+# Run all auth type tests (skips unavailable services)
+npm run test:auth-types
+
+# Run specific auth type
+npm run test:oauth      # OIDC basic
+npm run test:keycloak   # OIDC enterprise
+npm run test:ldap       # LDAP
+npm run test:saml       # SAML
+npm run test:authentik  # MFA/Flows
 ```
 
----
+## Phase Details
 
-## Phase 2: Mock OAuth Server
+### Phase 1: Config Validation (No Docker)
 
-Fast OAuth flow testing without real identity providers.
+Tests validate caddy-security configuration generation without external services.
 
-### Docker Service
+**Location**: `src/__tests__/caddy-security-config.test.ts`
 
-```yaml
-mock-oauth:
-  image: ghcr.io/navikt/mock-oauth2-server:2.1.0
-  ports: ["9000:9000"]
-  environment:
-    SERVER_PORT: 9000
-    JSON_CONFIG: |
-      {
-        "interactiveLogin": true,
-        "httpServer": "NettyWrapper",
-        "tokenCallbacks": [
-          {
-            "issuerId": "default",
-            "tokenExpiry": 3600,
-            "requestMappings": [
-              {
-                "requestParam": "scope",
-                "match": "openid",
-                "claims": {
-                  "sub": "test-user",
-                  "email": "test@example.com",
-                  "name": "Test User"
-                }
-              }
-            ]
-          }
-        ]
-      }
+| Test                 | Description                    |
+| -------------------- | ------------------------------ |
+| Local identity store | JSON user database config      |
+| JWT validation       | Token validator config         |
+| ACL rules            | Access control list generation |
+| Portal config        | Authentication portal settings |
+| OAuth provider       | OAuth2/OIDC provider config    |
+
+### Phase 2: OIDC Basic (Mock OAuth)
+
+Fast OAuth/OIDC testing with deterministic mock server.
+
+**Purpose**: Validate OIDC protocol compliance without enterprise complexity.
+
+```bash
+npm run docker:oauth:up
+npm run test:oauth
+npm run docker:oauth:down
 ```
 
-### Playwright Tests
+| Test               | Coverage                           |
+| ------------------ | ---------------------------------- |
+| Discovery endpoint | `.well-known/openid-configuration` |
+| Authorization flow | Redirect to IdP, code exchange     |
+| Token exchange     | Code → access/id tokens            |
+| JWT claims         | Token structure validation         |
+| JWKS endpoint      | Key rotation support               |
 
-| Test                       | Flow                                |
-| -------------------------- | ----------------------------------- |
-| `oauth-authorize-redirect` | App → Mock OAuth login page         |
-| `oauth-callback`           | Mock OAuth → App callback with code |
-| `oauth-token-exchange`     | Code → Token exchange               |
-| `oauth-userinfo`           | Token → User info endpoint          |
-| `oauth-logout`             | Logout flow                         |
+### Phase 3: OIDC Enterprise (Keycloak)
 
-### Implementation
+Production-like OIDC with enterprise RBAC features.
 
-```typescript
-// src/__tests__/integration/oauth-flow.integration.test.ts
-import { test, expect } from "@playwright/test";
+**Purpose**: Validate role-based access, group claims, token customization.
 
-test.describe("OAuth Flow with Mock Server", () => {
-  test("completes full OAuth login flow", async ({ page }) => {
-    // 1. Visit protected resource
-    await page.goto("http://localhost:8080/protected");
-
-    // 2. Should redirect to OAuth login
-    await expect(page).toHaveURL(/mock-oauth.*authorize/);
-
-    // 3. Fill login form (mock server auto-login or interactive)
-    await page.fill('[name="username"]', "test-user");
-    await page.click('button[type="submit"]');
-
-    // 4. Should redirect back with token
-    await expect(page).toHaveURL(/localhost:8080/);
-
-    // 5. Verify authenticated state
-    await expect(page.locator(".user-info")).toContainText("test@example.com");
-  });
-});
+```bash
+npm run docker:keycloak:up
+npm run test:keycloak
+npm run docker:keycloak:down
 ```
 
----
+| Test                | Coverage                     |
+| ------------------- | ---------------------------- |
+| Direct access grant | Username/password → tokens   |
+| Token refresh       | Refresh token flow           |
+| Userinfo endpoint   | Standard claims              |
+| Role mapping        | Realm/client roles in tokens |
+| Group membership    | Group claims                 |
+| Browser login       | Interactive OIDC flow        |
 
-## Phase 3: Keycloak (Full OIDC)
+### Phase 4: LDAP
 
-Production-like OAuth/OIDC testing with Keycloak.
+Directory-based authentication using OpenLDAP.
 
-### Docker Service
+**Purpose**: Validate LDAP bind, user search, group membership.
 
-```yaml
-keycloak:
-  image: quay.io/keycloak/keycloak:23.0
-  command: start-dev --import-realm
-  environment:
-    KEYCLOAK_ADMIN: admin
-    KEYCLOAK_ADMIN_PASSWORD: admin
-  volumes:
-    - ./fixtures/keycloak-realm.json:/opt/keycloak/data/import/realm.json
-  ports: ["8080:8080"]
+```bash
+npm run docker:ldap:up
+npm run test:ldap
+npm run docker:ldap:down
 ```
 
-### Realm Fixture
+| Test                 | Coverage                   |
+| -------------------- | -------------------------- |
+| Server health        | Connection, bind           |
+| User search          | By uid, email, cn          |
+| Group membership     | `memberOf`, `groupOfNames` |
+| Organizational units | `ou=users`, `ou=groups`    |
+| Service accounts     | Bind DN for searches       |
 
-```json
-{
-  "realm": "test-realm",
-  "enabled": true,
-  "clients": [
-    {
-      "clientId": "caddy-app",
-      "enabled": true,
-      "publicClient": false,
-      "secret": "test-secret",
-      "redirectUris": ["http://localhost:8080/*"],
-      "webOrigins": ["http://localhost:8080"]
-    }
-  ],
-  "users": [
-    {
-      "username": "testuser",
-      "email": "test@example.com",
-      "enabled": true,
-      "credentials": [{ "type": "password", "value": "password" }],
-      "realmRoles": ["user"]
-    }
-  ]
-}
+### Phase 5: SAML
+
+SAML 2.0 federation using Keycloak as IdP.
+
+**Purpose**: Validate SAML protocol, attribute mapping, SSO/SLO.
+
+```bash
+npm run docker:saml:up
+npm run test:saml
+npm run docker:saml:down
 ```
 
-### Tests
+| Test              | Coverage                   |
+| ----------------- | -------------------------- |
+| IdP metadata      | Entity ID, SSO bindings    |
+| Attribute mapping | Email, name, roles, groups |
+| Browser SSO       | SAML request/response flow |
+| Protocol mappers  | Claim transformation       |
+| Single logout     | SLO endpoints              |
 
-| Test                     | Description          |
-| ------------------------ | -------------------- |
-| `keycloak-oidc-login`    | Full OIDC login flow |
-| `keycloak-refresh-token` | Token refresh        |
-| `keycloak-logout`        | RP-initiated logout  |
-| `keycloak-groups`        | Group claims mapping |
-| `keycloak-roles`         | Role-based access    |
+### Phase 6: Advanced IdP (Authentik)
 
----
+Enterprise IdP with MFA and configurable authentication flows.
 
-## Phase 4: LDAP
+**Purpose**: Validate MFA enrollment, TOTP/WebAuthn, auth flow customization.
 
-### Docker Service
-
-```yaml
-openldap:
-  image: osixia/openldap:1.5.0
-  environment:
-    LDAP_ORGANISATION: "Test Org"
-    LDAP_DOMAIN: "test.local"
-    LDAP_ADMIN_PASSWORD: "admin"
-    LDAP_TLS: "false"
-  volumes:
-    - ./fixtures/ldap-bootstrap.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/bootstrap.ldif
-  ports: ["389:389"]
+```bash
+npm run docker:authentik:up
+npm run test:authentik
+npm run docker:authentik:down
 ```
 
-### LDIF Fixture
+| Test               | Coverage                  |
+| ------------------ | ------------------------- |
+| Health endpoints   | Ready, live checks        |
+| Admin interface    | Bootstrap login           |
+| API endpoints      | v3 API structure          |
+| MFA stages         | TOTP, WebAuthn            |
+| Flow configuration | Auth flow customization   |
+| Outposts           | Reverse proxy integration |
 
-```ldif
-dn: ou=users,dc=test,dc=local
-objectClass: organizationalUnit
-ou: users
+## Running All Tests
 
-dn: cn=testuser,ou=users,dc=test,dc=local
-objectClass: inetOrgPerson
-cn: testuser
-sn: User
-uid: testuser
-mail: test@test.local
-userPassword: password
+```bash
+# Run all auth type tests at once
+# Tests skip gracefully when their service isn't running
+npm run test:auth-types
 
-dn: cn=admins,ou=groups,dc=test,dc=local
-objectClass: groupOfNames
-cn: admins
-member: cn=testuser,ou=users,dc=test,dc=local
+# Example output:
+# 70 skipped (services not running)
+# 6 passed (validation tests)
 ```
 
-### Tests
+To run with all services:
 
-| Test                    | Description               |
-| ----------------------- | ------------------------- |
-| `ldap-simple-bind`      | Username/password auth    |
-| `ldap-search-user`      | User lookup               |
-| `ldap-group-membership` | Group-based authorization |
+```bash
+# Start services (note: may have port conflicts if run simultaneously)
+npm run docker:oauth:up
+npm run docker:keycloak:up
+npm run docker:ldap:up
+npm run docker:saml:up
+npm run docker:authentik:up
 
----
+# Wait for services to be healthy (~60s for Authentik)
 
-## Phase 5: SAML
+# Run all tests
+npm run test:auth-types
 
-Uses Keycloak as SAML IdP.
+# Cleanup
+npm run docker:oauth:down
+npm run docker:keycloak:down
+npm run docker:ldap:down
+npm run docker:saml:down
+npm run docker:authentik:down
+```
 
-### Tests
+## Port Assignments
 
-| Test                     | Description               |
-| ------------------------ | ------------------------- |
-| `saml-redirect-binding`  | HTTP-Redirect flow        |
-| `saml-post-binding`      | HTTP-POST flow            |
-| `saml-attribute-mapping` | Attribute → claim mapping |
-| `saml-logout`            | SLO flow                  |
-
----
+| Service         | Port     | Notes           |
+| --------------- | -------- | --------------- |
+| Mock OAuth      | 8888     | OIDC basic      |
+| Keycloak OIDC   | 8081     | Enterprise OIDC |
+| Keycloak SAML   | 8082     | SAML IdP        |
+| OpenLDAP        | 389, 636 | LDAP/LDAPS      |
+| phpLDAPadmin    | 8083     | LDAP admin UI   |
+| Authentik       | 9000     | Advanced IdP    |
+| Caddy (various) | 8080     | Test proxy      |
 
 ## Directory Structure
 
 ```
 src/__tests__/
-├── integration/
-│   ├── caddy-security/
-│   │   ├── config-generation.test.ts    # Phase 1: No Docker
-│   │   ├── oauth-mock.test.ts           # Phase 2: Mock OAuth
-│   │   ├── oauth-keycloak.test.ts       # Phase 3: Keycloak
-│   │   ├── ldap.test.ts                 # Phase 4: LDAP
-│   │   └── saml.test.ts                 # Phase 5: SAML
-│   └── fixtures/
-│       ├── keycloak-realm.json
-│       ├── ldap-bootstrap.ldif
-│       └── mock-oauth-config.json
 ├── playwright/
-│   └── caddy-security/
-│       ├── oauth-flow.spec.ts
-│       ├── ldap-login.spec.ts
-│       └── saml-flow.spec.ts
-docker/
-├── docker-compose.integration.yml
-└── Caddyfile.test
+│   ├── oauth-flow.spec.ts           # Phase 2: OIDC basic
+│   ├── keycloak-oidc.spec.ts        # Phase 3: OIDC enterprise
+│   ├── ldap-identity-store.spec.ts  # Phase 4: LDAP
+│   ├── saml-flow.spec.ts            # Phase 5: SAML
+│   └── authentik-advanced.spec.ts   # Phase 6: MFA/Flows
+├── caddy-security-config.test.ts    # Phase 1: Config validation
+tests/integration/
+├── docker-compose.oauth.yml
+├── docker-compose.keycloak.yml
+├── docker-compose.ldap.yml
+├── docker-compose.saml.yml
+├── docker-compose.authentik.yml
+├── Caddyfile.*
+└── fixtures/
+    ├── keycloak-realm.json
+    ├── keycloak-saml-realm.json
+    └── ldap-bootstrap.ldif
 ```
 
-## NPM Scripts
+## Test Count Summary
 
-```json
-{
-  "test:integration:quick": "vitest run src/__tests__/integration/caddy-security/config-generation.test.ts",
-  "test:integration:oauth": "docker compose -f docker/docker-compose.integration.yml up -d mock-oauth && playwright test src/playwright/caddy-security/oauth-flow.spec.ts",
-  "test:integration:keycloak": "docker compose -f docker/docker-compose.integration.yml up -d keycloak && playwright test",
-  "test:integration:all": "docker compose -f docker/docker-compose.integration.yml up -d && playwright test"
-}
+| Phase     | Tests  | Skip Behavior                     |
+| --------- | ------ | --------------------------------- |
+| 1         | 21     | Never skip (unit tests)           |
+| 2         | 7      | Skip if Mock OAuth unavailable    |
+| 3         | 16     | Skip if Keycloak unavailable      |
+| 4         | 20     | Skip if OpenLDAP unavailable      |
+| 5         | 16     | Skip if Keycloak SAML unavailable |
+| 6         | 17     | Skip if Authentik unavailable     |
+| **Total** | **97** |                                   |
+
+## CI/CD Integration
+
+Tests can run in GitHub Actions with conditional service startup:
+
+```yaml
+jobs:
+  test-auth-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # Start only needed services
+      - run: npm run docker:oauth:up
+      - run: npm run docker:ldap:up
+
+      # Run tests (others will skip)
+      - run: npm run test:auth-types
+
+      - run: npm run docker:oauth:down
+      - run: npm run docker:ldap:down
 ```
 
 ## Success Criteria
 
-- [ ] Phase 1: All config generation tests pass
-- [ ] Phase 2: OAuth flow with mock server works end-to-end
-- [ ] Phase 3: Keycloak OIDC login/logout works
-- [ ] Phase 4: LDAP authentication works
-- [ ] Phase 5: SAML flows work
+- [x] Phase 1: Config generation tests pass
+- [x] Phase 2: Mock OAuth OIDC flow works
+- [x] Phase 3: Keycloak OIDC with RBAC works
+- [x] Phase 4: LDAP authentication works
+- [x] Phase 5: SAML flows work
+- [x] Phase 6: Authentik MFA/flows work
 - [ ] CI/CD: Integration tests run in GitHub Actions
-
-## Dependencies
-
-```json
-{
-  "devDependencies": {
-    "@playwright/test": "^1.40.0"
-  }
-}
-```
-
-## Next Steps
-
-1. Install Playwright: `npm init playwright@latest`
-2. Implement Phase 1 tests (no Docker required)
-3. Create Docker compose for Phase 2
-4. Implement OAuth flow tests with Playwright
-5. Iterate through remaining phases
