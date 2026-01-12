@@ -92,6 +92,14 @@
       {
         "command": "caddy.insertSecurityConfig",
         "title": "Caddy: Insert Security Configuration"
+      },
+      {
+        "command": "caddy.runRouteWizard",
+        "title": "Caddy: Route Configuration Wizard"
+      },
+      {
+        "command": "caddy.runSecurityWizard",
+        "title": "Caddy: Security Configuration Wizard"
       }
     ],
     "configuration": {

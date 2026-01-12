@@ -13,6 +13,7 @@ import { CaddyHoverProvider } from "./providers/hover";
 import { CaddyDiagnosticsProvider } from "./providers/diagnostics";
 import { CaddyCodeLensProvider } from "./providers/codelens";
 import { registerCommands } from "./providers/commands";
+import { runRouteWizard, runSecurityWizard } from "./wizards";
 
 /**
  * Extension activation - called when extension is first used
@@ -46,6 +47,12 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Register commands
   registerCommands(context);
+
+  // Register wizard commands
+  context.subscriptions.push(
+    vscode.commands.registerCommand("caddy.runRouteWizard", runRouteWizard),
+    vscode.commands.registerCommand("caddy.runSecurityWizard", runSecurityWizard)
+  );
 
   // Register diagnostics provider for real-time validation
   new CaddyDiagnosticsProvider(context);
