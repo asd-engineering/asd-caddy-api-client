@@ -1,0 +1,5 @@
+{
+  "handler": "invalid_handler_type",
+  "foo": "bar",
+  "unknown_field": true
+}
