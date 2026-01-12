@@ -10,6 +10,8 @@
 import * as vscode from "vscode";
 import { CaddyCompletionProvider } from "./providers/completion";
 import { CaddyHoverProvider } from "./providers/hover";
+import { CaddyDiagnosticsProvider } from "./providers/diagnostics";
+import { CaddyCodeLensProvider } from "./providers/codelens";
 import { registerCommands } from "./providers/commands";
 
 /**
@@ -45,8 +47,20 @@ export function activate(context: vscode.ExtensionContext): void {
   // Register commands
   registerCommands(context);
 
+  // Register diagnostics provider for real-time validation
+  new CaddyDiagnosticsProvider(context);
+
+  // Register code lens provider for quick docs access
+  const codeLensProvider = vscode.languages.registerCodeLensProvider(
+    [
+      { language: "json", scheme: "file" },
+      { language: "jsonc", scheme: "file" },
+    ],
+    new CaddyCodeLensProvider()
+  );
+
   // Add to subscriptions for cleanup
-  context.subscriptions.push(completionProvider, hoverProvider);
+  context.subscriptions.push(completionProvider, hoverProvider, codeLensProvider);
 
   console.log("Caddy Configuration Tools: Activated successfully");
 }

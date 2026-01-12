@@ -106,6 +106,16 @@
           "type": "boolean",
           "default": true,
           "description": "Include links to Caddy documentation in hover"
+        },
+        "caddy.showCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show documentation links above handler definitions"
+        },
+        "caddy.enableDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time validation of Caddy configurations"
         }
       }
     }
