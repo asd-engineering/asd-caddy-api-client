@@ -1,0 +1,119 @@
+# Caddyfile for caddy-security LDAP authentication testing
+# Tests the authentication portal with LDAP identity store
+
+{
+    admin :2019
+    debug
+
+    security {
+        # LDAP identity store
+        ldap identity store ldapdb {
+            realm ldap
+            servers {
+                {$LDAP_HOST}:{$LDAP_PORT}
+            }
+            attributes {
+                name givenName
+                surname sn
+                username uid
+                member_of memberOf
+                email mail
+            }
+            username "uid={username},ou=users,dc=test,dc=local"
+            search_base_dn "ou=users,dc=test,dc=local"
+            search_filter "(&(uid={username})(objectClass=inetOrgPerson))"
+            groups {
+                search_base_dn "ou=groups,dc=test,dc=local"
+                search_filter "(&(objectClass=posixGroup)(memberUid={username}))"
+            }
+        }
+
+        # Authentication portal with LDAP backend
+        authentication portal ldapportal {
+            crypto default token lifetime 3600
+            crypto key sign-verify ldap-test-secret-key-for-integration
+            enable identity store ldapdb
+            cookie domain localhost
+            cookie lifetime 3600
+            transform user {
+                match realm ldap
+                action add role authp/user
+            }
+            transform user {
+                match realm ldap
+                match groups admins
+                action add role authp/admin
+            }
+            ui {
+                links {
+                    "Dashboard" /dashboard icon "las la-home"
+                    "Admin Panel" /admin icon "las la-cog"
+                }
+            }
+        }
+
+        # Authorization policy for regular users
+        authorization policy userpolicy {
+            set auth url /auth
+            crypto key verify ldap-test-secret-key-for-integration
+            allow roles authp/user authp/admin
+            validate bearer header
+            inject headers with claims
+        }
+
+        # Authorization policy for admin only
+        authorization policy adminpolicy {
+            set auth url /auth
+            crypto key verify ldap-test-secret-key-for-integration
+            allow roles authp/admin
+            validate bearer header
+            inject headers with claims
+        }
+    }
+}
+
+:80 {
+    # Health check endpoint (no auth)
+    route /health {
+        respond "OK" 200
+    }
+
+    # Authentication portal
+    route /auth* {
+        authenticate with ldapportal
+    }
+
+    # Protected dashboard (any authenticated user)
+    route /dashboard* {
+        authorize with userpolicy
+        respond `{"status": "authenticated", "endpoint": "dashboard", "message": "LDAP user authenticated"}` 200
+    }
+
+    # Protected API (any authenticated user)
+    route /api/* {
+        authorize with userpolicy
+        respond `{"status": "authenticated", "endpoint": "api"}` 200
+    }
+
+    # Admin only endpoint
+    route /admin/* {
+        authorize with adminpolicy
+        respond `{"status": "admin_authenticated", "endpoint": "admin", "message": "LDAP admin access granted"}` 200
+    }
+
+    # Whoami endpoint - returns user claims
+    route /whoami {
+        authorize with userpolicy
+        respond `{"authenticated": true, "source": "ldap"}` 200
+    }
+
+    # Public endpoint
+    route /public* {
+        respond "Public content - no auth required" 200
+    }
+
+    # Default
+    route {
+        respond "Caddy Security LDAP Test Server - visit /auth to login" 200
+    }
+}

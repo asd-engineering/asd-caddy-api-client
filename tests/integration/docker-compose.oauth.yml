@@ -17,12 +17,64 @@ services:
               "requestMappings": [
                 {
                   "requestParam": "scope",
+                  "match": "openid profile email",
+                  "claims": {
+                    "sub": "regular-user",
+                    "email": "user@example.com",
+                    "name": "Regular User",
+                    "preferred_username": "regularuser",
+                    "roles": ["user"],
+                    "groups": ["users"]
+                  }
+                },
+                {
+                  "requestParam": "scope",
+                  "match": "openid admin",
+                  "claims": {
+                    "sub": "admin-user",
+                    "email": "admin@example.com",
+                    "name": "Admin User",
+                    "preferred_username": "adminuser",
+                    "roles": ["admin", "user"],
+                    "groups": ["users", "admins"]
+                  }
+                },
+                {
+                  "requestParam": "scope",
                   "match": "openid",
                   "claims": {
                     "sub": "test-user",
                     "email": "test@example.com",
                     "name": "Test User",
                     "roles": ["user"]
+                  }
+                }
+              ]
+            },
+            {
+              "issuerId": "short-lived",
+              "tokenExpiry": 5,
+              "requestMappings": [
+                {
+                  "requestParam": "scope",
+                  "match": "*",
+                  "claims": {
+                    "sub": "short-lived-user",
+                    "email": "shortlived@example.com"
+                  }
+                }
+              ]
+            },
+            {
+              "issuerId": "no-roles",
+              "tokenExpiry": 3600,
+              "requestMappings": [
+                {
+                  "requestParam": "scope",
+                  "match": "*",
+                  "claims": {
+                    "sub": "no-roles-user",
+                    "email": "noroles@example.com"
                   }
                 }
               ]
