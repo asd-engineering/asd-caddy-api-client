@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://asd-engineering.github.io/asd-caddy-api-client/schemas/caddy-route.json",
+  "title": "Caddy Route",
+  "description": "Caddy HTTP route configuration",
+  "$ref": "#/definitions/caddy-route",
+  "definitions": {
+    "caddy-route": {
+      "type": "object",
+      "properties": {
+        "@id": {
+          "type": "string"
+        },
+        "match": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "path": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "method": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+                }
+              },
+              "header": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "handle": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "handler": {
+                "type": "string"
+              }
+            },
+            "required": ["handler"],
+            "additionalProperties": true
+          },
+          "minItems": 1
+        },
+        "terminal": {
+          "type": "boolean"
+        },
+        "priority": {
+          "type": "integer"
+        }
+      },
+      "required": ["handle"],
+      "additionalProperties": false
+    }
+  }
+}

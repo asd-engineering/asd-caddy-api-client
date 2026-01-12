@@ -163,3 +163,149 @@ fix(types): replace any with proper types in <module>
 - Add composed types for cross-package references
 - Update schemas to use strict types
 ```
+
+---
+
+## VSCode Extension Synergy Architecture
+
+The VSCode extension is a **thin view** of the library. All metadata flows from library source to extension via automated extraction.
+
+### Core Principle: Single Source of Truth
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    asd-caddy-api-client                         │
+│                                                                 │
+│  JSDoc Comments ──────┬──► TypeDoc (API docs)                   │
+│  Builder Signatures   │                                         │
+│  Zod Schemas         │                                         │
+│  Handler Types       │                                         │
+│                      │                                         │
+│                      ├──► extract-metadata.ts                   │
+│                      │         │                                │
+│                      │         ▼                                │
+│                      │    extension-assets.ts                   │
+│                      │    - BUILDER_METADATA (41 functions)     │
+│                      │    - HANDLER_METADATA (21 handlers)      │
+│                      │    - Snippets, completions, hover docs   │
+│                      │                                         │
+│                      └──► generate-json-schemas.ts              │
+│                                │                                │
+│                                ▼                                │
+│                           schemas/*.json (20 schemas)           │
+│                                                                 │
+│  Exports:                                                       │
+│    "./extension-assets" ────────────────────────────────────┐  │
+└─────────────────────────────────────────────────────────────┼──┘
+                                                               │
+                              ┌────────────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    VSCode Extension (Thin)                      │
+│                                                                 │
+│  import { BUILDER_METADATA, HANDLER_METADATA }                  │
+│    from "@asd/caddy-api-client/extension-assets";               │
+│                                                                 │
+│  - NO duplicate type definitions                                │
+│  - NO duplicate documentation                                   │
+│  - NO manual snippet maintenance                                │
+│  - Just UI/UX code (~500 lines)                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Metadata Flow
+
+| Source               | Extracted To                        | Used For                  |
+| -------------------- | ----------------------------------- | ------------------------- |
+| JSDoc `@description` | `BUILDER_METADATA.description`      | Hover docs, snippets      |
+| JSDoc `@default`     | `BUILDER_METADATA.params[].default` | Snippet placeholders      |
+| JSDoc `@example`     | `BUILDER_METADATA.example`          | Hover documentation       |
+| Builder signatures   | `BUILDER_METADATA.params`           | Wizard steps, completions |
+| Handler interfaces   | `HANDLER_METADATA`                  | Autocomplete, docs links  |
+| Zod schemas          | `schemas/*.json`                    | JSON validation in editor |
+
+### Generation Pipeline
+
+```bash
+# Full regeneration pipeline
+npm run generate:all
+
+# Individual steps:
+npm run generate:types        # Go → TypeScript (existing)
+npm run generate:plugin-types # Plugin types (existing)
+npm run generate:extension    # Extract metadata → extension-assets.ts
+npm run generate:json-schemas # Zod → JSON Schema
+```
+
+### Key Files
+
+**Library (Metadata Source)**
+
+- `src/plugins/caddy-security/builders.ts` - Security builder functions with JSDoc
+- `src/caddy/routes.ts` - Route builder functions
+- `src/types.ts` - Handler type definitions
+- `src/schemas.ts` - Zod schemas for validation
+
+**Library (Generated Assets)**
+
+- `src/generated/extension-assets.ts` - Extracted metadata for extension
+- `src/generated/schemas/*.json` - JSON Schemas from Zod
+
+**Scripts**
+
+- `scripts/extract-metadata.ts` - TypeScript AST parsing for metadata
+- `scripts/generate-json-schemas.ts` - Zod to JSON Schema conversion
+
+**Extension**
+
+- `vscode-extension/src/extension.ts` - Entry point (~60 lines)
+- `vscode-extension/src/providers/` - Completion, hover, commands
+
+### Adding New Builders
+
+When adding a new builder function:
+
+1. Write the function with proper JSDoc (`@description`, `@default`, `@example`)
+2. Run `npm run generate:extension`
+3. The builder automatically appears in extension snippets, completions, and hover docs
+
+````typescript
+/**
+ * Build a custom handler configuration
+ *
+ * @param options - Handler options
+ * @returns Validated handler configuration
+ *
+ * @example
+ * ```typescript
+ * const handler = buildCustomHandler({ setting: "value" });
+ * ```
+ */
+export function buildCustomHandler(options: BuildCustomHandlerOptions): CustomHandler {
+  // Implementation
+}
+````
+
+### Adding New Handlers
+
+When a new Caddy handler is added:
+
+1. Add the handler interface to `src/types.ts`
+2. Add to the `CaddyRouteHandler` union type
+3. Add handler info to `scripts/extract-metadata.ts` `handlerInfo` object
+4. Run `npm run generate:extension`
+
+### Code Size Comparison
+
+| Approach                           | Lines of Code |
+| ---------------------------------- | ------------- |
+| Traditional (duplicate everything) | ~5,000+       |
+| Synergy (thin view)                | ~1,100        |
+
+### Extension Development Rules
+
+1. **Don't duplicate** - If metadata exists in the library, import it
+2. **Regenerate after changes** - Run `npm run generate:extension` after modifying builders
+3. **JSDoc is the source** - Improve JSDoc in library, not extension docs
+4. **Test the pipeline** - Run `npm run generate:all` to verify the full flow
+5. **Check local/todo.md** - Contains known improvements and backlog items (not published)

@@ -19,6 +19,7 @@ export default tseslint.config(
       "src/generated/**", // Generated type files from Caddy Go source
       "scripts/**", // Build/generation scripts
       "tests/integration/**/*.js", // Docker test helper scripts (Node.js)
+      "vscode-extension/**", // VSCode extension has its own tsconfig/linting
       "*.config.ts",
       "*.config.js",
       "*.config.mjs",

@@ -36,6 +36,11 @@
       "types": "./dist/plugins/caddy-security/index.d.ts",
       "import": "./dist/plugins/caddy-security/index.js",
       "require": "./dist/plugins/caddy-security/index.cjs"
+    },
+    "./extension-assets": {
+      "types": "./dist/generated/extension-assets.d.ts",
+      "import": "./dist/generated/extension-assets.js",
+      "require": "./dist/generated/extension-assets.cjs"
     }
   },
   "files": [
@@ -97,7 +102,9 @@
     "prepublishOnly": "bun run build && bun run test && bun run typecheck && bun run lint",
     "generate:types": "npx tsx scripts/generate-caddy-types.ts",
     "generate:plugin-types": "npx tsx scripts/generate-plugin-types.ts",
-    "generate:all": "npm run generate:types && npm run generate:plugin-types",
+    "generate:extension": "npx tsx scripts/extract-metadata.ts",
+    "generate:json-schemas": "npx tsx scripts/generate-json-schemas.ts",
+    "generate:all": "npm run generate:types && npm run generate:plugin-types && npm run generate:extension && npm run generate:json-schemas",
     "sync:caddy": "git -C local/caddy pull && npm run generate:types",
     "sync:plugins": "git -C local/caddy-security pull && npm run generate:plugin-types",
     "sync:all": "npm run sync:caddy && npm run sync:plugins"
@@ -150,7 +157,8 @@
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.0.0",
     "vitest": "^1.0.0",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.25.1"
   },
   "engines": {
     "node": ">=18.0.0"

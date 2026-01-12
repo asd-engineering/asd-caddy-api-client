@@ -1,0 +1,277 @@
+{
+  "Build  Local Identity Store": {
+    "prefix": "caddy-local-identity-store",
+    "body": [
+      "buildLocalIdentityStore({",
+      "  path: ${1:/etc/caddy/config.json},",
+      "  // realm: ${2:local}",
+      "})"
+    ],
+    "description": "Build a local identity store configuration"
+  },
+  "Build  Ldap Identity Store": {
+    "prefix": "caddy-ldap-identity-store",
+    "body": [
+      "buildLdapIdentityStore({",
+      "  // realm: ${1:ldap},",
+      "  servers: ${2:\"\"},",
+      "  bindDn: ${3:\"\"},",
+      "  bindPassword: ${4:\"\"},",
+      "  searchBaseDn: ${5:\"\"},",
+      "  // searchFilter: ${6:(uid={username})}",
+      "})"
+    ],
+    "description": "Build an LDAP identity store configuration"
+  },
+  "Build  O Auth2 Provider": {
+    "prefix": "caddy-o-auth2-provider",
+    "body": [
+      "buildOAuth2Provider({",
+      "  provider: ${1:\"\"},",
+      "  clientId: ${2:your-client-id},",
+      "  clientSecret: ${3:your-client-secret},",
+      "  // scopes: ${4:[\"openid\", \"email\", \"profile\"]},",
+      "})"
+    ],
+    "description": "Build an OAuth2 identity provider configuration"
+  },
+  "Build  Oidc Provider": {
+    "prefix": "caddy-oidc-provider",
+    "body": [
+      "buildOidcProvider({",
+      "  provider: ${1:\"\"},",
+      "  clientId: ${2:your-client-id},",
+      "  clientSecret: ${3:your-client-secret},",
+      "  discoveryUrl: ${4:https://idp.example.com/.well-known/openid-configuration},",
+      "  // scopes: ${5:[\"openid\", \"email\", \"profile\"]},",
+      "})"
+    ],
+    "description": "Build an OIDC identity provider configuration"
+  },
+  "Build  Authentication Portal": {
+    "prefix": "caddy-authentication-portal",
+    "body": ["buildAuthenticationPortal({", "  name: ${1:my-name},", "})"],
+    "description": "Build an authentication portal configuration"
+  },
+  "Build  Authorization Policy": {
+    "prefix": "caddy-authorization-policy",
+    "body": ["buildAuthorizationPolicy({", "  name: ${1:my-name},", "})"],
+    "description": "Build an authorization policy (gatekeeper) configuration"
+  },
+  "Build  Security Config": {
+    "prefix": "caddy-security-config",
+    "body": ["buildSecurityConfig({", "})"],
+    "description": "Build a security configuration"
+  },
+  "Build  Security App": {
+    "prefix": "caddy-security-app",
+    "body": ["buildSecurityApp({", "  config: ${1:\"\"}", "})"],
+    "description": "Build a complete security app configuration"
+  },
+  "Build  Authenticator Handler": {
+    "prefix": "caddy-authenticator-handler",
+    "body": ["buildAuthenticatorHandler({", "  portalName: ${1:\"\"},", "})"],
+    "description": "Build an authenticator portal handler"
+  },
+  "Build  Authorization Handler": {
+    "prefix": "caddy-authorization-handler",
+    "body": ["buildAuthorizationHandler({", "  gatekeeperName: ${1:\"\"},", "})"],
+    "description": "Build an authorization handler"
+  },
+  "Build  Authenticator Route": {
+    "prefix": "caddy-authenticator-route",
+    "body": [
+      "buildAuthenticatorRoute({",
+      "  hosts: ${1:example.com},",
+      "  portalName: ${2:\"\"},",
+      "  // priority: ${3:10 (AUTH_DOMAIN priority)},",
+      "})"
+    ],
+    "description": "Build a complete authentication portal route"
+  },
+  "Build  Protected Route": {
+    "prefix": "caddy-protected-route",
+    "body": [
+      "buildProtectedRoute({",
+      "  hosts: ${1:example.com},",
+      "  gatekeeperName: ${2:\"\"},",
+      "  dial: ${3:localhost:3000},",
+      "  // priority: ${4:50 (SERVICE priority)},",
+      "})"
+    ],
+    "description": "Build a protected route with authorization"
+  },
+  "Build  Service Routes": {
+    "prefix": "caddy-service-routes",
+    "body": ["buildServiceRoutes({", "})"],
+    "description": "Build routes for a service (host-based and/or path-based)"
+  },
+  "Build  Health Check Route": {
+    "prefix": "caddy-health-check-route",
+    "body": ["buildHealthCheckRoute({", "})"],
+    "description": "Build a health check route"
+  },
+  "Build  Host Route": {
+    "prefix": "caddy-host-route",
+    "body": ["buildHostRoute({", "})"],
+    "description": "Build a host-based route"
+  },
+  "Build  Path Route": {
+    "prefix": "caddy-path-route",
+    "body": ["buildPathRoute({", "})"],
+    "description": "Build a path-based route"
+  },
+  "Build  Load Balancer Route": {
+    "prefix": "caddy-load-balancer-route",
+    "body": ["buildLoadBalancerRoute({", "})"],
+    "description": "Build a load balancer route"
+  },
+  "Build  Reverse Proxy Handler": {
+    "prefix": "caddy-reverse-proxy-handler",
+    "body": ["buildReverseProxyHandler({", "})"],
+    "description": "Build a reverse proxy handler"
+  },
+  "Build  Security Headers Handler": {
+    "prefix": "caddy-security-headers-handler",
+    "body": ["buildSecurityHeadersHandler({", "})"],
+    "description": "Build a security headers handler"
+  },
+  "Build  Basic Auth Handler": {
+    "prefix": "caddy-basic-auth-handler",
+    "body": ["buildBasicAuthHandler({", "})"],
+    "description": "Build a basic auth handler"
+  },
+  "Build  Rewrite Handler": {
+    "prefix": "caddy-rewrite-handler",
+    "body": ["buildRewriteHandler({", "})"],
+    "description": "Build a rewrite handler (strip path prefix)"
+  },
+  "Build  Ingress Tag Headers Handler": {
+    "prefix": "caddy-ingress-tag-headers-handler",
+    "body": ["buildIngressTagHeadersHandler({", "})"],
+    "description": "Build an ingress tag header handler"
+  },
+  "Build  Iframe Headers Handler": {
+    "prefix": "caddy-iframe-headers-handler",
+    "body": ["buildIframeHeadersHandler({", "})"],
+    "description": "Build CORS/CSP headers for iframe embedding"
+  },
+  "Build  Redirect Route": {
+    "prefix": "caddy-redirect-route",
+    "body": ["buildRedirectRoute({", "})"],
+    "description": "Build a redirect route for domain redirects (www <-> non-www)"
+  },
+  "Build  Compression Handler": {
+    "prefix": "caddy-compression-handler",
+    "body": ["buildCompressionHandler({", "})"],
+    "description": "Build a compression (encode) handler"
+  },
+  "Build  Www Redirect": {
+    "prefix": "caddy-www-redirect",
+    "body": ["buildWwwRedirect({", "})"],
+    "description": "Build a WWW redirect route (www.example.com ↔ example.com)"
+  },
+  "Build  Mitmproxy Route": {
+    "prefix": "caddy-mitmproxy-route",
+    "body": ["buildMitmproxyRoute({", "})"],
+    "description": "Build a route that forwards traffic through MITMproxy for inspection"
+  },
+  "Build  Mitmproxy Route Pair": {
+    "prefix": "caddy-mitmproxy-route-pair",
+    "body": ["buildMitmproxyRoutePair({", "})"],
+    "description": "Create a hot-swappable route pair for enabling/disabling MITMproxy interception"
+  },
+  "Build  Iframe Proxy Route": {
+    "prefix": "caddy-iframe-proxy-route",
+    "body": [
+      "buildIframeProxyRoute({",
+      "  pathPrefix: ${1:\"\"},",
+      "  upstreamHost: ${2:\"\"},",
+      "  upstreamPort: ${3:0},",
+      "})"
+    ],
+    "description": "Build a route for proxying a web UI with iframe embedding support"
+  },
+  "Build  Mitmproxy Web Ui Route": {
+    "prefix": "caddy-mitmproxy-web-ui-route",
+    "body": ["buildMitmproxyWebUiRoute({", "})"],
+    "description": ""
+  },
+  "Build  Web Socket Proxy Route": {
+    "prefix": "caddy-web-socket-proxy-route",
+    "body": [
+      "buildWebSocketProxyRoute({",
+      "  path: ${1:/etc/caddy/config.json},",
+      "  upstreamHost: ${2:\"\"},",
+      "  upstreamPort: ${3:0},",
+      "})"
+    ],
+    "description": "Build a route for WebSocket proxy"
+  },
+  "Build  Mitmproxy Web Socket Route": {
+    "prefix": "caddy-mitmproxy-web-socket-route",
+    "body": ["buildMitmproxyWebSocketRoute({", "})"],
+    "description": ""
+  },
+  "Build  Iframe Permissive Handler": {
+    "prefix": "caddy-iframe-permissive-handler",
+    "body": ["buildIframePermissiveHandler({", "})"],
+    "description": "Build a header handler that removes restrictive headers for iframe embedding"
+  },
+  "Build  Dns Rebinding Bypass Handler": {
+    "prefix": "caddy-dns-rebinding-bypass-handler",
+    "body": ["buildDnsRebindingBypassHandler({", "})"],
+    "description": "Build a header handler for DNS rebinding bypass"
+  },
+  "Build  File Server Route": {
+    "prefix": "caddy-file-server-route",
+    "body": [
+      "buildFileServerRoute({",
+      "  path: ${1:/etc/caddy/config.json},",
+      "  root: ${2:\"\"},",
+      "})"
+    ],
+    "description": "Build a file server route for serving static files"
+  },
+  "Build  Templates Route": {
+    "prefix": "caddy-templates-route",
+    "body": [
+      "buildTemplatesRoute({",
+      "  path: ${1:/etc/caddy/config.json},",
+      "  fileRoot: ${2:\"\"},",
+      "})"
+    ],
+    "description": "Build a templates route for server-side template rendering"
+  },
+  "Build  Error Route": {
+    "prefix": "caddy-error-route",
+    "body": ["buildErrorRoute({", "  statusCode: ${1:0},", "})"],
+    "description": "Build an error route that returns a static error response"
+  },
+  "Build  Request Body Handler": {
+    "prefix": "caddy-request-body-handler",
+    "body": ["buildRequestBodyHandler({", "  maxSize: ${1:0}", "})"],
+    "description": "Build a request body handler for limiting request body size"
+  },
+  "Build  Vars Handler": {
+    "prefix": "caddy-vars-handler",
+    "body": ["buildVarsHandler({", "  vars: ${1:\"\"}", "})"],
+    "description": "Build a vars handler for setting request variables"
+  },
+  "Build  Tracing Handler": {
+    "prefix": "caddy-tracing-handler",
+    "body": ["buildTracingHandler({", "})"],
+    "description": "Build a tracing handler for distributed tracing"
+  },
+  "Build  Map Handler": {
+    "prefix": "caddy-map-handler",
+    "body": [
+      "buildMapHandler({",
+      "  source: ${1:\"\"},",
+      "  destinations: ${2:[\"value\"]},",
+      "  mappings: ${3:[\"value\"]},",
+      "})"
+    ],
+    "description": "Build a map handler for variable mapping"
+  }
+}
