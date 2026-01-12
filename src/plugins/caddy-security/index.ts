@@ -67,12 +67,39 @@ export {
 
 // Builders
 export {
+  // Identity stores
+  buildLocalIdentityStore,
+  buildLdapIdentityStore,
+  type BuildLocalIdentityStoreOptions,
+  type BuildLdapIdentityStoreOptions,
+  type LdapServerConfig,
+  // Identity providers
+  buildOAuth2Provider,
+  buildOidcProvider,
+  type BuildOAuth2ProviderOptions,
+  type BuildOidcProviderOptions,
+  // Portals and policies
+  buildAuthenticationPortal,
+  buildAuthorizationPolicy,
+  type BuildAuthenticationPortalOptions,
+  type BuildAuthorizationPolicyOptions,
+  type PortalUiOptions,
+  type CookieOptions,
+  type AccessListEntry,
+  type CryptoKeyConfig,
+  // Config builders
+  buildSecurityConfig,
+  buildSecurityApp,
+  type BuildSecurityConfigOptions,
+  type BuildSecurityAppOptions,
+  // Handlers
   buildAuthenticatorHandler,
   buildAuthorizationHandler,
-  buildAuthenticatorRoute,
-  buildProtectedRoute,
   type BuildAuthenticatorHandlerOptions,
   type BuildAuthorizationHandlerOptions,
+  // Routes
+  buildAuthenticatorRoute,
+  buildProtectedRoute,
   type BuildAuthenticationRouteOptions,
   type BuildProtectedRouteOptions,
 } from "./builders.js";

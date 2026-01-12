@@ -10,6 +10,14 @@ import {
   buildAuthorizationHandler,
   buildAuthenticatorRoute,
   buildProtectedRoute,
+  buildLocalIdentityStore,
+  buildLdapIdentityStore,
+  buildOAuth2Provider,
+  buildOidcProvider,
+  buildAuthenticationPortal,
+  buildAuthorizationPolicy,
+  buildSecurityConfig,
+  buildSecurityApp,
 } from "../plugins/caddy-security/builders.js";
 
 // Import generated types for type safety
@@ -79,6 +87,329 @@ describe("Phase 1: caddy-security Config Generation", () => {
             gatekeeper_name: "mygatekeeper",
             route_matcher: "/api/*",
           },
+        },
+      });
+    });
+  });
+
+  // ============================================================================
+  // Identity Store Builder Tests
+  // ============================================================================
+
+  describe("Identity Store Builders", () => {
+    test("buildLocalIdentityStore creates valid local store", () => {
+      const store = buildLocalIdentityStore({
+        path: "/etc/caddy/users.json",
+        realm: "local",
+      });
+
+      expect(store).toEqual({
+        driver: "local",
+        realm: "local",
+        path: "/etc/caddy/users.json",
+      });
+    });
+
+    test("buildLocalIdentityStore uses default realm", () => {
+      const store = buildLocalIdentityStore({
+        path: "/etc/caddy/users.json",
+      });
+
+      expect(store.realm).toBe("local");
+    });
+
+    test("buildLdapIdentityStore creates valid LDAP store", () => {
+      const store = buildLdapIdentityStore({
+        servers: [{ address: "ldap.example.com", port: 389 }],
+        bindDn: "cn=admin,dc=example,dc=com",
+        bindPassword: "secret",
+        searchBaseDn: "ou=users,dc=example,dc=com",
+        searchFilter: "(uid={username})",
+        realm: "corporate",
+      });
+
+      expect(store).toEqual({
+        driver: "ldap",
+        realm: "corporate",
+        servers: [{ address: "ldap.example.com", port: 389 }],
+        bind_dn: "cn=admin,dc=example,dc=com",
+        bind_password: "secret",
+        search_base_dn: "ou=users,dc=example,dc=com",
+        search_filter: "(uid={username})",
+      });
+    });
+
+    test("buildLdapIdentityStore uses default realm and filter", () => {
+      const store = buildLdapIdentityStore({
+        servers: [{ address: "ldap.example.com" }],
+        bindDn: "cn=admin,dc=example,dc=com",
+        bindPassword: "secret",
+        searchBaseDn: "ou=users,dc=example,dc=com",
+      });
+
+      expect(store.realm).toBe("ldap");
+      expect(store.search_filter).toBe("(uid={username})");
+    });
+
+    test("buildLdapIdentityStore with multiple servers", () => {
+      const store = buildLdapIdentityStore({
+        servers: [
+          { address: "ldap1.example.com", port: 389 },
+          { address: "ldap2.example.com", port: 636 },
+        ],
+        bindDn: "cn=admin,dc=example,dc=com",
+        bindPassword: "secret",
+        searchBaseDn: "ou=users,dc=example,dc=com",
+      });
+
+      expect(store.servers).toHaveLength(2);
+      expect(store.servers?.[0].address).toBe("ldap1.example.com");
+      expect(store.servers?.[1].port).toBe(636);
+    });
+  });
+
+  // ============================================================================
+  // Identity Provider Builder Tests
+  // ============================================================================
+
+  describe("Identity Provider Builders", () => {
+    test("buildOAuth2Provider creates valid OAuth2 provider", () => {
+      const provider = buildOAuth2Provider({
+        provider: "github",
+        clientId: "my-client-id",
+        clientSecret: "my-client-secret",
+        scopes: ["user:email", "read:user"],
+      });
+
+      expect(provider).toEqual({
+        driver: "oauth2",
+        realm: "github",
+        provider: "github",
+        client_id: "my-client-id",
+        client_secret: "my-client-secret",
+        scopes: ["user:email", "read:user"],
+      });
+    });
+
+    test("buildOAuth2Provider uses default scopes", () => {
+      const provider = buildOAuth2Provider({
+        provider: "google",
+        clientId: "my-client-id",
+        clientSecret: "my-client-secret",
+      });
+
+      expect(provider.scopes).toEqual(["openid", "email", "profile"]);
+    });
+
+    test("buildOAuth2Provider with custom realm", () => {
+      const provider = buildOAuth2Provider({
+        provider: "google",
+        clientId: "my-client-id",
+        clientSecret: "my-client-secret",
+        realm: "custom-realm",
+      });
+
+      expect(provider.realm).toBe("custom-realm");
+    });
+
+    test("buildOidcProvider creates valid OIDC provider", () => {
+      const provider = buildOidcProvider({
+        provider: "keycloak",
+        clientId: "my-app",
+        clientSecret: "my-secret",
+        discoveryUrl:
+          "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",
+        scopes: ["openid", "email", "profile", "roles"],
+      });
+
+      expect(provider).toEqual({
+        driver: "oidc",
+        realm: "keycloak",
+        provider: "keycloak",
+        client_id: "my-app",
+        client_secret: "my-secret",
+        discovery_url:
+          "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",
+        scopes: ["openid", "email", "profile", "roles"],
+      });
+    });
+
+    test("buildOidcProvider uses default scopes", () => {
+      const provider = buildOidcProvider({
+        provider: "okta",
+        clientId: "my-app",
+        clientSecret: "my-secret",
+        discoveryUrl: "https://okta.example.com/.well-known/openid-configuration",
+      });
+
+      expect(provider.scopes).toEqual(["openid", "email", "profile"]);
+    });
+  });
+
+  // ============================================================================
+  // Portal and Policy Builder Tests
+  // ============================================================================
+
+  describe("Portal and Policy Builders", () => {
+    test("buildAuthenticationPortal creates minimal portal", () => {
+      const portal = buildAuthenticationPortal({
+        name: "myportal",
+        identityStores: ["local"],
+      });
+
+      expect(portal).toEqual({
+        name: "myportal",
+        identity_stores: ["local"],
+      });
+    });
+
+    test("buildAuthenticationPortal with full configuration", () => {
+      const portal = buildAuthenticationPortal({
+        name: "myportal",
+        identityStores: ["local", "ldap"],
+        identityProviders: ["keycloak", "google"],
+        ui: {
+          theme: "dark",
+          logoUrl: "https://example.com/logo.png",
+          customCss: ".header { color: blue; }",
+        },
+        cookie: {
+          domain: ".example.com",
+          path: "/",
+          lifetime: "24h",
+        },
+        transformUser: {
+          "match origin local": { "add role": "user" },
+        },
+      });
+
+      expect(portal).toEqual({
+        name: "myportal",
+        identity_stores: ["local", "ldap"],
+        identity_providers: ["keycloak", "google"],
+        ui: {
+          theme: "dark",
+          logo_url: "https://example.com/logo.png",
+          custom_css: ".header { color: blue; }",
+        },
+        cookie: {
+          domain: ".example.com",
+          path: "/",
+          lifetime: "24h",
+        },
+        transform_user: {
+          "match origin local": { "add role": "user" },
+        },
+      });
+    });
+
+    test("buildAuthorizationPolicy creates minimal policy", () => {
+      const policy = buildAuthorizationPolicy({
+        name: "mypolicy",
+      });
+
+      expect(policy).toEqual({
+        name: "mypolicy",
+      });
+    });
+
+    test("buildAuthorizationPolicy with access lists", () => {
+      const policy = buildAuthorizationPolicy({
+        name: "admin-policy",
+        accessLists: [
+          { claim: "roles", values: ["admin", "editor"], action: "allow" },
+          { claim: "email", values: ["*@example.com"] },
+        ],
+      });
+
+      expect(policy).toEqual({
+        name: "admin-policy",
+        access_lists: [
+          { action: "allow", claim: "roles", values: ["admin", "editor"] },
+          { action: "allow", claim: "email", values: ["*@example.com"] },
+        ],
+      });
+    });
+
+    test("buildAuthorizationPolicy with crypto key and bypass", () => {
+      const policy = buildAuthorizationPolicy({
+        name: "api-policy",
+        cryptoKey: {
+          tokenName: "access_token",
+          source: "cookie",
+        },
+        bypass: ["/health", "/metrics", "/public/*"],
+      });
+
+      expect(policy).toEqual({
+        name: "api-policy",
+        crypto_key: {
+          token_name: "access_token",
+          source: "cookie",
+        },
+        bypass: ["/health", "/metrics", "/public/*"],
+      });
+    });
+  });
+
+  // ============================================================================
+  // Security Config Builder Tests
+  // ============================================================================
+
+  describe("Security Config Builders", () => {
+    test("buildSecurityConfig creates empty config", () => {
+      const config = buildSecurityConfig({});
+
+      expect(config).toEqual({});
+    });
+
+    test("buildSecurityConfig with all components", () => {
+      const localStore = buildLocalIdentityStore({ path: "/etc/caddy/users.json" });
+      const ldapStore = buildLdapIdentityStore({
+        servers: [{ address: "ldap.example.com" }],
+        bindDn: "cn=admin,dc=example,dc=com",
+        bindPassword: "secret",
+        searchBaseDn: "ou=users,dc=example,dc=com",
+      });
+      const oidcProvider = buildOidcProvider({
+        provider: "keycloak",
+        clientId: "my-app",
+        clientSecret: "my-secret",
+        discoveryUrl: "https://keycloak.example.com/.well-known/openid-configuration",
+      });
+      const portal = buildAuthenticationPortal({
+        name: "myportal",
+        identityStores: ["local", "ldap"],
+        identityProviders: ["keycloak"],
+      });
+      const policy = buildAuthorizationPolicy({
+        name: "mypolicy",
+        accessLists: [{ claim: "roles", values: ["user"] }],
+      });
+
+      const config = buildSecurityConfig({
+        identityStores: [localStore, ldapStore],
+        identityProviders: [oidcProvider],
+        portals: [portal],
+        policies: [policy],
+      });
+
+      expect(config.identity_stores).toHaveLength(2);
+      expect(config.identity_providers).toHaveLength(1);
+      expect(config.authentication_portals).toHaveLength(1);
+      expect(config.authorization_policies).toHaveLength(1);
+    });
+
+    test("buildSecurityApp wraps config", () => {
+      const config = buildSecurityConfig({
+        portals: [buildAuthenticationPortal({ name: "myportal" })],
+      });
+
+      const app = buildSecurityApp({ config });
+
+      expect(app).toEqual({
+        config: {
+          authentication_portals: [{ name: "myportal" }],
         },
       });
     });
