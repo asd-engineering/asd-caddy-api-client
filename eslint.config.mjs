@@ -18,6 +18,7 @@ export default tseslint.config(
       "docs/api/**", // Generated TypeDoc documentation
       "src/generated/**", // Generated type files from Caddy Go source
       "scripts/**", // Build/generation scripts
+      "tests/integration/**/*.js", // Docker test helper scripts (Node.js)
       "*.config.ts",
       "*.config.js",
       "*.config.mjs",

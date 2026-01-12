@@ -60,6 +60,27 @@
         respond `{"status": "authenticated", "message": "API access granted"}` 200
     }
 
+    # Auth-echo backend - proxies to auth-aware backend
+    # This allows testing that claims are properly injected
+    route /backend/* {
+        authorize with mypolicy
+        reverse_proxy auth-echo:5690
+    }
+
+    # Whoami endpoint via auth-echo
+    route /whoami {
+        authorize with mypolicy
+        uri strip_prefix /whoami
+        rewrite * /whoami
+        reverse_proxy auth-echo:5690
+    }
+
+    # Claims endpoint via auth-echo
+    route /claims {
+        authorize with mypolicy
+        reverse_proxy auth-echo:5690
+    }
+
     # Public endpoint
     route /public* {
         respond "Public content - no auth required" 200

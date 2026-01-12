@@ -75,6 +75,8 @@
     "docker:authentik:down": "docker compose -f tests/integration/docker-compose.authentik.yml down -v",
     "test:caddy-security": "playwright test src/__tests__/playwright/caddy-security-portal.spec.ts",
     "test:oidc-flow": "playwright test src/__tests__/playwright/caddy-security-oidc-flow.spec.ts",
+    "test:auth:security": "playwright test src/__tests__/playwright/auth-security-advanced.spec.ts",
+    "test:auth:claims": "playwright test src/__tests__/playwright/auth-claims-injection.spec.ts",
     "docker:caddy-security:up": "docker compose -f tests/integration/docker-compose.caddy-security.yml up -d --build",
     "docker:caddy-security:down": "docker compose -f tests/integration/docker-compose.caddy-security.yml down",
     "typecheck": "tsc --noEmit",
