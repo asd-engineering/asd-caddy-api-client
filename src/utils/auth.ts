@@ -17,12 +17,18 @@ interface BcryptModule {
  * @param password - Plain text password
  * @param rounds - Bcrypt cost factor (default: 10, range: 4-31)
  * @returns Promise resolving to bcrypt hash string
+ * @throws Error if rounds is outside valid range (4-31) or bcrypt module is not installed
  *
  * @example
  * const hash = await hashPassword("my-secret-password");
  * // Returns: $2a$10$... (bcrypt hash)
  */
 export async function hashPassword(password: string, rounds = 10): Promise<string> {
+  // Validate bcrypt rounds (must be 4-31 per bcrypt specification)
+  if (rounds < 4 || rounds > 31) {
+    throw new Error("Bcrypt rounds must be between 4 and 31");
+  }
+
   // Import bcrypt dynamically to avoid bundling if not used
   try {
     // Try to use bcrypt if available
@@ -75,10 +81,11 @@ export async function hashPasswordWithCaddy(password: string): Promise<string> {
     const { stdout } = await execFileAsync("caddy", ["hash-password", "--plaintext", password]);
     return stdout.trim();
   } catch {
+    // SECURITY: Do not include password in error messages to prevent credential exposure in logs
     throw new Error(
       `Failed to hash password with Caddy CLI. Is Caddy installed?\n` +
         `Alternative: Use hashPassword() with npm install bcrypt\n` +
-        `Or manually run: caddy hash-password --plaintext "${password}"`
+        `Or manually run: caddy hash-password --plaintext <your-password>`
     );
   }
 }
