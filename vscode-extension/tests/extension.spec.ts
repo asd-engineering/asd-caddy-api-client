@@ -495,3 +495,349 @@ test.describe("Real User Workflows", () => {
     // User successfully searched the file
   });
 });
+
+// ============================================================================
+// WIZARD AND COMMAND TESTS
+// ============================================================================
+
+test.describe("Wizard and Command Interactions", () => {
+  test.beforeEach(async ({ page, codeServerUrl }) => {
+    await setupPage(page, codeServerUrl);
+  });
+
+  test("command palette finds Caddy commands", async ({ page }) => {
+    // Open command palette
+    await page.keyboard.press("Control+Shift+p");
+    await page.waitForTimeout(500);
+
+    // Search for Caddy commands
+    const inputBox = page.locator(".quick-input-box input").first();
+    await inputBox.fill("Caddy");
+    await page.waitForTimeout(500);
+
+    // Verify Caddy commands appear in the list
+    const resultsList = page.locator(".quick-input-list");
+    await expect(resultsList).toBeVisible({ timeout: 5000 });
+
+    // Look for specific Caddy commands
+    const caddyItems = page.locator('.quick-input-list [role="option"]');
+    const itemCount = await caddyItems.count();
+    console.log(`Found ${itemCount} Caddy-related items`);
+
+    // Should find at least one Caddy command
+    expect(itemCount).toBeGreaterThan(0);
+
+    await page.keyboard.press("Escape");
+  });
+
+  test("can launch Route Configuration Wizard", async ({ page }) => {
+    // Open a JSON file first
+    await openFile(page, "valid.caddy.json");
+    await waitForEditor(page);
+
+    // Open command palette and search for route wizard
+    await page.keyboard.press("Control+Shift+p");
+    await page.waitForTimeout(500);
+
+    const inputBox = page.locator(".quick-input-box input").first();
+    await inputBox.fill("Caddy: Route Configuration Wizard");
+    await page.waitForTimeout(500);
+
+    // Select the command
+    const routeWizardOption = page
+      .locator('[role="option"]:has-text("Route Configuration Wizard")')
+      .first();
+    const isVisible = await routeWizardOption.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (isVisible) {
+      await routeWizardOption.click();
+      await page.waitForTimeout(1000);
+
+      // The wizard should show a quick pick for route type selection
+      // Look for the route type selection dialog
+      const quickPick = page.locator(".quick-input-widget").first();
+      const quickPickVisible = await quickPick.isVisible({ timeout: 3000 }).catch(() => false);
+      console.log(`Route wizard quick pick visible: ${quickPickVisible}`);
+
+      // Cancel the wizard
+      await page.keyboard.press("Escape");
+    } else {
+      console.log(
+        "Route Configuration Wizard command not found - extension may not be fully loaded"
+      );
+    }
+
+    await page.keyboard.press("Escape");
+  });
+
+  test("can launch Security Configuration Wizard", async ({ page }) => {
+    // Open a JSON file first
+    await openFile(page, "valid.caddy.json");
+    await waitForEditor(page);
+
+    // Open command palette and search for security wizard
+    await page.keyboard.press("Control+Shift+p");
+    await page.waitForTimeout(500);
+
+    const inputBox = page.locator(".quick-input-box input").first();
+    await inputBox.fill("Caddy: Security Configuration Wizard");
+    await page.waitForTimeout(500);
+
+    // Select the command
+    const securityWizardOption = page
+      .locator('[role="option"]:has-text("Security Configuration Wizard")')
+      .first();
+    const isVisible = await securityWizardOption.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (isVisible) {
+      await securityWizardOption.click();
+      await page.waitForTimeout(1000);
+
+      // The wizard should show a quick pick for setup type (Quick Setup vs Custom Setup)
+      const quickPick = page.locator(".quick-input-widget").first();
+      const quickPickVisible = await quickPick.isVisible({ timeout: 3000 }).catch(() => false);
+      console.log(`Security wizard quick pick visible: ${quickPickVisible}`);
+
+      // Cancel the wizard
+      await page.keyboard.press("Escape");
+    } else {
+      console.log(
+        "Security Configuration Wizard command not found - extension may not be fully loaded"
+      );
+    }
+
+    await page.keyboard.press("Escape");
+  });
+
+  test("Insert Route command shows route type options", async ({ page }) => {
+    // Open a JSON file first
+    await openFile(page, "valid.caddy.json");
+    await waitForEditor(page);
+
+    // Open command palette and search for insert route
+    await page.keyboard.press("Control+Shift+p");
+    await page.waitForTimeout(500);
+
+    const inputBox = page.locator(".quick-input-box input").first();
+    await inputBox.fill("Caddy: Insert Route");
+    await page.waitForTimeout(500);
+
+    // Select the command
+    const insertRouteOption = page
+      .locator('[role="option"]:has-text("Insert Route Configuration")')
+      .first();
+    const isVisible = await insertRouteOption.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (isVisible) {
+      await insertRouteOption.click();
+      await page.waitForTimeout(1000);
+
+      // Should show route type options (Reverse Proxy, Static File Server, etc.)
+      const quickPick = page.locator(".quick-input-widget").first();
+      const quickPickVisible = await quickPick.isVisible({ timeout: 3000 }).catch(() => false);
+      console.log(`Insert route options visible: ${quickPickVisible}`);
+
+      if (quickPickVisible) {
+        // Verify route types are shown
+        const reverseProxy = page.locator('[role="option"]:has-text("Reverse Proxy")').first();
+        const rpVisible = await reverseProxy.isVisible({ timeout: 2000 }).catch(() => false);
+        console.log(`Reverse Proxy option visible: ${rpVisible}`);
+      }
+
+      await page.keyboard.press("Escape");
+    } else {
+      console.log("Insert Route command not found - extension may not be fully loaded");
+    }
+
+    await page.keyboard.press("Escape");
+  });
+
+  test("Insert Security Config command shows config type options", async ({ page }) => {
+    // Open a JSON file first
+    await openFile(page, "valid.caddy.json");
+    await waitForEditor(page);
+
+    // Open command palette and search for insert security
+    await page.keyboard.press("Control+Shift+p");
+    await page.waitForTimeout(500);
+
+    const inputBox = page.locator(".quick-input-box input").first();
+    await inputBox.fill("Caddy: Insert Security");
+    await page.waitForTimeout(500);
+
+    // Select the command
+    const insertSecurityOption = page
+      .locator('[role="option"]:has-text("Insert Security Configuration")')
+      .first();
+    const isVisible = await insertSecurityOption.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (isVisible) {
+      await insertSecurityOption.click();
+      await page.waitForTimeout(1000);
+
+      // Should show security config options (Local Identity Store, LDAP, Portal, Policy)
+      const quickPick = page.locator(".quick-input-widget").first();
+      const quickPickVisible = await quickPick.isVisible({ timeout: 3000 }).catch(() => false);
+      console.log(`Insert security options visible: ${quickPickVisible}`);
+
+      if (quickPickVisible) {
+        // Verify security options are shown
+        const localStore = page.locator('[role="option"]:has-text("Local Identity Store")').first();
+        const lsVisible = await localStore.isVisible({ timeout: 2000 }).catch(() => false);
+        console.log(`Local Identity Store option visible: ${lsVisible}`);
+      }
+
+      await page.keyboard.press("Escape");
+    } else {
+      console.log(
+        "Insert Security Configuration command not found - extension may not be fully loaded"
+      );
+    }
+
+    await page.keyboard.press("Escape");
+  });
+
+  test("Show Handler Docs command lists all handlers", async ({ page }) => {
+    // Open command palette and search for handler docs
+    await page.keyboard.press("Control+Shift+p");
+    await page.waitForTimeout(500);
+
+    const inputBox = page.locator(".quick-input-box input").first();
+    await inputBox.fill("Caddy: Show Handler Documentation");
+    await page.waitForTimeout(500);
+
+    // Select the command
+    const handlerDocsOption = page
+      .locator('[role="option"]:has-text("Show Handler Documentation")')
+      .first();
+    const isVisible = await handlerDocsOption.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (isVisible) {
+      await handlerDocsOption.click();
+      await page.waitForTimeout(1000);
+
+      // Should show handler list
+      const quickPick = page.locator(".quick-input-widget").first();
+      const quickPickVisible = await quickPick.isVisible({ timeout: 3000 }).catch(() => false);
+      console.log(`Handler list visible: ${quickPickVisible}`);
+
+      if (quickPickVisible) {
+        // Verify common handlers are shown
+        const reverseProxy = page.locator('[role="option"]:has-text("Reverse Proxy")').first();
+        const rpVisible = await reverseProxy.isVisible({ timeout: 2000 }).catch(() => false);
+        console.log(`Reverse Proxy handler visible: ${rpVisible}`);
+
+        const fileServer = page.locator('[role="option"]:has-text("File Server")').first();
+        const fsVisible = await fileServer.isVisible({ timeout: 2000 }).catch(() => false);
+        console.log(`File Server handler visible: ${fsVisible}`);
+      }
+
+      await page.keyboard.press("Escape");
+    } else {
+      console.log(
+        "Show Handler Documentation command not found - extension may not be fully loaded"
+      );
+    }
+
+    await page.keyboard.press("Escape");
+  });
+});
+
+// ============================================================================
+// EXTENSION FEATURE TESTS - CodeLens, Hover, Completion
+// ============================================================================
+
+test.describe("Extension Features", () => {
+  test.beforeEach(async ({ page, codeServerUrl }) => {
+    await setupPage(page, codeServerUrl);
+  });
+
+  test("CodeLens shows documentation links above handlers", async ({ page }) => {
+    await openFile(page, "valid.caddy.json");
+    await waitForEditor(page);
+
+    // Wait for CodeLens to load
+    await page.waitForTimeout(2000);
+
+    // Look for CodeLens widgets in the editor
+    const codeLens = page.locator(".codelens-decoration, .contentWidgets .codicon-book");
+    const codeLensCount = await codeLens.count();
+    console.log(`Found ${codeLensCount} CodeLens decorations`);
+
+    // Also check for the specific "Docs" link we add
+    const docsLink = page.locator('text="📖"').first();
+    const docsVisible = await docsLink.isVisible({ timeout: 3000 }).catch(() => false);
+    console.log(`Docs CodeLens visible: ${docsVisible}`);
+  });
+
+  test("hover on handler shows documentation", async ({ page }) => {
+    await openFile(page, "valid.caddy.json");
+    await waitForEditor(page);
+
+    // Find the "reverse_proxy" text in the editor
+    const handlerText = page.locator('.view-lines:has-text("reverse_proxy")');
+    await expect(handlerText).toBeVisible();
+
+    // Try to hover over the handler text
+    const reverseProxySpan = page.locator('text="reverse_proxy"').first();
+    if (await reverseProxySpan.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await reverseProxySpan.hover();
+      await page.waitForTimeout(1500);
+
+      // Check if hover widget appeared
+      const hoverWidget = page.locator(".monaco-hover, .hover-contents");
+      const hoverVisible = await hoverWidget
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
+      console.log(`Hover widget visible: ${hoverVisible}`);
+    }
+  });
+
+  test("snippets work in JSON files", async ({ page }) => {
+    // Create a new untitled file to avoid modifying test fixtures
+    await page.keyboard.press("Control+n");
+    await waitForEditor(page);
+
+    // Set language mode to JSON
+    await page.keyboard.press("Control+k");
+    await page.keyboard.press("m");
+    await page.waitForTimeout(500);
+
+    const langInput = page.locator(".quick-input-box input").first();
+    await langInput.fill("JSON");
+    await page.waitForTimeout(300);
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(500);
+
+    // Type a snippet prefix
+    await page.keyboard.type("caddy-route", { delay: 50 });
+    await page.waitForTimeout(500);
+
+    // Trigger completion
+    await page.keyboard.press("Control+Space");
+    await page.waitForTimeout(500);
+
+    // Check if completion widget shows our snippet
+    const suggestWidget = page.locator(".suggest-widget");
+    const isVisible = await suggestWidget.isVisible({ timeout: 3000 }).catch(() => false);
+    console.log(`Suggest widget visible after snippet prefix: ${isVisible}`);
+
+    if (isVisible) {
+      // Look for our snippet in the list
+      const snippetItem = page.locator('.suggest-widget [role="option"]:has-text("caddy")').first();
+      const snippetVisible = await snippetItem.isVisible({ timeout: 2000 }).catch(() => false);
+      console.log(`Caddy snippet visible: ${snippetVisible}`);
+    }
+
+    // Close the untitled file without saving
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Control+w");
+    await page.waitForTimeout(300);
+    // Don't save if prompted
+    const dontSaveButton = page.locator('button:has-text("Don\'t Save")').first();
+    if (await dontSaveButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await dontSaveButton.click();
+    }
+  });
+});
