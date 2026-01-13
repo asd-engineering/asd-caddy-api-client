@@ -46,6 +46,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Strict `no-any` rule enforcement
   - ESLint `@typescript-eslint/no-explicit-any` set to error
 
+- **VSCode Extension** (`vscode-extension/`) - `vscode-caddy-tools` v0.1.0
+  - JSON validation for `caddy.json`, `caddy-security.json` files
+  - TypeScript/JavaScript snippets for builder patterns
+  - IntelliSense: completion provider for handler types
+  - Hover documentation with links to Caddy docs
+  - Diagnostics provider for real-time validation
+  - Code lens for quick documentation access
+  - Route Configuration Wizard - interactive multi-step route builder
+  - Security Configuration Wizard - guided caddy-security setup
+  - 5 commands: `caddy.showHandlerDocs`, `caddy.insertRoute`, `caddy.insertSecurityConfig`, `caddy.runRouteWizard`, `caddy.runSecurityWizard`
+  - Settings: `caddy.enableHoverDocs`, `caddy.showCaddyDocsLinks`, `caddy.showCodeLens`, `caddy.enableDiagnostics`
+  - 22 Playwright tests for extension functionality
+
+- **Comprehensive Authentication Integration Tests** (`src/__tests__/playwright/`)
+  - OAuth flow tests with mock-oauth2-server (token lifecycle, multiple users, error scenarios)
+  - Keycloak OIDC tests (authorization code flow, token refresh, userinfo)
+  - LDAP identity store tests (OpenLDAP integration, group mapping)
+  - SAML flow tests (SimpleSAMLphp IdP)
+  - Authentik advanced tests (full OIDC provider)
+  - caddy-security portal tests (local auth, two-step login, session management)
+  - Security tests: token tampering detection, refresh token rotation, concurrent sessions, CSRF
+  - Claims injection tests with auth-echo backend (verifies caddy-security → backend header injection)
+
+- **Test Infrastructure** (`tests/integration/`)
+  - Docker Compose stacks for OAuth, Keycloak, LDAP, SAML, Authentik, caddy-security
+  - `auth-echo-server.js` - Auth-aware backend that decodes JWTs and returns claims
+  - Caddyfiles for each authentication scenario
+  - npm scripts: `test:oauth`, `test:keycloak`, `test:ldap`, `test:saml`, `test:authentik`, `test:caddy-security`, `test:auth:security`, `test:auth:claims`
+
 ### Changed
 
 - **Type Generation Architecture** - Cleaner separation of generated vs hand-written code
