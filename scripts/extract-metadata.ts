@@ -224,8 +224,16 @@ function generateSnippet(
   params: ParamMetadata[]
 ): { prefix: string; body: string[]; description: string } {
   // Convert camelCase to kebab-case for prefix
+  // Preserve common acronyms before splitting on capitals
   const prefix = funcName
     .replace(/^build/, "caddy-")
+    .replace(/OAuth/g, "oauth")
+    .replace(/Oidc/g, "oidc")
+    .replace(/OIDC/g, "oidc")
+    .replace(/Ldap/g, "ldap")
+    .replace(/LDAP/g, "ldap")
+    .replace(/Sso/g, "sso")
+    .replace(/SSO/g, "sso")
     .replace(/([A-Z])/g, "-$1")
     .toLowerCase()
     .replace(/--/g, "-");
@@ -252,9 +260,21 @@ function generateSnippet(
   body.push("})");
 
   // Get description from function name
+  // Use lowercase placeholders to preserve acronyms during camelCase splitting
   const description = funcName
-    .replace(/^build/, "Build ")
+    .replace(/^build/, "Build")
+    .replace(/OAuth2/g, " xoauth2x")
+    .replace(/Oidc/g, " xoidcx")
+    .replace(/Ldap/g, " xldapx")
+    .replace(/LDAP/g, " xldapx")
+    .replace(/SSO/g, " xssox")
+    .replace(/Sso/g, " xssox")
     .replace(/([A-Z])/g, " $1")
+    .replace(/xoauth2x/g, "OAuth2")
+    .replace(/xoidcx/g, "OIDC")
+    .replace(/xldapx/g, "LDAP")
+    .replace(/xssox/g, "SSO")
+    .replace(/\s+/g, " ")
     .trim();
 
   return { prefix, body, description };

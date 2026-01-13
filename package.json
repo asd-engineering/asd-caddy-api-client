@@ -145,6 +145,7 @@
     "@playwright/test": "^1.57.0",
     "@types/node": "^20.10.0",
     "@vitest/coverage-v8": "^1.0.0",
+    "ajv": "^8.17.1",
     "bcryptjs": "^3.0.3",
     "eslint": "^9.32.0",
     "globals": "^15.12.0",

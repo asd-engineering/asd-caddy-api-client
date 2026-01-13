@@ -94,6 +94,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - These types are unexported in Go but referenced by exported types
   - Post-processing script now injects missing type definitions
 
+- **VSCode Extension Snippet Naming** - Fixed OAuth/OIDC/LDAP snippet prefixes and descriptions
+  - Prefixes now correctly use `caddy-oauth2-provider` (not `caddy-o-auth2-provider`)
+  - Descriptions now use proper acronyms: "Build OAuth2 Provider" (not "Build O Auth2 Provider")
+  - Fixed double spaces in generated snippet descriptions
+
+- **Windows Build Compatibility** - VSCode extension now builds on Windows
+  - Replaced Unix `cp -r` with cross-platform `shx` in `vscode-extension/package.json`
+
+- **CI Schema Validation** - Added Ajv-based JSON schema validation tests
+  - `src/__tests__/generated-schemas.test.ts` now validates all 20 generated JSON schemas
+  - Tests ensure schemas stay in sync with Zod source definitions
+
 ## [0.3.0] - 2026-01-09
 
 ### Added

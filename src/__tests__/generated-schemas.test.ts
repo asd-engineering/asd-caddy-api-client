@@ -3,6 +3,9 @@
  * These tests ensure the generated schemas validate data correctly
  */
 import { describe, test, expect } from "vitest";
+import Ajv from "ajv";
+import { readdirSync, readFileSync } from "fs";
+import { join } from "path";
 
 // Auth schemas
 import {
@@ -500,6 +503,95 @@ describe("Generated Rewrite Schemas", () => {
         query: { set: { version: "2" } },
       };
       expect(rewriteSchema.parse(rewrite)).toEqual(rewrite);
+    });
+  });
+});
+
+// ============================================================================
+// JSON Schema Validation Tests
+// ============================================================================
+
+describe("JSON Schema Validation", () => {
+  const schemasDir = join(__dirname, "../generated/schemas");
+
+  // Get all JSON schema files (exclude catalog and example files)
+  const schemaFiles = readdirSync(schemasDir)
+    .filter((f) => f.endsWith(".json"))
+    .filter((f) => !f.includes("catalog") && !f.includes("example"));
+
+  describe("All generated JSON schemas are valid", () => {
+    test.each(schemaFiles)("%s compiles without errors", (filename) => {
+      // Use fresh Ajv instance per test to avoid $id collision
+      const ajv = new Ajv({ strict: false, allErrors: true });
+      const schemaPath = join(schemasDir, filename);
+      const schema = JSON.parse(readFileSync(schemaPath, "utf-8")) as object;
+
+      // Ajv.compile throws if schema is invalid
+      expect(() => ajv.compile(schema)).not.toThrow();
+    });
+  });
+
+  describe("Core Caddy schemas validate correctly", () => {
+    test("caddy-route.json accepts valid route", () => {
+      const ajv = new Ajv({ strict: false, allErrors: true });
+      const schema = JSON.parse(
+        readFileSync(join(schemasDir, "caddy-route.json"), "utf-8")
+      ) as object;
+      const validate = ajv.compile(schema);
+
+      const validRoute = {
+        match: [{ host: ["example.com"] }],
+        handle: [{ handler: "static_response", body: "Hello" }],
+      };
+
+      expect(validate(validRoute)).toBe(true);
+    });
+
+    test("caddy-handler.json accepts valid handler", () => {
+      const ajv = new Ajv({ strict: false, allErrors: true });
+      const schema = JSON.parse(
+        readFileSync(join(schemasDir, "caddy-handler.json"), "utf-8")
+      ) as object;
+      const validate = ajv.compile(schema);
+
+      const validHandler = {
+        handler: "reverse_proxy",
+        upstreams: [{ dial: "localhost:3000" }],
+      };
+
+      expect(validate(validHandler)).toBe(true);
+    });
+  });
+
+  describe("caddy-security schemas validate correctly", () => {
+    test("caddy-security-portal.json accepts valid portal config", () => {
+      const ajv = new Ajv({ strict: false, allErrors: true });
+      const schema = JSON.parse(
+        readFileSync(join(schemasDir, "caddy-security-portal.json"), "utf-8")
+      ) as object;
+      const validate = ajv.compile(schema);
+
+      const validPortal = {
+        name: "my-portal",
+        ui: { theme: "basic" },
+      };
+
+      expect(validate(validPortal)).toBe(true);
+    });
+
+    test("caddy-security-policy.json accepts valid policy", () => {
+      const ajv = new Ajv({ strict: false, allErrors: true });
+      const schema = JSON.parse(
+        readFileSync(join(schemasDir, "caddy-security-policy.json"), "utf-8")
+      ) as object;
+      const validate = ajv.compile(schema);
+
+      const validPolicy = {
+        name: "default",
+        access_lists: [{ action: "allow", claim: "roles", values: ["admin", "user"] }],
+      };
+
+      expect(validate(validPolicy)).toBe(true);
     });
   });
 });

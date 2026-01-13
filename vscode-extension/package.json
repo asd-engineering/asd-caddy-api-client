@@ -132,7 +132,7 @@
     "vscode:prepublish": "npm run build",
     "build": "npm run copy-schemas && npm run generate-snippets && esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
     "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --watch",
-    "copy-schemas": "cp -r ../src/generated/schemas/*.json ./schemas/ 2>/dev/null || true",
+    "copy-schemas": "shx mkdir -p schemas && shx cp ../src/generated/schemas/*.json ./schemas/",
     "generate-snippets": "node scripts/generate-snippets.js",
     "package": "vsce package --no-dependencies",
     "publish": "vsce publish",
@@ -146,6 +146,7 @@
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^2.22.0",
     "esbuild": "^0.19.0",
+    "shx": "^0.4.0",
     "typescript": "^5.3.3"
   },
   "dependencies": {

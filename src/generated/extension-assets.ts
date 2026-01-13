@@ -7,7 +7,7 @@
  *
  * @generated
  * @version 0.4.0
- * @generatedAt 2026-01-12T18:36:35.531Z
+ * @generatedAt 2026-01-13T15:46:05.640Z
  */
 
 // ============================================================================
@@ -59,7 +59,7 @@ export const METADATA_VERSION = "0.4.0";
 /**
  * Timestamp when this metadata was generated
  */
-export const GENERATED_AT = "2026-01-12T18:36:35.531Z";
+export const GENERATED_AT = "2026-01-13T15:46:05.640Z";
 
 /**
  * Builder function metadata extracted from JSDoc and type definitions
@@ -100,7 +100,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         "  // realm: ${2:local}",
         "})",
       ],
-      description: "Build  Local Identity Store",
+      description: "Build Local Identity Store",
     },
   },
   buildLdapIdentityStore: {
@@ -164,7 +164,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         "  // searchFilter: ${6:(uid={username})}",
         "})",
       ],
-      description: "Build  Ldap Identity Store",
+      description: "Build LDAP Identity Store",
     },
   },
   buildOAuth2Provider: {
@@ -207,7 +207,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     example:
       'import { buildOAuth2Provider } from "@.../caddy-api-client/plugins/caddy-security";\n\nconst provider = buildOAuth2Provider({\n  provider: "github",\n  clientId: "your-client-id",\n  clientSecret: "your-client-secret",\n  scopes: ["user:email", "read:user"],\n});',
     snippet: {
-      prefix: "caddy-o-auth2-provider",
+      prefix: "caddy-oauth2-provider",
       body: [
         "buildOAuth2Provider({",
         '  provider: ${1:""},',
@@ -216,7 +216,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         '  // scopes: ${4:["openid", "email", "profile"]},',
         "})",
       ],
-      description: "Build  O Auth2 Provider",
+      description: "Build OAuth2 Provider",
     },
   },
   buildOidcProvider: {
@@ -276,7 +276,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         '  // scopes: ${5:["openid", "email", "profile"]},',
         "})",
       ],
-      description: "Build  Oidc Provider",
+      description: "Build OIDC Provider",
     },
   },
   buildAuthenticationPortal: {
@@ -326,7 +326,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-authentication-portal",
       body: ["buildAuthenticationPortal({", "  name: ${1:my-name},", "})"],
-      description: "Build  Authentication Portal",
+      description: "Build Authentication Portal",
     },
   },
   buildAuthorizationPolicy: {
@@ -364,7 +364,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-authorization-policy",
       body: ["buildAuthorizationPolicy({", "  name: ${1:my-name},", "})"],
-      description: "Build  Authorization Policy",
+      description: "Build Authorization Policy",
     },
   },
   buildSecurityConfig: {
@@ -402,7 +402,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-security-config",
       body: ["buildSecurityConfig({", "})"],
-      description: "Build  Security Config",
+      description: "Build Security Config",
     },
   },
   buildSecurityApp: {
@@ -423,7 +423,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-security-app",
       body: ["buildSecurityApp({", '  config: ${1:""}', "})"],
-      description: "Build  Security App",
+      description: "Build Security App",
     },
   },
   buildAuthenticatorHandler: {
@@ -450,7 +450,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-authenticator-handler",
       body: ["buildAuthenticatorHandler({", '  portalName: ${1:""},', "})"],
-      description: "Build  Authenticator Handler",
+      description: "Build Authenticator Handler",
     },
   },
   buildAuthorizationHandler: {
@@ -477,7 +477,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-authorization-handler",
       body: ["buildAuthorizationHandler({", '  gatekeeperName: ${1:""},', "})"],
-      description: "Build  Authorization Handler",
+      description: "Build Authorization Handler",
     },
   },
   buildAuthenticatorRoute: {
@@ -523,7 +523,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         "  // priority: ${3:10 (AUTH_DOMAIN priority)},",
         "})",
       ],
-      description: "Build  Authenticator Route",
+      description: "Build Authenticator Route",
     },
   },
   buildProtectedRoute: {
@@ -582,7 +582,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         "  // priority: ${4:50 (SERVICE priority)},",
         "})",
       ],
-      description: "Build  Protected Route",
+      description: "Build Protected Route",
     },
   },
   buildServiceRoutes: {
@@ -593,7 +593,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-service-routes",
       body: ["buildServiceRoutes({", "})"],
-      description: "Build  Service Routes",
+      description: "Build Service Routes",
     },
   },
   buildHealthCheckRoute: {
@@ -604,7 +604,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-health-check-route",
       body: ["buildHealthCheckRoute({", "})"],
-      description: "Build  Health Check Route",
+      description: "Build Health Check Route",
     },
   },
   buildHostRoute: {
@@ -615,7 +615,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-host-route",
       body: ["buildHostRoute({", "})"],
-      description: "Build  Host Route",
+      description: "Build Host Route",
     },
   },
   buildPathRoute: {
@@ -626,7 +626,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-path-route",
       body: ["buildPathRoute({", "})"],
-      description: "Build  Path Route",
+      description: "Build Path Route",
     },
   },
   buildLoadBalancerRoute: {
@@ -637,7 +637,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-load-balancer-route",
       body: ["buildLoadBalancerRoute({", "})"],
-      description: "Build  Load Balancer Route",
+      description: "Build Load Balancer Route",
     },
   },
   buildReverseProxyHandler: {
@@ -649,7 +649,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-reverse-proxy-handler",
       body: ["buildReverseProxyHandler({", "})"],
-      description: "Build  Reverse Proxy Handler",
+      description: "Build Reverse Proxy Handler",
     },
   },
   buildSecurityHeadersHandler: {
@@ -660,7 +660,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-security-headers-handler",
       body: ["buildSecurityHeadersHandler({", "})"],
-      description: "Build  Security Headers Handler",
+      description: "Build Security Headers Handler",
     },
   },
   buildBasicAuthHandler: {
@@ -674,7 +674,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-basic-auth-handler",
       body: ["buildBasicAuthHandler({", "})"],
-      description: "Build  Basic Auth Handler",
+      description: "Build Basic Auth Handler",
     },
   },
   buildRewriteHandler: {
@@ -685,7 +685,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-rewrite-handler",
       body: ["buildRewriteHandler({", "})"],
-      description: "Build  Rewrite Handler",
+      description: "Build Rewrite Handler",
     },
   },
   buildIngressTagHeadersHandler: {
@@ -696,7 +696,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-ingress-tag-headers-handler",
       body: ["buildIngressTagHeadersHandler({", "})"],
-      description: "Build  Ingress Tag Headers Handler",
+      description: "Build Ingress Tag Headers Handler",
     },
   },
   buildIframeHeadersHandler: {
@@ -707,7 +707,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-iframe-headers-handler",
       body: ["buildIframeHeadersHandler({", "})"],
-      description: "Build  Iframe Headers Handler",
+      description: "Build Iframe Headers Handler",
     },
   },
   buildRedirectRoute: {
@@ -718,7 +718,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-redirect-route",
       body: ["buildRedirectRoute({", "})"],
-      description: "Build  Redirect Route",
+      description: "Build Redirect Route",
     },
   },
   buildCompressionHandler: {
@@ -730,7 +730,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-compression-handler",
       body: ["buildCompressionHandler({", "})"],
-      description: "Build  Compression Handler",
+      description: "Build Compression Handler",
     },
   },
   buildWwwRedirect: {
@@ -744,7 +744,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-www-redirect",
       body: ["buildWwwRedirect({", "})"],
-      description: "Build  Www Redirect",
+      description: "Build Www Redirect",
     },
   },
   buildMitmproxyRoute: {
@@ -758,7 +758,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-mitmproxy-route",
       body: ["buildMitmproxyRoute({", "})"],
-      description: "Build  Mitmproxy Route",
+      description: "Build Mitmproxy Route",
     },
   },
   buildMitmproxyRoutePair: {
@@ -773,7 +773,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-mitmproxy-route-pair",
       body: ["buildMitmproxyRoutePair({", "})"],
-      description: "Build  Mitmproxy Route Pair",
+      description: "Build Mitmproxy Route Pair",
     },
   },
   buildIframeProxyRoute: {
@@ -830,7 +830,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         "  upstreamPort: ${3:0},",
         "})",
       ],
-      description: "Build  Iframe Proxy Route",
+      description: "Build Iframe Proxy Route",
     },
   },
   buildMitmproxyWebUiRoute: {
@@ -841,7 +841,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-mitmproxy-web-ui-route",
       body: ["buildMitmproxyWebUiRoute({", "})"],
-      description: "Build  Mitmproxy Web Ui Route",
+      description: "Build Mitmproxy Web Ui Route",
     },
   },
   buildWebSocketProxyRoute: {
@@ -892,7 +892,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         "  upstreamPort: ${3:0},",
         "})",
       ],
-      description: "Build  Web Socket Proxy Route",
+      description: "Build Web Socket Proxy Route",
     },
   },
   buildMitmproxyWebSocketRoute: {
@@ -903,7 +903,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-mitmproxy-web-socket-route",
       body: ["buildMitmproxyWebSocketRoute({", "})"],
-      description: "Build  Mitmproxy Web Socket Route",
+      description: "Build Mitmproxy Web Socket Route",
     },
   },
   buildIframePermissiveHandler: {
@@ -916,7 +916,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-iframe-permissive-handler",
       body: ["buildIframePermissiveHandler({", "})"],
-      description: "Build  Iframe Permissive Handler",
+      description: "Build Iframe Permissive Handler",
     },
   },
   buildDnsRebindingBypassHandler: {
@@ -930,7 +930,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-dns-rebinding-bypass-handler",
       body: ["buildDnsRebindingBypassHandler({", "})"],
-      description: "Build  Dns Rebinding Bypass Handler",
+      description: "Build Dns Rebinding Bypass Handler",
     },
   },
   buildFileServerRoute: {
@@ -1003,7 +1003,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         '  root: ${2:""},',
         "})",
       ],
-      description: "Build  File Server Route",
+      description: "Build File Server Route",
     },
   },
   buildTemplatesRoute: {
@@ -1058,7 +1058,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         '  fileRoot: ${2:""},',
         "})",
       ],
-      description: "Build  Templates Route",
+      description: "Build Templates Route",
     },
   },
   buildErrorRoute: {
@@ -1108,7 +1108,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-error-route",
       body: ["buildErrorRoute({", "  statusCode: ${1:0},", "})"],
-      description: "Build  Error Route",
+      description: "Build Error Route",
     },
   },
   buildRequestBodyHandler: {
@@ -1128,7 +1128,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-request-body-handler",
       body: ["buildRequestBodyHandler({", "  maxSize: ${1:0}", "})"],
-      description: "Build  Request Body Handler",
+      description: "Build Request Body Handler",
     },
   },
   buildVarsHandler: {
@@ -1148,7 +1148,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-vars-handler",
       body: ["buildVarsHandler({", '  vars: ${1:""}', "})"],
-      description: "Build  Vars Handler",
+      description: "Build Vars Handler",
     },
   },
   buildTracingHandler: {
@@ -1167,7 +1167,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     snippet: {
       prefix: "caddy-tracing-handler",
       body: ["buildTracingHandler({", "})"],
-      description: "Build  Tracing Handler",
+      description: "Build Tracing Handler",
     },
   },
   buildMapHandler: {
@@ -1211,7 +1211,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         '  mappings: ${3:["value"]},',
         "})",
       ],
-      description: "Build  Map Handler",
+      description: "Build Map Handler",
     },
   },
 };
