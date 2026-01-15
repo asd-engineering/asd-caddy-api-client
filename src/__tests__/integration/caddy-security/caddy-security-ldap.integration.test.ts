@@ -33,10 +33,10 @@ const LDAP_BIND_PASSWORD = "admin";
 const LDAP_SEARCH_BASE_DN = "ou=users,dc=test,dc=local";
 const LDAP_SEARCH_FILTER = "(uid={username})";
 
-// Skip if not in CI or docker environment
-const skipIfNoDocker = !process.env.CI && !process.env.DOCKER_TEST;
+// Skip unless CADDY_SECURITY_TEST is explicitly set (requires caddy-security Docker stack)
+const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 
-describe.skipIf(skipIfNoDocker)(
+describe.skipIf(skipIfNoSecurityStack)(
   "caddy-security LDAP Integration",
   () => {
     let client: CaddyClient;

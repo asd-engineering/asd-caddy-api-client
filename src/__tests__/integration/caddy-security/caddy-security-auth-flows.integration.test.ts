@@ -81,10 +81,10 @@ class CookieJar {
   }
 }
 
-// Skip if not in CI or docker environment
-const skipIfNoDocker = !process.env.CI && !process.env.DOCKER_TEST;
+// Skip unless CADDY_SECURITY_TEST is explicitly set (requires caddy-security Docker stack)
+const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 
-describe.skipIf(skipIfNoDocker)(
+describe.skipIf(skipIfNoSecurityStack)(
   "caddy-security Authentication Flows",
   () => {
     let client: CaddyClient;

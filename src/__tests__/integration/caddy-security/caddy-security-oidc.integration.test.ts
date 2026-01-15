@@ -33,10 +33,10 @@ const KEYCLOAK_REALM = "test-realm";
 const KEYCLOAK_CLIENT_ID = "caddy-app";
 const KEYCLOAK_CLIENT_SECRET = "test-client-secret";
 
-// Skip if not in CI or docker environment
-const skipIfNoDocker = !process.env.CI && !process.env.DOCKER_TEST;
+// Skip unless CADDY_SECURITY_TEST is explicitly set (requires caddy-security Docker stack)
+const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 
-describe.skipIf(skipIfNoDocker)(
+describe.skipIf(skipIfNoSecurityStack)(
   "caddy-security OIDC Integration",
   () => {
     let client: CaddyClient;
