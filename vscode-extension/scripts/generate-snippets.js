@@ -1,0 +1,184 @@
+/**
+ * Generate VSCode snippets from library metadata
+ *
+ * This script imports the extension-assets from the library and generates
+ * VSCode snippet files for both TypeScript builders and JSON configurations.
+ */
+
+const fs = require("fs");
+const path = require("path");
+
+// Import metadata from built library
+const assetsPath = path.join(__dirname, "../../dist/generated/extension-assets.js");
+
+async function generateSnippets() {
+  // Dynamic import for ESM module
+  const { BUILDER_METADATA, HANDLER_METADATA } = await import(assetsPath);
+
+  // Generate TypeScript/JavaScript builder snippets
+  const builderSnippets = {};
+
+  for (const [name, builder] of Object.entries(BUILDER_METADATA)) {
+    builderSnippets[builder.snippet.description] = {
+      prefix: builder.snippet.prefix,
+      body: builder.snippet.body,
+      description: builder.description.split("\n")[0], // First line only
+    };
+  }
+
+  // Generate JSON configuration snippets
+  const jsonSnippets = {
+    "Caddy Route": {
+      prefix: "caddy-route",
+      body: [
+        "{",
+        '  "@id": "${1:route-id}",',
+        '  "match": [{ "host": ["${2:example.com}"] }],',
+        '  "handle": [',
+        "    {",
+        '      "handler": "${3|reverse_proxy,file_server,static_response,headers|}",',
+        '      ${4:"upstreams": [{ "dial": "${5:localhost:3000}" }]}',
+        "    }",
+        "  ],",
+        '  "terminal": true',
+        "}",
+      ],
+      description: "Insert a Caddy route configuration",
+    },
+    "Caddy Reverse Proxy Handler": {
+      prefix: "caddy-handler-proxy",
+      body: [
+        "{",
+        '  "handler": "reverse_proxy",',
+        '  "upstreams": [{ "dial": "${1:localhost:3000}" }]',
+        "}",
+      ],
+      description: "Reverse proxy handler",
+    },
+    "Caddy File Server Handler": {
+      prefix: "caddy-handler-files",
+      body: ["{", '  "handler": "file_server",', '  "root": "${1:/var/www/html}"', "}"],
+      description: "File server handler",
+    },
+    "Caddy Headers Handler": {
+      prefix: "caddy-handler-headers",
+      body: [
+        "{",
+        '  "handler": "headers",',
+        '  "response": {',
+        '    "set": {',
+        '      "${1:X-Custom-Header}": ["${2:value}"]',
+        "    }",
+        "  }",
+        "}",
+      ],
+      description: "Headers manipulation handler",
+    },
+    "Caddy Static Response Handler": {
+      prefix: "caddy-handler-static",
+      body: [
+        "{",
+        '  "handler": "static_response",',
+        '  "status_code": ${1:200},',
+        '  "body": "${2:Hello, World!}"',
+        "}",
+      ],
+      description: "Static response handler",
+    },
+    "Caddy Security Authenticator Handler": {
+      prefix: "caddy-sec-authenticator",
+      body: ["{", '  "handler": "authenticator",', '  "portal_name": "${1:myportal}"', "}"],
+      description: "caddy-security authenticator portal handler",
+    },
+    "Caddy Security Authorization Handler": {
+      prefix: "caddy-sec-authorizer",
+      body: [
+        "{",
+        '  "handler": "authentication",',
+        '  "providers": {',
+        '    "authorizer": {',
+        '      "gatekeeper_name": "${1:my-policy}"',
+        "    }",
+        "  }",
+        "}",
+      ],
+      description: "caddy-security authorization handler",
+    },
+    "Caddy Security Local Store": {
+      prefix: "caddy-sec-local-store",
+      body: [
+        "{",
+        '  "driver": "local",',
+        '  "realm": "${1:local}",',
+        '  "path": "${2:/etc/caddy/users.json}"',
+        "}",
+      ],
+      description: "caddy-security local identity store",
+    },
+    "Caddy Security LDAP Store": {
+      prefix: "caddy-sec-ldap-store",
+      body: [
+        "{",
+        '  "driver": "ldap",',
+        '  "realm": "${1:ldap}",',
+        '  "servers": [{ "address": "${2:ldap.example.com}", "port": 389 }],',
+        '  "bind_dn": "${3:cn=admin,dc=example,dc=com}",',
+        '  "bind_password": "${4:secret}",',
+        '  "search_base_dn": "${5:ou=users,dc=example,dc=com}",',
+        '  "search_filter": "(uid={username})"',
+        "}",
+      ],
+      description: "caddy-security LDAP identity store",
+    },
+    "Caddy Security Portal": {
+      prefix: "caddy-sec-portal",
+      body: [
+        "{",
+        '  "name": "${1:myportal}",',
+        '  "identity_stores": ["${2:local}"],',
+        '  "cookie": {',
+        '    "domain": "${3:.example.com}",',
+        '    "lifetime": "24h"',
+        "  }",
+        "}",
+      ],
+      description: "caddy-security authentication portal",
+    },
+    "Caddy Security Policy": {
+      prefix: "caddy-sec-policy",
+      body: [
+        "{",
+        '  "name": "${1:my-policy}",',
+        '  "access_lists": [',
+        "    {",
+        '      "action": "allow",',
+        '      "claim": "${2:roles}",',
+        '      "values": ["${3:user}"]',
+        "    }",
+        "  ]",
+        "}",
+      ],
+      description: "caddy-security authorization policy",
+    },
+  };
+
+  // Write snippet files
+  const snippetsDir = path.join(__dirname, "../snippets");
+
+  fs.writeFileSync(
+    path.join(snippetsDir, "caddy-builders.json"),
+    JSON.stringify(builderSnippets, null, 2)
+  );
+  console.log("✓ Generated caddy-builders.json");
+
+  fs.writeFileSync(
+    path.join(snippetsDir, "caddy-json.json"),
+    JSON.stringify(jsonSnippets, null, 2)
+  );
+  console.log("✓ Generated caddy-json.json");
+
+  console.log(`\nGenerated ${Object.keys(builderSnippets).length} builder snippets`);
+  console.log(`Generated ${Object.keys(jsonSnippets).length} JSON snippets`);
+}
+
+generateSnippets().catch(console.error);

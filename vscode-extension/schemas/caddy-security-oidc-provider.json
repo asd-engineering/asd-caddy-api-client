@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://asd-engineering.github.io/asd-caddy-api-client/schemas/caddy-security-oidc-provider.json",
+  "title": "Caddy Security Oidc Provider",
+  "description": "caddy-security OIDC identity provider configuration",
+  "$ref": "#/definitions/caddy-security-oidc-provider",
+  "definitions": {
+    "caddy-security-oidc-provider": {
+      "type": "object",
+      "properties": {
+        "driver": {
+          "type": "string",
+          "const": "oidc"
+        },
+        "realm": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "client_id": {
+          "type": "string"
+        },
+        "client_secret": {
+          "type": "string"
+        },
+        "discovery_url": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["driver"],
+      "additionalProperties": false
+    }
+  }
+}

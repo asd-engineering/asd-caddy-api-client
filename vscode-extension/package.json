@@ -1,0 +1,155 @@
+{
+  "name": "vscode-caddy-tools",
+  "displayName": "Caddy Configuration Tools",
+  "description": "IntelliSense, snippets, and validation for Caddy and caddy-security configurations",
+  "version": "0.1.0",
+  "publisher": "asd-engineering",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/asd-engineering/asd-caddy-api-client.git",
+    "directory": "vscode-extension"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Snippets",
+    "Linters",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "caddy",
+    "caddy-security",
+    "reverse-proxy",
+    "web-server",
+    "configuration"
+  ],
+  "activationEvents": [
+    "onLanguage:json",
+    "onLanguage:jsonc",
+    "onLanguage:typescript",
+    "onLanguage:javascript"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "jsonValidation": [
+      {
+        "fileMatch": [
+          "**/caddy.json",
+          "**/caddy-config.json",
+          "**/*.caddy.json"
+        ],
+        "url": "./schemas/caddy-route.json"
+      },
+      {
+        "fileMatch": [
+          "**/.caddy-security.json",
+          "**/caddy-security.json",
+          "**/security-config.json"
+        ],
+        "url": "./schemas/caddy-security-config.json"
+      },
+      {
+        "fileMatch": [
+          "**/.caddy-security-portal.json",
+          "**/caddy-security-portal.json"
+        ],
+        "url": "./schemas/caddy-security-portal.json"
+      },
+      {
+        "fileMatch": [
+          "**/.caddy-security-policy.json",
+          "**/caddy-security-policy.json"
+        ],
+        "url": "./schemas/caddy-security-policy.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "typescript",
+        "path": "./snippets/caddy-builders.json"
+      },
+      {
+        "language": "javascript",
+        "path": "./snippets/caddy-builders.json"
+      },
+      {
+        "language": "json",
+        "path": "./snippets/caddy-json.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "caddy.showHandlerDocs",
+        "title": "Caddy: Show Handler Documentation"
+      },
+      {
+        "command": "caddy.insertRoute",
+        "title": "Caddy: Insert Route Configuration"
+      },
+      {
+        "command": "caddy.insertSecurityConfig",
+        "title": "Caddy: Insert Security Configuration"
+      },
+      {
+        "command": "caddy.runRouteWizard",
+        "title": "Caddy: Route Configuration Wizard"
+      },
+      {
+        "command": "caddy.runSecurityWizard",
+        "title": "Caddy: Security Configuration Wizard"
+      }
+    ],
+    "configuration": {
+      "title": "Caddy Configuration Tools",
+      "properties": {
+        "caddy.enableHoverDocs": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show Caddy documentation in hover tooltips"
+        },
+        "caddy.showCaddyDocsLinks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include links to Caddy documentation in hover"
+        },
+        "caddy.showCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show documentation links above handler definitions"
+        },
+        "caddy.enableDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time validation of Caddy configurations"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "npm run copy-schemas && npm run generate-snippets && esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --watch",
+    "copy-schemas": "shx mkdir -p schemas && shx cp ../src/generated/schemas/*.json ./schemas/",
+    "generate-snippets": "node scripts/generate-snippets.js",
+    "package": "vsce package --no-dependencies",
+    "publish": "vsce publish",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.19.0",
+    "shx": "^0.4.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@accelerated-software-development/caddy-api-client": "file:.."
+  }
+}

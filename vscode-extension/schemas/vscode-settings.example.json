@@ -1,0 +1,40 @@
+{
+  "json.schemas": [
+    {
+      "fileMatch": ["**/caddy-route.json"],
+      "url": "./src/generated/schemas/caddy-route.json"
+    },
+    {
+      "fileMatch": ["**/*.caddy-route.json"],
+      "url": "./src/generated/schemas/caddy-route.json"
+    },
+    {
+      "fileMatch": ["**/.caddy-security-portal.json"],
+      "url": "./src/generated/schemas/caddy-security-portal.json"
+    },
+    {
+      "fileMatch": ["**/caddy-security-portal.json"],
+      "url": "./src/generated/schemas/caddy-security-portal.json"
+    },
+    {
+      "fileMatch": ["**/.caddy-security-policy.json"],
+      "url": "./src/generated/schemas/caddy-security-policy.json"
+    },
+    {
+      "fileMatch": ["**/caddy-security-policy.json"],
+      "url": "./src/generated/schemas/caddy-security-policy.json"
+    },
+    {
+      "fileMatch": ["**/.caddy-security.json"],
+      "url": "./src/generated/schemas/caddy-security-config.json"
+    },
+    {
+      "fileMatch": ["**/caddy-security.json"],
+      "url": "./src/generated/schemas/caddy-security-config.json"
+    },
+    {
+      "fileMatch": ["**/security-app.json"],
+      "url": "./src/generated/schemas/caddy-security-app.json"
+    }
+  ]
+}

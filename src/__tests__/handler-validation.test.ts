@@ -631,10 +631,7 @@ describe("ReverseProxyHandlerSchema (regression)", () => {
   it("validates config with load balancing", () => {
     const result = ReverseProxyHandlerSchema.safeParse({
       handler: "reverse_proxy",
-      upstreams: [
-        { dial: "server1:8080" },
-        { dial: "server2:8080" },
-      ],
+      upstreams: [{ dial: "server1:8080" }, { dial: "server2:8080" }],
       load_balancing: {
         selection_policy: { policy: "round_robin" },
       },

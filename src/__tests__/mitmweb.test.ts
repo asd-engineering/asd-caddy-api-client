@@ -255,9 +255,7 @@ describe("startMitmweb() - Validation", () => {
     const isInstalled = await isMitmproxyInstalled();
     if (!isInstalled) {
       // Will throw MitmproxyNotInstalledError, but validates options first
-      await expect(
-        startMitmweb({ scripts: ["/path/to/script.py"] })
-      ).rejects.toThrow();
+      await expect(startMitmweb({ scripts: ["/path/to/script.py"] })).rejects.toThrow();
     }
   });
 

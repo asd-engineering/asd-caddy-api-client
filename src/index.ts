@@ -42,6 +42,10 @@ export type {
   CopyResponseHandler,
   CopyResponseHeadersHandler,
   GenericHandler,
+  // Plugin handler types
+  SecurityAuthenticatorHandler,
+  SecurityAuthorizerProvider,
+  SecurityAuthorizationHandler,
 } from "./types.js";
 
 // Caddy module
@@ -49,6 +53,9 @@ export * from "./caddy/index.js";
 
 // MITM module
 export * from "./mitm/index.js";
+
+// Plugins module
+export * from "./plugins/index.js";
 
 // Certificate utilities
 export * from "./utils/certificate.js";

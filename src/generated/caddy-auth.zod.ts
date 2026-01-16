@@ -4,8 +4,8 @@ import { z } from "zod";
 export const argon2idHashSchema = z.object({});
 
 export const accountSchema = z.object({
-    username: z.string(),
-    password: z.string()
+  username: z.string(),
+  password: z.string(),
 });
 
 export const cacheSchema = z.object({});
@@ -16,20 +16,22 @@ export const hasherSchema = z.any();
 
 export const bcryptHashSchema = z.object({});
 
-export const authenticationSchema = z.object({
-    providers: z.any().optional()
-});
-
 export const authenticatorSchema = z.any();
 
 export const userSchema = z.object({
-    ID: z.string(),
-    Metadata: z.record(z.string(), z.string())
+  ID: z.string(),
+  Metadata: z.record(z.string(), z.string()),
 });
 
+const moduleMapSchema = z.any();
+
 export const httpBasicAuthSchema = z.object({
-    hash: z.unknown().optional(),
-    accounts: z.array(accountSchema).optional(),
-    realm: z.string().optional(),
-    hash_cache: cacheSchema.optional()
+  hash: z.unknown().optional(),
+  accounts: z.array(accountSchema).optional(),
+  realm: z.string().optional(),
+  hash_cache: cacheSchema.optional(),
+});
+
+export const authenticationSchema = z.object({
+  providers: moduleMapSchema.optional(),
 });

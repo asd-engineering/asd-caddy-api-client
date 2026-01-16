@@ -1134,9 +1134,7 @@ export function buildFileServerRoute(options: FileServerRouteOptions): CaddyRout
 
   // Enable browsing
   if (options.browse) {
-    handler.browse = options.browseTemplate
-      ? { template_file: options.browseTemplate }
-      : {};
+    handler.browse = options.browseTemplate ? { template_file: options.browseTemplate } : {};
   }
 
   // Add hidden file patterns
@@ -1232,10 +1230,7 @@ export function buildTemplatesRoute(options: TemplatesRouteOptions): CaddyRoute 
 
   const route: CaddyRoute = {
     match: [{ path: [options.path] }],
-    handle: [
-      templatesHandler as CaddyRouteHandler,
-      fileServerHandler as CaddyRouteHandler,
-    ],
+    handle: [templatesHandler as CaddyRouteHandler, fileServerHandler as CaddyRouteHandler],
     terminal: true,
   };
 

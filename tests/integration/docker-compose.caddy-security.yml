@@ -1,0 +1,38 @@
+services:
+  # Auth-aware backend that decodes tokens and returns claims
+  auth-echo:
+    image: node:20-alpine
+    container_name: auth-echo-server
+    working_dir: /app
+    volumes:
+      - ./auth-echo-server.js:/app/server.js:ro
+    command: node server.js
+    environment:
+      PORT: "5690"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5690/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  caddy-security:
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy-security
+    container_name: caddy-security-test
+    ports:
+      - "8443:443"
+      - "8084:80"
+      - "2020:2019"
+    volumes:
+      - ./Caddyfile.caddy-security:/etc/caddy/Caddyfile:ro
+      - ./fixtures/local-users.json:/data/users.json
+    depends_on:
+      auth-echo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s

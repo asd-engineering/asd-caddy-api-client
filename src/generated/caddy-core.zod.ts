@@ -58,7 +58,7 @@ export const listenerFuncSchema = z.any();
 
 export const listenerWrapperSchema = z.any();
 
-export const writerOpenerSchema = z.any();
+export const writerOpenerSchema = z.unknown();
 
 export const logSamplingSchema = z.object({
   interval: z.union([z.number(), z.string()]).optional(),

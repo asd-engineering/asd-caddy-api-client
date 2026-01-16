@@ -1,6 +1,6 @@
 {
   "name": "@accelerated-software-development/caddy-api-client",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "TypeScript client for Caddy Admin API with MITMproxy integration",
   "type": "module",
   "main": "./dist/index.js",
@@ -26,6 +26,21 @@
       "types": "./dist/caddy-types.d.ts",
       "import": "./dist/caddy-types.js",
       "require": "./dist/caddy-types.cjs"
+    },
+    "./plugins": {
+      "types": "./dist/plugins/index.d.ts",
+      "import": "./dist/plugins/index.js",
+      "require": "./dist/plugins/index.cjs"
+    },
+    "./plugins/caddy-security": {
+      "types": "./dist/plugins/caddy-security/index.d.ts",
+      "import": "./dist/plugins/caddy-security/index.js",
+      "require": "./dist/plugins/caddy-security/index.cjs"
+    },
+    "./extension-assets": {
+      "types": "./dist/generated/extension-assets.d.ts",
+      "import": "./dist/generated/extension-assets.js",
+      "require": "./dist/generated/extension-assets.cjs"
     }
   },
   "files": [
@@ -42,6 +57,33 @@
     "test:coverage:unit": "echo '================================================\nRunning Unit Test Coverage\n================================================\n' && vitest run --coverage",
     "test:coverage:integration": "echo '\n================================================\nRunning Integration Tests (bun)\n================================================\n' && INTEGRATION_TEST=true bun test src/__tests__/integration/",
     "test:integration": "INTEGRATION_TEST=true bun test src/__tests__/integration/ --no-coverage",
+    "test:playwright": "playwright test",
+    "test:auth-types": "playwright test src/__tests__/playwright/",
+    "test:oauth": "playwright test src/__tests__/playwright/oauth-flow.spec.ts",
+    "test:oauth:enhanced": "playwright test src/__tests__/playwright/oauth-flow-enhanced.spec.ts",
+    "docker:oauth:up": "docker compose -f tests/integration/docker-compose.oauth.yml up -d",
+    "docker:oauth:down": "docker compose -f tests/integration/docker-compose.oauth.yml down",
+    "test:keycloak": "playwright test src/__tests__/playwright/keycloak-oidc.spec.ts",
+    "docker:keycloak:up": "docker compose -f tests/integration/docker-compose.keycloak.yml up -d",
+    "docker:keycloak:down": "docker compose -f tests/integration/docker-compose.keycloak.yml down",
+    "test:ldap": "playwright test src/__tests__/playwright/ldap-identity-store.spec.ts",
+    "test:ldap:http": "playwright test src/__tests__/playwright/ldap-http-auth.spec.ts",
+    "docker:ldap:up": "docker compose -f tests/integration/docker-compose.ldap.yml up -d",
+    "docker:ldap:down": "docker compose -f tests/integration/docker-compose.ldap.yml down",
+    "docker:caddy-security-ldap:up": "docker compose -f tests/integration/docker-compose.caddy-security-ldap.yml up -d --build",
+    "docker:caddy-security-ldap:down": "docker compose -f tests/integration/docker-compose.caddy-security-ldap.yml down",
+    "test:saml": "playwright test src/__tests__/playwright/saml-flow.spec.ts",
+    "docker:saml:up": "docker compose -f tests/integration/docker-compose.saml.yml up -d",
+    "docker:saml:down": "docker compose -f tests/integration/docker-compose.saml.yml down",
+    "test:authentik": "playwright test src/__tests__/playwright/authentik-advanced.spec.ts",
+    "docker:authentik:up": "docker compose -f tests/integration/docker-compose.authentik.yml up -d",
+    "docker:authentik:down": "docker compose -f tests/integration/docker-compose.authentik.yml down -v",
+    "test:caddy-security": "playwright test src/__tests__/playwright/caddy-security-portal.spec.ts",
+    "test:oidc-flow": "playwright test src/__tests__/playwright/caddy-security-oidc-flow.spec.ts",
+    "test:auth:security": "playwright test src/__tests__/playwright/auth-security-advanced.spec.ts",
+    "test:auth:claims": "playwright test src/__tests__/playwright/auth-claims-injection.spec.ts",
+    "docker:caddy-security:up": "docker compose -f tests/integration/docker-compose.caddy-security.yml up -d --build",
+    "docker:caddy-security:down": "docker compose -f tests/integration/docker-compose.caddy-security.yml down",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
@@ -58,8 +100,14 @@
     "verify:publish": "npm publish --dry-run",
     "prepare": "husky",
     "prepublishOnly": "bun run build && bun run test && bun run typecheck && bun run lint",
-    "generate:types": "cd local/caddy && tygo generate && cd ../.. && npx tsx scripts/transform-caddy-types.ts && npx tsx scripts/generate-zod-schemas.ts",
-    "sync:caddy": "git -C local/caddy pull && npm run generate:types"
+    "generate:types": "npx tsx scripts/generate-caddy-types.ts",
+    "generate:plugin-types": "npx tsx scripts/generate-plugin-types.ts",
+    "generate:extension": "npx tsx scripts/extract-metadata.ts",
+    "generate:json-schemas": "npx tsx scripts/generate-json-schemas.ts",
+    "generate:all": "npm run generate:types && npm run generate:plugin-types && npm run generate:extension && npm run generate:json-schemas",
+    "sync:caddy": "git -C local/caddy pull && npm run generate:types",
+    "sync:plugins": "git -C local/caddy-security pull && npm run generate:plugin-types",
+    "sync:all": "npm run sync:caddy && npm run sync:plugins"
   },
   "keywords": [
     "caddy",
@@ -94,8 +142,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.57.0",
     "@types/node": "^20.10.0",
     "@vitest/coverage-v8": "^1.0.0",
+    "ajv": "^8.17.1",
+    "bcryptjs": "^3.0.3",
     "eslint": "^9.32.0",
     "globals": "^15.12.0",
     "husky": "^9.1.6",
@@ -107,7 +158,8 @@
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.0.0",
     "vitest": "^1.0.0",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.25.1"
   },
   "engines": {
     "node": ">=18.0.0"

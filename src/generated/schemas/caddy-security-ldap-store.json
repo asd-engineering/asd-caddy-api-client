@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://asd-engineering.github.io/asd-caddy-api-client/schemas/caddy-security-ldap-store.json",
+  "title": "Caddy Security Ldap Store",
+  "description": "caddy-security LDAP identity store configuration",
+  "$ref": "#/definitions/caddy-security-ldap-store",
+  "definitions": {
+    "caddy-security-ldap-store": {
+      "type": "object",
+      "properties": {
+        "driver": {
+          "type": "string",
+          "const": "ldap"
+        },
+        "realm": {
+          "type": "string"
+        },
+        "servers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 65535
+              }
+            },
+            "required": ["address"],
+            "additionalProperties": false
+          }
+        },
+        "bind_dn": {
+          "type": "string"
+        },
+        "bind_password": {
+          "type": "string"
+        },
+        "search_base_dn": {
+          "type": "string"
+        },
+        "search_filter": {
+          "type": "string"
+        }
+      },
+      "required": ["driver"],
+      "additionalProperties": false
+    }
+  }
+}

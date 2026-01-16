@@ -1,0 +1,40 @@
+# Caddyfile for Authentik integration testing
+# Note: Standard Caddy without caddy-security plugin
+# Tests focus on Authentik OIDC endpoints directly
+
+{
+    admin :2019
+    debug
+}
+
+:80 {
+    # Health check endpoint
+    route /health {
+        respond "OK" 200
+    }
+
+    # OAuth callback endpoint
+    route /callback* {
+        respond "OAuth callback received" 200
+    }
+
+    # Protected endpoint
+    route /protected* {
+        respond "Protected content - requires authentication" 200
+    }
+
+    # Public endpoint
+    route /public* {
+        respond "Public content - no auth required" 200
+    }
+
+    # Proxy to Authentik for auth endpoints
+    route /application/* {
+        reverse_proxy authentik-server:9000
+    }
+
+    # Default
+    route {
+        respond "Caddy Authentik Test Server" 200
+    }
+}

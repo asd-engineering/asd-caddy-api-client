@@ -1,0 +1,93 @@
+# Caddyfile for caddy-security local authentication testing
+# Tests the authentication portal with local users and JWT tokens
+
+{
+    admin :2019
+    debug
+
+    security {
+        # Local identity store with test users
+        local identity store localdb {
+            realm local
+            path /data/users.json
+        }
+
+        # Authentication portal
+        authentication portal myportal {
+            crypto default token lifetime 3600
+            crypto key sign-verify test-secret-key-for-integration-tests
+            enable identity store localdb
+            cookie domain localhost
+            cookie lifetime 3600
+            ui {
+                links {
+                    "Dashboard" /dashboard icon "las la-home"
+                }
+            }
+        }
+
+        # Authorization policy
+        authorization policy mypolicy {
+            set auth url /auth
+            crypto key verify test-secret-key-for-integration-tests
+            allow roles authp/admin authp/user
+            validate bearer header
+            inject headers with claims
+        }
+    }
+}
+
+:80 {
+    # Health check endpoint (no auth)
+    route /health {
+        respond "OK" 200
+    }
+
+    # Authentication portal
+    route /auth* {
+        authenticate with myportal
+    }
+
+    # Protected dashboard
+    route /dashboard* {
+        authorize with mypolicy
+        respond "Welcome to the dashboard! You are authenticated." 200
+    }
+
+    # Protected API
+    route /api/* {
+        authorize with mypolicy
+        respond `{"status": "authenticated", "message": "API access granted"}` 200
+    }
+
+    # Auth-echo backend - proxies to auth-aware backend
+    # This allows testing that claims are properly injected
+    route /backend/* {
+        authorize with mypolicy
+        reverse_proxy auth-echo:5690
+    }
+
+    # Whoami endpoint via auth-echo
+    route /whoami {
+        authorize with mypolicy
+        uri strip_prefix /whoami
+        rewrite * /whoami
+        reverse_proxy auth-echo:5690
+    }
+
+    # Claims endpoint via auth-echo
+    route /claims {
+        authorize with mypolicy
+        reverse_proxy auth-echo:5690
+    }
+
+    # Public endpoint
+    route /public* {
+        respond "Public content - no auth required" 200
+    }
+
+    # Default - redirect to auth
+    route {
+        respond "Caddy Security Test Server - visit /auth to login" 200
+    }
+}

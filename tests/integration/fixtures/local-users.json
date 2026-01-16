@@ -1,0 +1,173 @@
+{
+  "version": "1.1.7",
+  "policy": {
+    "password": {
+      "keep_versions": 10,
+      "min_length": 8,
+      "max_length": 128,
+      "require_uppercase": false,
+      "require_lowercase": false,
+      "require_number": false,
+      "require_non_alpha_numeric": false,
+      "block_reuse": false,
+      "block_password_change": false
+    },
+    "user": {
+      "min_length": 3,
+      "max_length": 50,
+      "allow_non_alpha_numeric": false,
+      "allow_uppercase": false
+    }
+  },
+  "revision": 3,
+  "last_modified": "2026-01-11T22:49:29.654990287Z",
+  "users": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "username": "testuser",
+      "name": {
+        "first": "Test",
+        "last": "User"
+      },
+      "email_address": {
+        "address": "testuser@test.local",
+        "domain": "test.local"
+      },
+      "email_addresses": [
+        {
+          "address": "testuser@test.local",
+          "domain": "test.local"
+        }
+      ],
+      "passwords": [
+        {
+          "purpose": "generic",
+          "algorithm": "bcrypt",
+          "hash": "$2a$10$5TLTERPjBpv1uwshbcjmu.kZ6zQSk1ytVNOAjFcaHk1bl2XRSNr9e",
+          "cost": 10,
+          "expired_at": "0001-01-01T00:00:00Z",
+          "created_at": "2024-01-01T00:00:00Z",
+          "disabled_at": "0001-01-01T00:00:00Z"
+        }
+      ],
+      "created": "2024-01-01T00:00:00Z",
+      "last_modified": "2024-01-01T00:00:00Z",
+      "roles": [
+        {
+          "name": "authp/user"
+        }
+      ]
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "username": "admin",
+      "name": {
+        "first": "Admin",
+        "last": "User"
+      },
+      "email_address": {
+        "address": "admin@test.local",
+        "domain": "test.local"
+      },
+      "email_addresses": [
+        {
+          "address": "admin@test.local",
+          "domain": "test.local"
+        }
+      ],
+      "passwords": [
+        {
+          "purpose": "generic",
+          "algorithm": "bcrypt",
+          "hash": "$2a$10$5TLTERPjBpv1uwshbcjmu.kZ6zQSk1ytVNOAjFcaHk1bl2XRSNr9e",
+          "cost": 10,
+          "expired_at": "0001-01-01T00:00:00Z",
+          "created_at": "2024-01-01T00:00:00Z",
+          "disabled_at": "0001-01-01T00:00:00Z"
+        }
+      ],
+      "created": "2024-01-01T00:00:00Z",
+      "last_modified": "2024-01-01T00:00:00Z",
+      "roles": [
+        {
+          "name": "authp/admin"
+        },
+        {
+          "name": "authp/user"
+        }
+      ]
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440003",
+      "username": "editor",
+      "name": {
+        "first": "Editor",
+        "last": "User"
+      },
+      "email_address": {
+        "address": "editor@test.local",
+        "domain": "test.local"
+      },
+      "email_addresses": [
+        {
+          "address": "editor@test.local",
+          "domain": "test.local"
+        }
+      ],
+      "passwords": [
+        {
+          "purpose": "generic",
+          "algorithm": "bcrypt",
+          "hash": "$2a$10$5TLTERPjBpv1uwshbcjmu.kZ6zQSk1ytVNOAjFcaHk1bl2XRSNr9e",
+          "cost": 10,
+          "expired_at": "0001-01-01T00:00:00Z",
+          "created_at": "2024-01-01T00:00:00Z",
+          "disabled_at": "0001-01-01T00:00:00Z"
+        }
+      ],
+      "created": "2024-01-01T00:00:00Z",
+      "last_modified": "2024-01-01T00:00:00Z",
+      "roles": [
+        {
+          "name": "authp/editor"
+        },
+        {
+          "name": "authp/user"
+        }
+      ]
+    },
+    {
+      "id": "d970db27-ca2a-40c8-b2c7-17f0f434e173",
+      "username": "webadmin",
+      "email_address": {
+        "address": "webadmin@localdomain.local",
+        "domain": "localdomain.local"
+      },
+      "email_addresses": [
+        {
+          "address": "webadmin@localdomain.local",
+          "domain": "localdomain.local"
+        }
+      ],
+      "passwords": [
+        {
+          "purpose": "generic",
+          "algorithm": "bcrypt",
+          "hash": "$2a$10$Ua.kkrZLMxJEptqpQnoVl.XOoWz1GuIgptrU3pJxJBvjJocNx9klS",
+          "cost": 10,
+          "expired_at": "0001-01-01T00:00:00Z",
+          "created_at": "2026-01-11T22:49:29.609045991Z",
+          "disabled_at": "0001-01-01T00:00:00Z"
+        }
+      ],
+      "created": "2026-01-11T22:49:29.609045601Z",
+      "last_modified": "2026-01-11T22:49:29.654987157Z",
+      "roles": [
+        {
+          "name": "admin",
+          "organization": "authp"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: keycloak-test
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: "8081"
+    volumes:
+      - ./fixtures/keycloak-realm.json:/opt/keycloak/data/import/realm.json:ro
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/localhost/8081 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy-keycloak-test
+    ports:
+      - "8080:80"
+      - "2019:2019"
+    volumes:
+      - ./Caddyfile.keycloak:/etc/caddy/Caddyfile:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
