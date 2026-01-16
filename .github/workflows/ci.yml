@@ -130,6 +130,67 @@ jobs:
         if: always()
         run: docker compose -f docker-compose.test.yml down -v
 
+  caddy-security-tests:
+    name: Caddy Security Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Start caddy-security stack
+        run: |
+          docker compose -f tests/integration/docker-compose.caddy-security.yml up -d --build
+          docker compose -f tests/integration/docker-compose.keycloak.yml up -d
+          docker compose -f tests/integration/docker-compose.ldap.yml up -d
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for caddy-security..."
+          timeout 120 bash -c 'until curl -sf http://localhost:8084/health; do sleep 3; done' || (docker compose -f tests/integration/docker-compose.caddy-security.yml logs && exit 1)
+          echo "Waiting for Keycloak..."
+          timeout 180 bash -c 'until curl -sf http://localhost:8081/health/ready; do sleep 5; done' || (docker compose -f tests/integration/docker-compose.keycloak.yml logs && exit 1)
+          echo "Waiting for OpenLDAP..."
+          timeout 60 bash -c 'until docker exec openldap-test ldapsearch -x -H ldap://localhost -b "dc=test,dc=local" -D "cn=admin,dc=test,dc=local" -w admin "(objectClass=*)" > /dev/null 2>&1; do sleep 3; done' || (docker compose -f tests/integration/docker-compose.ldap.yml logs && exit 1)
+          echo "All caddy-security services ready!"
+
+      - name: Setup LDAP test data
+        run: |
+          chmod +x tests/integration/setup-ldap.sh
+          tests/integration/setup-ldap.sh || echo "LDAP setup script failed (may be OK if data exists)"
+
+      - name: Run caddy-security integration tests
+        run: bun test src/__tests__/integration/caddy-security/
+        env:
+          CADDY_SECURITY_TEST: "true"
+          CADDY_ADMIN_URL: "http://127.0.0.1:2020"
+          KEYCLOAK_URL: "http://localhost:8081"
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ./coverage/integration/coverage-final.json
+          flags: caddy-security
+          name: caddy-security-tests
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Cleanup Docker services
+        if: always()
+        run: |
+          docker compose -f tests/integration/docker-compose.caddy-security.yml down -v
+          docker compose -f tests/integration/docker-compose.keycloak.yml down -v
+          docker compose -f tests/integration/docker-compose.ldap.yml down -v
+
   build:
     name: Build
     runs-on: ubuntu-latest
