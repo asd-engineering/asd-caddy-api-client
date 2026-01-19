@@ -3,8 +3,13 @@
   "displayName": "Caddy Configuration Tools",
   "description": "IntelliSense, snippets, and validation for Caddy and caddy-security configurations",
   "version": "0.1.0",
-  "publisher": "asd-engineering",
+  "publisher": "asd-host",
+  "author": {
+    "name": "Accelerated Software Development B.V.",
+    "url": "https://asd.host"
+  },
   "license": "MIT",
+  "homepage": "https://asd.host",
   "repository": {
     "type": "git",
     "url": "https://github.com/asd-engineering/asd-caddy-api-client.git",

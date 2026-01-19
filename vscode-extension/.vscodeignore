@@ -1,0 +1,14 @@
+.gitignore
+.vscode/**
+node_modules/**
+src/**
+tests/**
+test-results/**
+playwright-report/**
+playwright.config.ts
+scripts/**
+tsconfig.json
+package-lock.json
+*.vsix
+**/*.ts
+!dist/**
