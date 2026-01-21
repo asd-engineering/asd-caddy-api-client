@@ -148,7 +148,7 @@ jobs:
 
       - name: Start caddy-security stack
         run: |
-          docker compose -f tests/integration/docker-compose.caddy-security.yml up -d --build
+          docker compose -f tests/integration/docker-compose.caddy-security.yml up -d
           docker compose -f tests/integration/docker-compose.keycloak.yml up -d
           docker compose -f tests/integration/docker-compose.ldap.yml up -d
 

@@ -16,9 +16,7 @@ services:
       retries: 5
 
   caddy-security:
-    build:
-      context: .
-      dockerfile: Dockerfile.caddy-security
+    image: androw/caddy-security:2.10.2_1.1.31
     container_name: caddy-security-test
     ports:
       - "8443:443"
