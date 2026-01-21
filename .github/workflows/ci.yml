@@ -188,17 +188,21 @@ jobs:
 
       - name: Run caddy-security integration tests
         run: |
-          # Final connectivity check right before tests
-          echo "Final connectivity check with curl..."
-          curl -sf http://127.0.0.1:2020/config/ | head -c 100 || echo "FAILED"
-          echo ""
+          # Final connectivity check
+          echo "Final connectivity check..."
+          curl -sf http://127.0.0.1:2020/config/ | head -c 100 && echo ""
 
-          # Test bun's fetch directly
-          echo "Testing bun fetch..."
-          bun -e "fetch('http://127.0.0.1:2020/config/').then(r => r.text()).then(t => console.log('Bun fetch OK:', t.slice(0,100))).catch(e => console.error('Bun fetch FAILED:', e.message))"
+          # Test bun fetch with same env vars as test will use
+          echo "Testing bun fetch with env vars..."
+          CADDY_ADMIN_URL=http://127.0.0.1:2020 bun -e "
+            const url = process.env.CADDY_ADMIN_URL + '/config/';
+            console.log('Fetching:', url);
+            fetch(url).then(r => r.text()).then(t => console.log('OK:', t.slice(0,100))).catch(e => console.error('FAILED:', e.message));
+          "
 
-          # Run tests
-          bun test src/__tests__/integration/caddy-security/
+          # Run tests with vitest instead of bun test
+          echo "Running tests with vitest..."
+          CADDY_SECURITY_TEST=true CADDY_ADMIN_URL=http://127.0.0.1:2020 KEYCLOAK_URL=http://localhost:8081 bunx vitest run src/__tests__/integration/caddy-security/
         env:
           CADDY_SECURITY_TEST: "true"
           CADDY_ADMIN_URL: "http://127.0.0.1:2020"
