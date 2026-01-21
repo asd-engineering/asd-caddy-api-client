@@ -194,16 +194,18 @@ jobs:
 
           # Test with tsx (TypeScript execution) using CaddyClient directly
           echo "Testing with tsx using CaddyClient..."
-          CADDY_ADMIN_URL=http://127.0.0.1:2020 npx tsx -e "
+          CADDY_ADMIN_URL=http://127.0.0.1:2020 npx tsx --experimental-specifier-resolution=node -e "
             import { CaddyClient } from './src/caddy/client.js';
-            const client = new CaddyClient({ adminUrl: process.env.CADDY_ADMIN_URL, timeout: 10000 });
-            try {
-              const config = await client.getConfig();
-              console.log('CaddyClient OK:', JSON.stringify(config).slice(0, 100));
-            } catch (e) {
-              console.error('CaddyClient FAILED:', e.message);
-              process.exit(1);
-            }
+            (async () => {
+              const client = new CaddyClient({ adminUrl: process.env.CADDY_ADMIN_URL, timeout: 10000 });
+              try {
+                const config = await client.getConfig();
+                console.log('CaddyClient OK:', JSON.stringify(config).slice(0, 100));
+              } catch (e) {
+                console.error('CaddyClient FAILED:', e.message);
+                process.exit(1);
+              }
+            })();
           "
 
           # Run tests using npx
