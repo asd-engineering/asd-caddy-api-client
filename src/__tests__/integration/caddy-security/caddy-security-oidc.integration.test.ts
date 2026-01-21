@@ -10,7 +10,7 @@
  *
  * Run with: npm run test:integration:caddy-security-oidc
  */
-import { describe, test, expect, beforeAll, afterAll } from "vitest";
+import { describe, test, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { CaddyClient } from "../../../caddy/client.js";
 import {
   buildOidcProvider,
