@@ -154,8 +154,10 @@ jobs:
 
       - name: Wait for services to be ready
         run: |
-          echo "Waiting for caddy-security..."
+          echo "Waiting for caddy-security HTTP..."
           timeout 120 bash -c 'until curl -sf http://localhost:8084/health; do sleep 3; done' || (docker compose -f tests/integration/docker-compose.caddy-security.yml logs && exit 1)
+          echo "Waiting for caddy-security Admin API..."
+          timeout 60 bash -c 'until curl -sf http://localhost:2020/config/; do sleep 3; done' || (docker compose -f tests/integration/docker-compose.caddy-security.yml logs && exit 1)
           echo "Waiting for Keycloak..."
           timeout 180 bash -c 'until curl -sf http://localhost:8081/health/ready; do sleep 5; done' || (docker compose -f tests/integration/docker-compose.keycloak.yml logs && exit 1)
           echo "Waiting for OpenLDAP..."
