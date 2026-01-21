@@ -1,3 +1,6 @@
+# Check changelog is updated when version changes
+./scripts/check-changelog.sh || exit 1
+
 # Run format check
 echo "Running format check..."
 bun run format:check || {

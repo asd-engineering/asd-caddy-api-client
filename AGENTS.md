@@ -410,3 +410,53 @@ export const MY_NEW_TEMPLATE: SecurityTemplate = {
 | `policy`            | Authorization policies with ACL rules                        |
 | `route`             | Auth portal and protected route configurations               |
 | `full-setup`        | Complete authentication setups combining multiple components |
+
+---
+
+## Changelog Rule
+
+**Rule: When changing a package version, the CHANGELOG must also be updated.**
+
+This is enforced by a pre-commit hook (`scripts/check-changelog.sh`).
+
+### What Gets Checked
+
+| Package          | Version File                    | Changelog File                  |
+| ---------------- | ------------------------------- | ------------------------------- |
+| Main library     | `package.json`                  | `CHANGELOG.md`                  |
+| VSCode extension | `vscode-extension/package.json` | `vscode-extension/CHANGELOG.md` |
+
+### Changelog Format
+
+Follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/):
+
+```markdown
+## [0.1.5] - 2025-01-21
+
+### Added
+
+- New feature description
+
+### Changed
+
+- What changed
+
+### Fixed
+
+- Bug that was fixed
+
+### Removed
+
+- What was removed
+```
+
+### If You Forget
+
+The pre-commit hook will fail with:
+
+```
+❌ VSCode extension version changed but CHANGELOG.md was not updated
+
+  Version change detected in: vscode-extension/package.json
+  Please update: vscode-extension/CHANGELOG.md
+```
