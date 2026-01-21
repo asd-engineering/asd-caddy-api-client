@@ -97,9 +97,13 @@ describe.skipIf(skipIfNoSecurityStack)(
       // Verify Caddy is reachable
       try {
         await client.getConfig();
-      } catch {
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        const errorName = error instanceof Error ? error.name : "Unknown";
         throw new Error(
-          `Cannot connect to Caddy at ${CADDY_ADMIN_URL}. Ensure docker-compose is running.`
+          `Cannot connect to Caddy at ${CADDY_ADMIN_URL}. ` +
+            `Error: ${errorName}: ${errorMsg}. ` +
+            "Ensure docker-compose is running."
         );
       }
 
