@@ -188,13 +188,27 @@ jobs:
 
       - name: Run caddy-security integration tests
         run: |
-          # Final connectivity check
-          echo "Final connectivity check..."
+          # Final connectivity check with curl
+          echo "Final connectivity check with curl..."
           curl -sf http://127.0.0.1:2020/config/ | head -c 100 && echo ""
 
-          # Run integration tests with bun test (matches project's test:integration script)
+          # Test with raw Node.js fetch
+          echo "Testing with Node.js fetch..."
+          node -e "
+            fetch('http://127.0.0.1:2020/config/')
+              .then(r => r.json())
+              .then(d => console.log('Node fetch OK:', JSON.stringify(d).slice(0, 100)))
+              .catch(e => { console.error('Node fetch FAILED:', e.message); process.exit(1); });
+          "
+
+          # Test environment variables
+          echo "Environment check:"
+          echo "CADDY_ADMIN_URL=$CADDY_ADMIN_URL"
+          echo "CADDY_SECURITY_TEST=$CADDY_SECURITY_TEST"
+
+          # Run integration tests with bun test
           echo "Running caddy-security integration tests with bun..."
-          CADDY_SECURITY_TEST=true bun test src/__tests__/integration/caddy-security/
+          CADDY_SECURITY_TEST=true CADDY_ADMIN_URL=http://127.0.0.1:2020 bun test src/__tests__/integration/caddy-security/
         env:
           CADDY_SECURITY_TEST: "true"
           CADDY_ADMIN_URL: "http://127.0.0.1:2020"
