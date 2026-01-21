@@ -164,8 +164,14 @@ jobs:
 
       - name: Setup LDAP test data
         run: |
-          chmod +x tests/integration/setup-ldap.sh
-          tests/integration/setup-ldap.sh || echo "LDAP setup script failed (may be OK if data exists)"
+          # LDAP bootstrap data is loaded automatically via docker-compose volume mount
+          # This step is kept for any additional setup that might be needed
+          if [ -f tests/integration/setup-ldap.sh ]; then
+            chmod +x tests/integration/setup-ldap.sh
+            tests/integration/setup-ldap.sh || echo "LDAP setup script failed (may be OK if data exists)"
+          else
+            echo "No setup-ldap.sh script found - LDAP data loaded via docker-compose"
+          fi
 
       - name: Run caddy-security integration tests
         run: bun test src/__tests__/integration/caddy-security/
