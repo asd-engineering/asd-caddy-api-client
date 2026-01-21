@@ -191,6 +191,55 @@ jobs:
           docker compose -f tests/integration/docker-compose.keycloak.yml down -v
           docker compose -f tests/integration/docker-compose.ldap.yml down -v
 
+  vscode-extension-tests:
+    name: VSCode Extension Tests
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install root dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build main library
+        run: bun run build
+
+      - name: Install extension dependencies
+        working-directory: vscode-extension
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: vscode-extension
+        run: npx playwright install chromium --with-deps
+
+      - name: Run VSCode extension tests
+        working-directory: vscode-extension
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm test
+        env:
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vscode-extension-test-results
+          path: |
+            vscode-extension/playwright-report/
+            vscode-extension/test-results/
+          retention-days: 7
+
   build:
     name: Build
     runs-on: ubuntu-latest
