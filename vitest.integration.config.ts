@@ -15,9 +15,14 @@ export default defineConfig({
     sequence: {
       concurrent: false,
     },
-    // Run in main process without worker isolation
-    browser: false,
-    threads: false,
+    // Use threads pool with single thread for sequential execution
+    pool: "threads",
+    poolOptions: {
+      threads: {
+        singleThread: true,
+        isolate: false,
+      },
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
