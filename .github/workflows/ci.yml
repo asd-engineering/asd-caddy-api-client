@@ -187,7 +187,18 @@ jobs:
           ss -tlnp | grep -E "2020|8084" || true
 
       - name: Run caddy-security integration tests
-        run: bun test src/__tests__/integration/caddy-security/
+        run: |
+          # Final connectivity check right before tests
+          echo "Final connectivity check with curl..."
+          curl -sf http://127.0.0.1:2020/config/ | head -c 100 || echo "FAILED"
+          echo ""
+
+          # Test bun's fetch directly
+          echo "Testing bun fetch..."
+          bun -e "fetch('http://127.0.0.1:2020/config/').then(r => r.text()).then(t => console.log('Bun fetch OK:', t.slice(0,100))).catch(e => console.error('Bun fetch FAILED:', e.message))"
+
+          # Run tests
+          bun test src/__tests__/integration/caddy-security/
         env:
           CADDY_SECURITY_TEST: "true"
           CADDY_ADMIN_URL: "http://127.0.0.1:2020"
