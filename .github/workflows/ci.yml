@@ -192,12 +192,18 @@ jobs:
           echo "Final connectivity check..."
           curl -sf http://127.0.0.1:2020/config/ | head -c 100 && echo ""
 
-          # Test with node's fetch
-          echo "Testing node fetch..."
-          node -e "
-            const url = 'http://127.0.0.1:2020/config/';
-            console.log('Node fetching:', url);
-            fetch(url).then(r => r.text()).then(t => console.log('Node OK:', t.slice(0,100))).catch(e => console.error('Node FAILED:', e));
+          # Test with tsx (TypeScript execution) using CaddyClient directly
+          echo "Testing with tsx using CaddyClient..."
+          CADDY_ADMIN_URL=http://127.0.0.1:2020 npx tsx -e "
+            import { CaddyClient } from './src/caddy/client.js';
+            const client = new CaddyClient({ adminUrl: process.env.CADDY_ADMIN_URL, timeout: 10000 });
+            try {
+              const config = await client.getConfig();
+              console.log('CaddyClient OK:', JSON.stringify(config).slice(0, 100));
+            } catch (e) {
+              console.error('CaddyClient FAILED:', e.message);
+              process.exit(1);
+            }
           "
 
           # Run tests using npx
