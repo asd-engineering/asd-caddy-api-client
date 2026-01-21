@@ -192,25 +192,9 @@ jobs:
           echo "Final connectivity check..."
           curl -sf http://127.0.0.1:2020/config/ | head -c 100 && echo ""
 
-          # Test with tsx (TypeScript execution) using CaddyClient directly
-          echo "Testing with tsx using CaddyClient..."
-          CADDY_ADMIN_URL=http://127.0.0.1:2020 npx tsx --experimental-specifier-resolution=node -e "
-            import { CaddyClient } from './src/caddy/client.js';
-            (async () => {
-              const client = new CaddyClient({ adminUrl: process.env.CADDY_ADMIN_URL, timeout: 10000 });
-              try {
-                const config = await client.getConfig();
-                console.log('CaddyClient OK:', JSON.stringify(config).slice(0, 100));
-              } catch (e) {
-                console.error('CaddyClient FAILED:', e.message);
-                process.exit(1);
-              }
-            })();
-          "
-
-          # Run tests using npx
-          echo "Running tests with npx vitest..."
-          CADDY_SECURITY_TEST=true CADDY_ADMIN_URL=http://127.0.0.1:2020 KEYCLOAK_URL=http://localhost:8081 npx vitest run --config vitest.integration.config.ts src/__tests__/integration/caddy-security/
+          # Run integration tests with bun test (matches project's test:integration script)
+          echo "Running caddy-security integration tests with bun..."
+          CADDY_SECURITY_TEST=true bun test src/__tests__/integration/caddy-security/
         env:
           CADDY_SECURITY_TEST: "true"
           CADDY_ADMIN_URL: "http://127.0.0.1:2020"
