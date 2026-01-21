@@ -1,0 +1,16 @@
+{
+  "@id": "route-with-typo",
+  "match": [
+    {
+      "host": ["example.com"],
+      "paths": ["/api/*"]
+    }
+  ],
+  "handle": [
+    {
+      "handler": "reverse_proxy",
+      "upstreams": [{ "dial": "localhost:3000" }]
+    }
+  ],
+  "termnal": true
+}

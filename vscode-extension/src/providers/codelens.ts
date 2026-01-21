@@ -9,12 +9,16 @@ import * as vscode from "vscode";
 import { HANDLER_METADATA } from "@accelerated-software-development/caddy-api-client/extension-assets";
 
 const CADDY_DOCS_BASE = "https://caddyserver.com";
+const MAX_FILE_SIZE = 100 * 1024; // 100KB - skip code lens for large files
 
 export class CaddyCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
+  private outputChannel: vscode.OutputChannel | undefined;
+  private callCount = 0;
 
-  constructor() {
+  constructor(outputChannel?: vscode.OutputChannel) {
+    this.outputChannel = outputChannel;
     // Refresh code lenses when configuration changes
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("caddy.showCodeLens")) {
@@ -23,10 +27,20 @@ export class CaddyCodeLensProvider implements vscode.CodeLensProvider {
     });
   }
 
+  private log(message: string): void {
+    if (this.outputChannel) {
+      this.outputChannel.appendLine(`[CodeLens] ${message}`);
+    }
+  }
+
   provideCodeLenses(
     document: vscode.TextDocument,
     _token: vscode.CancellationToken
   ): vscode.CodeLens[] | undefined {
+    const startTime = performance.now();
+    this.callCount++;
+    const callId = this.callCount;
+
     // Check if code lens is enabled
     const config = vscode.workspace.getConfiguration("caddy");
     if (!config.get("showCodeLens", true)) {
@@ -38,8 +52,27 @@ export class CaddyCodeLensProvider implements vscode.CodeLensProvider {
       return undefined;
     }
 
-    const codeLenses: vscode.CodeLens[] = [];
+    // Only process Caddy-related files (check filename)
+    const fileName = document.fileName.toLowerCase();
+    const isCaddyFile =
+      fileName.includes("caddy") ||
+      fileName.includes("security") ||
+      fileName.endsWith(".caddy.json");
+    if (!isCaddyFile) {
+      return undefined;
+    }
+
     const text = document.getText();
+
+    // File size guard - skip code lens for large files
+    if (text.length > MAX_FILE_SIZE) {
+      this.log(`[#${callId}] Skipping: file too large (${(text.length / 1024).toFixed(1)}KB)`);
+      return undefined;
+    }
+
+    this.log(`[#${callId}] Processing ${document.fileName} (${(text.length / 1024).toFixed(1)}KB)`);
+
+    const codeLenses: vscode.CodeLens[] = [];
 
     // Find all handler definitions
     const handlerPattern = /"handler"\s*:\s*"([^"]+)"/g;
@@ -69,21 +102,21 @@ export class CaddyCodeLensProvider implements vscode.CodeLensProvider {
 
         codeLenses.push(docsLens);
 
-        // Add fields hint if there are common fields
-        if (handlerMeta.commonFields.length > 0) {
-          const fieldsLens = new vscode.CodeLens(range, {
-            title: `Fields: ${handlerMeta.commonFields.slice(0, 3).join(", ")}${handlerMeta.commonFields.length > 3 ? "..." : ""}`,
-            command: "",
-          });
-
-          codeLenses.push(fieldsLens);
-        }
+        // Add fields hint as part of the docs title (not a separate clickable lens)
+        const fieldsHint =
+          handlerMeta.commonFields.length > 0
+            ? ` | Fields: ${handlerMeta.commonFields.slice(0, 3).join(", ")}${handlerMeta.commonFields.length > 3 ? "..." : ""}`
+            : "";
+        docsLens.command!.title = `📖 ${handlerMeta.displayName} Docs${fieldsHint}`;
       }
     }
 
     // Find security-related patterns
     this.addSecurityCodeLenses(document, text, codeLenses);
 
+    this.log(
+      `[#${callId}] Found ${codeLenses.length} code lenses in ${(performance.now() - startTime).toFixed(2)}ms`
+    );
     return codeLenses;
   }
 

@@ -14,6 +14,18 @@ import {
 const CADDY_DOCS_BASE = "https://caddyserver.com";
 
 export class CaddyHoverProvider implements vscode.HoverProvider {
+  private outputChannel: vscode.OutputChannel | undefined;
+
+  constructor(outputChannel?: vscode.OutputChannel) {
+    this.outputChannel = outputChannel;
+  }
+
+  private log(message: string): void {
+    if (this.outputChannel) {
+      this.outputChannel.appendLine(`[Hover] ${message}`);
+    }
+  }
+
   provideHover(
     document: vscode.TextDocument,
     position: vscode.Position,
@@ -21,6 +33,16 @@ export class CaddyHoverProvider implements vscode.HoverProvider {
   ): vscode.Hover | undefined {
     const config = vscode.workspace.getConfiguration("caddy");
     if (!config.get("enableHoverDocs", true)) {
+      return undefined;
+    }
+
+    // Only process Caddy-related files
+    const fileName = document.fileName.toLowerCase();
+    const isCaddyFile =
+      fileName.includes("caddy") ||
+      fileName.includes("security") ||
+      fileName.endsWith(".caddy.json");
+    if (!isCaddyFile && document.languageId === "json") {
       return undefined;
     }
 

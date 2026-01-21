@@ -103,3 +103,12 @@ export {
   type BuildAuthenticationRouteOptions,
   type BuildProtectedRouteOptions,
 } from "./builders.js";
+
+// Templates (single source of truth for snippets)
+export {
+  SECURITY_TEMPLATES,
+  getTemplatesByCategory,
+  getTemplateById,
+  type SecurityTemplate,
+  type TemplateVariable,
+} from "./templates.js";

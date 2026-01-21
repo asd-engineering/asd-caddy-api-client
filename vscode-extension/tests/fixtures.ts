@@ -32,22 +32,17 @@ export { expect };
  * Helper to dismiss the workspace trust dialog if present
  */
 export async function handleTrustDialog(page: Page): Promise<void> {
-  // Try multiple times with increasing waits
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      // Look for "Yes, I trust the authors" button and click it
-      const trustButton = page.locator('button:has-text("Yes, I trust the authors")');
-      await trustButton.waitFor({ state: "visible", timeout: 3000 });
-      await trustButton.click();
-      await page.waitForTimeout(500);
-      console.log("Trust dialog dismissed");
-      return;
-    } catch {
-      // Trust dialog not visible yet, wait a bit
-      await page.waitForTimeout(500);
-    }
+  // Quick check for trust dialog with shorter timeout
+  try {
+    const trustButton = page.locator('button:has-text("Yes, I trust the authors")');
+    await trustButton.waitFor({ state: "visible", timeout: 2000 });
+    await trustButton.click();
+    // Wait for dialog to close
+    await trustButton.waitFor({ state: "hidden", timeout: 1000 }).catch(() => {});
+    console.log("Trust dialog dismissed");
+  } catch {
+    // Trust dialog not present, continue
   }
-  // Trust dialog not present after all attempts, continue
 }
 
 /**
@@ -62,7 +57,7 @@ export async function closeNotifications(page: Page): Promise<void> {
     const count = await closeButtons.count();
     for (let i = 0; i < count; i++) {
       try {
-        await closeButtons.nth(i).click({ timeout: 500 });
+        await closeButtons.nth(i).click({ timeout: 300 });
       } catch {
         // Button may have disappeared
       }
@@ -71,10 +66,52 @@ export async function closeNotifications(page: Page): Promise<void> {
     // No notifications present
   }
 
-  // Press Escape multiple times to close any dialogs/quick picks
-  for (let i = 0; i < 3; i++) {
+  // Press Escape to close any dialogs/quick picks (batched, no waits)
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+}
+
+/**
+ * Helper to dismiss any modal dialogs (save dialogs, etc.)
+ */
+async function dismissDialogs(page: Page): Promise<void> {
+  const modalBlock = page.locator(".monaco-dialog-modal-block");
+  if (await modalBlock.isVisible({ timeout: 100 }).catch(() => false)) {
+    // Try "Don't Save" button first
+    const dontSaveButton = page.locator('button:has-text("Don\'t Save")').first();
+    if (await dontSaveButton.isVisible({ timeout: 100 }).catch(() => false)) {
+      await dontSaveButton.click();
+      await modalBlock.waitFor({ state: "hidden", timeout: 1000 }).catch(() => {});
+      return;
+    }
+    // Press Escape as fallback
     await page.keyboard.press("Escape");
-    await page.waitForTimeout(100);
+  }
+}
+
+/**
+ * Helper to close all editors, handling "Don't Save" dialogs
+ */
+export async function closeAllEditors(page: Page): Promise<void> {
+  // Dismiss any existing dialogs first
+  await dismissDialogs(page);
+
+  // Press Escape to close quick picks
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+
+  // Close all editors - loop until no tabs remain
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const tabs = page.locator('[role="tab"]');
+    const tabCount = await tabs.count().catch(() => 0);
+    if (tabCount === 0) break;
+
+    // Close all editors shortcut
+    await page.keyboard.press("Control+k");
+    await page.keyboard.press("Control+w");
+
+    // Handle save dialog if it appears
+    await dismissDialogs(page);
   }
 }
 
@@ -82,20 +119,7 @@ export async function closeNotifications(page: Page): Promise<void> {
  * Helper to cleanup open editors and dialogs
  */
 export async function cleanupEditor(page: Page): Promise<void> {
-  // Press Escape multiple times to close any quick picks or dialogs
-  for (let i = 0; i < 5; i++) {
-    await page.keyboard.press("Escape");
-    await page.waitForTimeout(100);
-  }
-
-  // Close all open editors
-  try {
-    await page.keyboard.press("Control+k");
-    await page.keyboard.press("Control+w");
-    await page.waitForTimeout(300);
-  } catch {
-    // May fail if no editors open
-  }
+  await closeAllEditors(page);
 }
 
 /**
@@ -105,17 +129,15 @@ export async function waitForEditor(page: Page): Promise<void> {
   // Wait for the Monaco editor to be present
   await page.waitForSelector(".monaco-editor", { timeout: 30000 });
 
-  // Wait for editor to be interactive
+  // Wait for editor to be interactive (includes cursor line visible)
   await page.waitForFunction(
     () => {
       const editor = document.querySelector(".monaco-editor");
-      return editor && !editor.classList.contains("loading");
+      const cursorLine = document.querySelector(".monaco-editor .cursor");
+      return editor && !editor.classList.contains("loading") && cursorLine;
     },
     { timeout: 30000 }
   );
-
-  // Small delay for editor initialization
-  await page.waitForTimeout(1000);
 }
 
 /**
@@ -156,32 +178,83 @@ export async function createFile(
     }
   }
 
-  // Wait for file to be saved
-  await page.waitForTimeout(1000);
+  // Wait for file to be saved by checking tab title loses the dot indicator
+  await page
+    .waitForFunction(
+      (fn) => {
+        const tab = document.querySelector(`[role="tab"][aria-label*="${fn}"]`);
+        return tab && !tab.getAttribute("aria-label")?.includes("●");
+      },
+      filename,
+      { timeout: 5000 }
+    )
+    .catch(() => {});
 }
 
 /**
  * Helper to open an existing file
  */
 export async function openFile(page: Page, filename: string): Promise<void> {
-  // Use quick open (Ctrl+P)
-  await page.keyboard.press("Control+p");
+  // Dismiss any blocking dialogs
+  await dismissDialogs(page);
 
-  // Wait for quick input
+  // First try to find and click the file in the explorer using exact aria-label match
+  const fileInExplorer = page.locator(`.monaco-list-row[aria-label="${filename}"]`).first();
+  if (await fileInExplorer.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await fileInExplorer.dblclick();
+    await waitForEditor(page);
+    return;
+  }
+
+  // If not visible in explorer, try expanding the folder first
+  const folderItem = page.locator('.monaco-list-row:has-text("test-files")').first();
+  if (await folderItem.isVisible({ timeout: 1000 }).catch(() => false)) {
+    const twistie = folderItem.locator(".twistie").first();
+    if (await twistie.isVisible({ timeout: 500 }).catch(() => false)) {
+      await twistie.click();
+      // Wait for folder to expand by checking for children
+      await page
+        .waitForFunction(() => document.querySelectorAll(".monaco-list-row").length > 1, {
+          timeout: 2000,
+        })
+        .catch(() => {});
+    }
+
+    // Try again to find the file with exact aria-label match
+    const fileAfterExpand = page.locator(`.monaco-list-row[aria-label="${filename}"]`).first();
+    if (await fileAfterExpand.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await fileAfterExpand.dblclick();
+      await waitForEditor(page);
+      return;
+    }
+
+    // Try partial match as fallback (must start with filename)
+    const filePartial = page.locator(`.monaco-list-row[aria-label^="${filename}"]`).first();
+    if (await filePartial.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await filePartial.dblclick();
+      await waitForEditor(page);
+      return;
+    }
+  }
+
+  // Fall back to quick open (Ctrl+P)
+  await page.keyboard.press("Control+p");
   const quickInput = page.locator(".quick-input-box input");
   await quickInput.waitFor({ state: "visible", timeout: 5000 });
 
-  // Type filename
+  // Type filename and wait for results to appear
   await quickInput.fill(filename);
-  await page.waitForTimeout(500);
+  await page
+    .waitForFunction(() => document.querySelectorAll('[role="option"]').length > 0, {
+      timeout: 3000,
+    })
+    .catch(() => {});
 
-  // Wait for results to appear and select the first match
-  const resultItem = page.locator(`[role="option"]:has-text("${filename}")`).first();
-  try {
-    await resultItem.waitFor({ state: "visible", timeout: 3000 });
-    await resultItem.click();
-  } catch {
-    // Fall back to pressing Enter
+  // Wait for exact match first, then any result
+  const exactMatch = page.locator(`[role="option"]:has-text("${filename}")`).first();
+  if (await exactMatch.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await exactMatch.click();
+  } else {
     await page.keyboard.press("Enter");
   }
 
@@ -235,6 +308,12 @@ export async function openCommandPalette(page: Page): Promise<void> {
 export async function runCommand(page: Page, command: string): Promise<void> {
   await openCommandPalette(page);
   await page.keyboard.type(command);
-  await page.waitForTimeout(300); // Wait for filtering
+  // Wait for filtering by checking for options
+  await page
+    .waitForFunction(
+      () => document.querySelectorAll('.quick-input-list [role="option"]').length > 0,
+      { timeout: 3000 }
+    )
+    .catch(() => {});
   await page.keyboard.press("Enter");
 }

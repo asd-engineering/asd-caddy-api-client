@@ -2,7 +2,7 @@
   "name": "vscode-caddy-tools",
   "displayName": "Caddy Configuration Tools",
   "description": "IntelliSense, snippets, and validation for Caddy and caddy-security configurations",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "publisher": "asd-host",
   "author": {
     "name": "Accelerated Software Development B.V.",
@@ -40,6 +40,14 @@
   "main": "./dist/extension.js",
   "contributes": {
     "jsonValidation": [
+      {
+        "fileMatch": [
+          "**/caddy-server.json",
+          "**/caddy-full.json",
+          "**/*.caddy-server.json"
+        ],
+        "url": "./schemas/caddy-full-config.json"
+      },
       {
         "fileMatch": [
           "**/caddy.json",

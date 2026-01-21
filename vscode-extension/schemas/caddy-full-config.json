@@ -1,0 +1,540 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://asd-engineering.github.io/asd-caddy-api-client/schemas/caddy-full-config.json",
+  "title": "Caddy Full Configuration",
+  "description": "Complete Caddy server configuration including HTTP servers, routes, and security",
+  "type": "object",
+  "properties": {
+    "admin": {
+      "type": "object",
+      "description": "Admin API configuration",
+      "properties": {
+        "disabled": { "type": "boolean" },
+        "listen": {
+          "type": "string",
+          "description": "Admin API listen address (e.g., localhost:2019)"
+        },
+        "enforce_origin": { "type": "boolean" },
+        "origins": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "description": "Logging configuration",
+      "properties": {
+        "logs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "writer": {
+                "type": "object",
+                "properties": {
+                  "output": { "type": "string", "enum": ["stdout", "stderr", "discard", "file"] },
+                  "filename": { "type": "string" }
+                }
+              },
+              "level": { "type": "string", "enum": ["DEBUG", "INFO", "WARN", "ERROR"] },
+              "include": { "type": "array", "items": { "type": "string" } },
+              "exclude": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "apps": {
+      "type": "object",
+      "description": "Caddy applications",
+      "properties": {
+        "http": {
+          "type": "object",
+          "description": "HTTP server application",
+          "properties": {
+            "http_port": { "type": "integer", "description": "Default HTTP port (default: 80)" },
+            "https_port": { "type": "integer", "description": "Default HTTPS port (default: 443)" },
+            "grace_period": {
+              "type": "string",
+              "description": "Grace period for shutdown (e.g., 10s)"
+            },
+            "servers": {
+              "type": "object",
+              "description": "Named server configurations",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "listen": {
+                    "type": "array",
+                    "description": "Listen addresses (e.g., [\":443\", \":80\"])",
+                    "items": { "type": "string" }
+                  },
+                  "listener_wrappers": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "wrapper": { "type": "string" }
+                      }
+                    }
+                  },
+                  "routes": {
+                    "type": "array",
+                    "description": "HTTP routes",
+                    "items": { "$ref": "#/definitions/route" }
+                  },
+                  "errors": {
+                    "type": "object",
+                    "properties": {
+                      "routes": {
+                        "type": "array",
+                        "items": { "$ref": "#/definitions/route" }
+                      }
+                    }
+                  },
+                  "tls_connection_policies": {
+                    "type": "array",
+                    "description": "TLS policies for connections",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "match": {
+                          "type": "object",
+                          "properties": {
+                            "sni": { "type": "array", "items": { "type": "string" } }
+                          }
+                        },
+                        "certificate_selection": {
+                          "type": "object",
+                          "properties": {
+                            "any_tag": { "type": "array", "items": { "type": "string" } }
+                          }
+                        },
+                        "client_authentication": {
+                          "type": "object",
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "enum": ["require", "request", "require_and_verify"]
+                            },
+                            "trusted_ca_certs": { "type": "array", "items": { "type": "string" } },
+                            "trusted_ca_certs_pem_files": {
+                              "type": "array",
+                              "items": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "automatic_https": {
+                    "type": "object",
+                    "properties": {
+                      "disable": { "type": "boolean" },
+                      "disable_redirects": { "type": "boolean" },
+                      "skip": { "type": "array", "items": { "type": "string" } }
+                    }
+                  },
+                  "max_header_bytes": { "type": "integer" },
+                  "strict_sni_host": { "type": "boolean" },
+                  "logs": {
+                    "type": "object",
+                    "properties": {
+                      "default_logger_name": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tls": {
+          "type": "object",
+          "description": "TLS application for certificate management",
+          "properties": {
+            "certificates": {
+              "type": "object",
+              "properties": {
+                "automate": {
+                  "type": "array",
+                  "description": "Domains to automatically obtain certificates for",
+                  "items": { "type": "string" }
+                },
+                "load_files": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "certificate": { "type": "string" },
+                      "key": { "type": "string" },
+                      "tags": { "type": "array", "items": { "type": "string" } }
+                    },
+                    "required": ["certificate", "key"]
+                  }
+                },
+                "load_folders": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            },
+            "automation": {
+              "type": "object",
+              "properties": {
+                "policies": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "subjects": { "type": "array", "items": { "type": "string" } },
+                      "issuers": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "module": { "type": "string" },
+                            "ca": { "type": "string" },
+                            "email": { "type": "string" }
+                          }
+                        }
+                      },
+                      "on_demand": { "type": "boolean" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": {
+          "type": "object",
+          "description": "caddy-security plugin configuration",
+          "properties": {
+            "config": {
+              "type": "object",
+              "properties": {
+                "authentication_portals": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/authentication_portal" }
+                },
+                "authorization_policies": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/authorization_policy" }
+                },
+                "credentials": {
+                  "type": "object",
+                  "properties": {
+                    "generic": { "type": "object", "additionalProperties": {} }
+                  }
+                },
+                "identity_stores": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/identity_store" }
+                },
+                "identity_providers": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/identity_provider" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "route": {
+      "type": "object",
+      "properties": {
+        "match": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": { "type": "array", "items": { "type": "string" } },
+              "path": { "type": "array", "items": { "type": "string" } },
+              "method": { "type": "array", "items": { "type": "string" } },
+              "protocol": { "type": "string" },
+              "header": {
+                "type": "object",
+                "additionalProperties": { "type": "array", "items": { "type": "string" } }
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": { "type": "array", "items": { "type": "string" } }
+              },
+              "not": {
+                "type": "array",
+                "items": { "$ref": "#/definitions/route/properties/match/items" }
+              }
+            }
+          }
+        },
+        "handle": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/handler" }
+        },
+        "terminal": { "type": "boolean" },
+        "group": { "type": "string" }
+      }
+    },
+    "handler": {
+      "type": "object",
+      "properties": {
+        "handler": {
+          "type": "string",
+          "description": "Handler type",
+          "enum": [
+            "reverse_proxy",
+            "static_response",
+            "file_server",
+            "rewrite",
+            "headers",
+            "encode",
+            "templates",
+            "authentication",
+            "subroute",
+            "vars",
+            "error",
+            "invoke",
+            "map",
+            "push",
+            "request_body",
+            "tracing",
+            "intercept",
+            "copy_response"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "handler": { "const": "reverse_proxy" } } },
+          "then": {
+            "properties": {
+              "upstreams": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "dial": {
+                      "type": "string",
+                      "description": "Upstream address (e.g., localhost:8080)"
+                    }
+                  },
+                  "required": ["dial"]
+                }
+              },
+              "load_balancing": {
+                "type": "object",
+                "properties": {
+                  "selection_policy": {
+                    "type": "object",
+                    "properties": { "policy": { "type": "string" } }
+                  }
+                }
+              },
+              "health_checks": {
+                "type": "object",
+                "properties": {
+                  "active": {
+                    "type": "object",
+                    "properties": {
+                      "path": { "type": "string" },
+                      "interval": { "type": "string" },
+                      "timeout": { "type": "string" }
+                    }
+                  }
+                }
+              },
+              "headers": {
+                "type": "object",
+                "properties": {
+                  "request": {
+                    "type": "object",
+                    "properties": {
+                      "set": {
+                        "type": "object",
+                        "additionalProperties": { "type": "array", "items": { "type": "string" } }
+                      },
+                      "add": {
+                        "type": "object",
+                        "additionalProperties": { "type": "array", "items": { "type": "string" } }
+                      },
+                      "delete": { "type": "array", "items": { "type": "string" } }
+                    }
+                  },
+                  "response": {
+                    "type": "object",
+                    "properties": {
+                      "set": {
+                        "type": "object",
+                        "additionalProperties": { "type": "array", "items": { "type": "string" } }
+                      },
+                      "add": {
+                        "type": "object",
+                        "additionalProperties": { "type": "array", "items": { "type": "string" } }
+                      },
+                      "delete": { "type": "array", "items": { "type": "string" } }
+                    }
+                  }
+                }
+              },
+              "transport": {
+                "type": "object",
+                "properties": {
+                  "protocol": { "type": "string" },
+                  "tls": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "handler": { "const": "static_response" } } },
+          "then": {
+            "properties": {
+              "status_code": { "type": ["integer", "string"] },
+              "body": { "type": "string" },
+              "headers": {
+                "type": "object",
+                "additionalProperties": { "type": "array", "items": { "type": "string" } }
+              },
+              "close": { "type": "boolean" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "handler": { "const": "file_server" } } },
+          "then": {
+            "properties": {
+              "root": { "type": "string" },
+              "index_names": { "type": "array", "items": { "type": "string" } },
+              "browse": { "type": "object" },
+              "hide": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "handler": { "const": "authentication" } } },
+          "then": {
+            "properties": {
+              "providers": {
+                "type": "object",
+                "properties": {
+                  "authorizer": {
+                    "type": "object",
+                    "properties": {
+                      "auth_url_path": { "type": "string" },
+                      "portal_name": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "handler": { "const": "subroute" } } },
+          "then": {
+            "properties": {
+              "routes": { "type": "array", "items": { "$ref": "#/definitions/route" } }
+            }
+          }
+        }
+      ]
+    },
+    "authentication_portal": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "ui": {
+          "type": "object",
+          "properties": {
+            "theme": { "type": "string" },
+            "logo_url": { "type": "string" },
+            "custom_css": { "type": "string" }
+          }
+        },
+        "cookie": {
+          "type": "object",
+          "properties": {
+            "domain": { "type": "string" },
+            "path": { "type": "string" },
+            "lifetime": { "type": "string" }
+          }
+        },
+        "identity_stores": { "type": "array", "items": { "type": "string" } },
+        "identity_providers": { "type": "array", "items": { "type": "string" } },
+        "transform_user": { "type": "object", "additionalProperties": {} }
+      },
+      "required": ["name"]
+    },
+    "authorization_policy": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "access_lists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "action": { "type": "string", "enum": ["allow", "deny"] },
+              "claim": { "type": "string" },
+              "values": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "crypto_key": {
+          "type": "object",
+          "properties": {
+            "token_name": { "type": "string" },
+            "source": { "type": "string" }
+          }
+        },
+        "bypass": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["name"]
+    },
+    "identity_store": {
+      "type": "object",
+      "properties": {
+        "driver": { "type": "string", "enum": ["local", "ldap", "oauth2", "oidc"] },
+        "realm": { "type": "string" },
+        "path": { "type": "string", "description": "Path to users file (local driver)" },
+        "servers": {
+          "type": "array",
+          "description": "LDAP servers",
+          "items": {
+            "type": "object",
+            "properties": {
+              "address": { "type": "string" },
+              "port": { "type": "integer" }
+            }
+          }
+        },
+        "bind_dn": { "type": "string" },
+        "bind_password": { "type": "string" },
+        "search_base_dn": { "type": "string" },
+        "search_filter": { "type": "string" },
+        "provider": { "type": "string" },
+        "client_id": { "type": "string" },
+        "client_secret": { "type": "string" },
+        "discovery_url": { "type": "string" },
+        "scopes": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["driver"]
+    },
+    "identity_provider": {
+      "type": "object",
+      "properties": {
+        "driver": { "type": "string", "enum": ["local", "ldap", "oauth2", "oidc"] },
+        "realm": { "type": "string" },
+        "path": { "type": "string" },
+        "provider": { "type": "string" },
+        "client_id": { "type": "string" },
+        "client_secret": { "type": "string" },
+        "discovery_url": { "type": "string" },
+        "scopes": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["driver"]
+    }
+  }
+}

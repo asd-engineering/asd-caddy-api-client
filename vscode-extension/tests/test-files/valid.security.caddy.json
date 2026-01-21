@@ -1,0 +1,32 @@
+{
+  "authentication_portals": [
+    {
+      "name": "myportal",
+      "identity_stores": ["local"],
+      "cookie": {
+        "domain": ".example.com",
+        "lifetime": "24h"
+      }
+    }
+  ],
+  "authorization_policies": [
+    {
+      "name": "admin-policy",
+      "access_lists": [
+        {
+          "action": "allow",
+          "claim": "roles",
+          "values": ["admin", "superuser"]
+        }
+      ]
+    }
+  ],
+  "identity_stores": [
+    {
+      "name": "local",
+      "driver": "local",
+      "realm": "local",
+      "path": "/etc/caddy/users.json"
+    }
+  ]
+}

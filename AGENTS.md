@@ -309,3 +309,104 @@ When a new Caddy handler is added:
 3. **JSDoc is the source** - Improve JSDoc in library, not extension docs
 4. **Test the pipeline** - Run `npm run generate:all` to verify the full flow
 5. **Check local/todo.md** - Contains known improvements and backlog items (not published)
+
+---
+
+## Tested Templates Rule
+
+**Rule: All VSCode snippets for caddy-security must be backed by validated templates.**
+
+### Single Source of Truth
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    templates.ts                                  │
+│                 (SINGLE SOURCE OF TRUTH)                         │
+│                                                                 │
+│  Each template has:                                             │
+│  - id: "caddy-sec-local-store"                                  │
+│  - name: "Local Identity Store"                                 │
+│  - description: "File-based user authentication..."             │
+│  - build(): returns validated config (uses builders)            │
+│  - snippet[]: VSCode snippet lines                              │
+│                                                                 │
+│         │                              │                        │
+│         ▼                              ▼                        │
+│  ┌──────────────┐            ┌──────────────────┐              │
+│  │ templates.   │            │ generate-        │              │
+│  │ test.ts      │            │ snippets.js      │              │
+│  │              │            │                  │              │
+│  │ Tests every  │            │ Generates        │              │
+│  │ template's   │            │ VSCode snippets  │              │
+│  │ build()      │            │ from templates   │              │
+│  │ produces     │            │                  │              │
+│  │ valid config │            │                  │              │
+│  └──────────────┘            └──────────────────┘              │
+│                                                                 │
+│  If build() fails test → snippet would produce invalid config   │
+│  This CANNOT happen because tests catch it first                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Adding New Security Snippets
+
+When adding a new caddy-security snippet:
+
+1. **Add template to `templates.ts`** - NOT directly to snippet JSON
+2. **Include a `build()` function** - Must use the actual builders
+3. **Run tests** - `bun test templates.test.ts`
+4. **Regenerate snippets** - `npm run generate-snippets` (in vscode-extension)
+
+```typescript
+// ✅ CORRECT: Add to templates.ts
+export const MY_NEW_TEMPLATE: SecurityTemplate = {
+  id: "caddy-sec-my-feature",
+  name: "My Feature",
+  description: "Description for IntelliSense",
+  category: "portal",
+  variables: [{ name: "param", description: "Parameter description", default: "default-value" }],
+  // This function is tested - if it fails, the test fails
+  build: () =>
+    buildAuthenticationPortal({
+      name: "myportal",
+      identityStores: ["local"],
+    }),
+  // This becomes the VSCode snippet
+  snippet: [
+    "buildAuthenticationPortal({",
+    '  name: "${1:myportal}",',
+    '  identityStores: ["${2:local}"],',
+    "})",
+  ],
+};
+
+// ❌ WRONG: Don't add snippets directly to JSON files
+// They won't be validated and may produce invalid config
+```
+
+### Why This Matters
+
+1. **Snippets produce valid config** - Every snippet is backed by a tested `build()` function
+2. **Refactoring is safe** - If builder API changes, tests fail, snippets get updated
+3. **No drift** - Snippets and actual API stay in sync automatically
+4. **Documentation is tested** - Example code in templates actually works
+
+### File Locations
+
+| File                                            | Purpose                                      |
+| ----------------------------------------------- | -------------------------------------------- |
+| `src/plugins/caddy-security/templates.ts`       | Template definitions (source of truth)       |
+| `src/__tests__/templates.test.ts`               | Validates all templates produce valid config |
+| `vscode-extension/scripts/generate-snippets.js` | Generates snippets from templates            |
+| `vscode-extension/snippets/caddy-builders.json` | Generated file (don't edit directly)         |
+
+### Template Categories
+
+| Category            | Description                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| `identity-store`    | Local, LDAP identity stores                                  |
+| `identity-provider` | OAuth2, OIDC providers (GitHub, Google, Keycloak, etc.)      |
+| `portal`            | Authentication portals with various configurations           |
+| `policy`            | Authorization policies with ACL rules                        |
+| `route`             | Auth portal and protected route configurations               |
+| `full-setup`        | Complete authentication setups combining multiple components |

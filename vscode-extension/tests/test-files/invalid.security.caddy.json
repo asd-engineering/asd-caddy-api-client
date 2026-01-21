@@ -1,0 +1,21 @@
+{
+  "authentication_portals": [
+    {
+      "identity_stores": ["local"],
+      "cookie": {
+        "domain": ".example.com"
+      }
+    }
+  ],
+  "authorization_policies": [
+    {
+      "name": "broken-policy",
+      "access_lists": [
+        {
+          "action": "maybe",
+          "claim": "roles"
+        }
+      ]
+    }
+  ]
+}

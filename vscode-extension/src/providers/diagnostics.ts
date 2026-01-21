@@ -16,6 +16,10 @@ interface ValidationError {
   keyword: string;
 }
 
+// Performance guard constants
+const MAX_VALIDATION_DEPTH = 10;
+const MAX_FILE_SIZE = 100 * 1024; // 100KB
+
 /**
  * Lightweight JSON Schema validator for VSCode
  * Uses a simple validation approach without heavy dependencies
@@ -23,10 +27,18 @@ interface ValidationError {
 class SimpleSchemaValidator {
   private schemas: Map<string, object> = new Map();
   private extensionPath: string;
+  private outputChannel: vscode.OutputChannel | undefined;
 
-  constructor(extensionPath: string) {
+  constructor(extensionPath: string, outputChannel?: vscode.OutputChannel) {
     this.extensionPath = extensionPath;
+    this.outputChannel = outputChannel;
     this.loadSchemas();
+  }
+
+  private log(message: string): void {
+    if (this.outputChannel) {
+      this.outputChannel.appendLine(`[Validator] ${message}`);
+    }
   }
 
   private loadSchemas(): void {
@@ -79,7 +91,12 @@ class SimpleSchemaValidator {
    */
   validate(data: unknown, schema: object): ValidationError[] {
     const errors: ValidationError[] = [];
-    this.validateObject(data, schema, "", errors);
+    const visited = new WeakSet<object>(); // Track visited objects for circular ref detection
+    const startTime = performance.now();
+    this.validateObject(data, schema as Record<string, unknown>, "", errors, 0, visited);
+    this.log(
+      `Validation completed in ${(performance.now() - startTime).toFixed(2)}ms, ${errors.length} errors found`
+    );
     return errors;
   }
 
@@ -87,8 +104,24 @@ class SimpleSchemaValidator {
     data: unknown,
     schema: Record<string, unknown>,
     currentPath: string,
-    errors: ValidationError[]
+    errors: ValidationError[],
+    depth: number = 0,
+    visited: WeakSet<object> = new WeakSet()
   ): void {
+    // Depth guard to prevent excessive recursion
+    if (depth > MAX_VALIDATION_DEPTH) {
+      this.log(`Max depth (${MAX_VALIDATION_DEPTH}) exceeded at path: ${currentPath}`);
+      return;
+    }
+
+    // Circular reference detection for objects
+    if (typeof data === "object" && data !== null) {
+      if (visited.has(data)) {
+        this.log(`Circular reference detected at path: ${currentPath}`);
+        return;
+      }
+      visited.add(data);
+    }
     // Check type constraints
     const schemaType = schema.type as string | string[] | undefined;
 
@@ -129,7 +162,7 @@ class SimpleSchemaValidator {
         const propSchema = properties[key];
         if (propSchema) {
           const propPath = currentPath ? `${currentPath}.${key}` : key;
-          this.validateObject(value, propSchema, propPath, errors);
+          this.validateObject(value, propSchema, propPath, errors, depth + 1, visited);
         }
       }
     }
@@ -156,7 +189,7 @@ class SimpleSchemaValidator {
     if (items && Array.isArray(data)) {
       for (let i = 0; i < data.length; i++) {
         const itemPath = `${currentPath}[${i}]`;
-        this.validateObject(data[i], items, itemPath, errors);
+        this.validateObject(data[i], items, itemPath, errors, depth + 1, visited);
       }
     }
 
@@ -245,7 +278,7 @@ class SimpleSchemaValidator {
     // Check oneOf (discriminated unions)
     const oneOf = schema.oneOf as Record<string, unknown>[] | undefined;
     if (oneOf) {
-      this.validateOneOf(data, oneOf, currentPath, errors);
+      this.validateOneOf(data, oneOf, currentPath, errors, depth, visited);
     }
 
     // Check anyOf
@@ -253,7 +286,7 @@ class SimpleSchemaValidator {
     if (anyOf) {
       const anyValid = anyOf.some((subSchema) => {
         const subErrors: ValidationError[] = [];
-        this.validateObject(data, subSchema, currentPath, subErrors);
+        this.validateObject(data, subSchema, currentPath, subErrors, depth + 1, visited);
         return subErrors.length === 0;
       });
 
@@ -271,7 +304,9 @@ class SimpleSchemaValidator {
     data: unknown,
     oneOf: Record<string, unknown>[],
     currentPath: string,
-    errors: ValidationError[]
+    errors: ValidationError[],
+    depth: number,
+    visited: WeakSet<object>
   ): void {
     // For handler discriminated unions, check if data has handler property
     if (typeof data === "object" && data !== null && "handler" in data) {
@@ -287,7 +322,7 @@ class SimpleSchemaValidator {
       });
 
       if (matchingSchema) {
-        this.validateObject(data, matchingSchema, currentPath, errors);
+        this.validateObject(data, matchingSchema, currentPath, errors, depth + 1, visited);
         return;
       } else if (typeof handlerValue === "string") {
         // Check if handler value is valid at all
@@ -312,7 +347,7 @@ class SimpleSchemaValidator {
     // Generic oneOf validation - check if exactly one matches
     const matchResults = oneOf.map((schema) => {
       const subErrors: ValidationError[] = [];
-      this.validateObject(data, schema, currentPath, subErrors);
+      this.validateObject(data, schema, currentPath, subErrors, depth + 1, visited);
       return subErrors.length === 0;
     });
 
@@ -343,16 +378,29 @@ class SimpleSchemaValidator {
 export class CaddyDiagnosticsProvider {
   private diagnosticCollection: vscode.DiagnosticCollection;
   private validator: SimpleSchemaValidator;
+  private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+  private readonly DEBOUNCE_MS = 500; // Wait 500ms after last keystroke
+  private outputChannel: vscode.OutputChannel | undefined;
 
-  constructor(context: vscode.ExtensionContext) {
+  constructor(context: vscode.ExtensionContext, outputChannel?: vscode.OutputChannel) {
+    this.outputChannel = outputChannel;
     this.diagnosticCollection = vscode.languages.createDiagnosticCollection("caddy");
-    this.validator = new SimpleSchemaValidator(context.extensionPath);
+    this.validator = new SimpleSchemaValidator(context.extensionPath, outputChannel);
+    this.log("CaddyDiagnosticsProvider initialized");
 
     // Register for document events
     context.subscriptions.push(
-      vscode.workspace.onDidChangeTextDocument((e) => this.validateDocument(e.document)),
+      vscode.workspace.onDidChangeTextDocument((e) => this.debouncedValidate(e.document)),
       vscode.workspace.onDidOpenTextDocument((doc) => this.validateDocument(doc)),
-      vscode.workspace.onDidCloseTextDocument((doc) => this.diagnosticCollection.delete(doc.uri)),
+      vscode.workspace.onDidCloseTextDocument((doc) => {
+        this.diagnosticCollection.delete(doc.uri);
+        // Clear any pending timer
+        const timer = this.debounceTimers.get(doc.uri.toString());
+        if (timer) {
+          clearTimeout(timer);
+          this.debounceTimers.delete(doc.uri.toString());
+        }
+      }),
       this.diagnosticCollection
     );
 
@@ -360,7 +408,33 @@ export class CaddyDiagnosticsProvider {
     vscode.workspace.textDocuments.forEach((doc) => this.validateDocument(doc));
   }
 
+  private log(message: string): void {
+    if (this.outputChannel) {
+      this.outputChannel.appendLine(`[Diagnostics] ${message}`);
+    }
+  }
+
+  private debouncedValidate(document: vscode.TextDocument): void {
+    const uri = document.uri.toString();
+
+    // Clear existing timer
+    const existingTimer = this.debounceTimers.get(uri);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    // Set new timer
+    const timer = setTimeout(() => {
+      this.debounceTimers.delete(uri);
+      this.validateDocument(document);
+    }, this.DEBOUNCE_MS);
+
+    this.debounceTimers.set(uri, timer);
+  }
+
   private validateDocument(document: vscode.TextDocument): void {
+    const startTime = performance.now();
+
     // Check if diagnostics are enabled
     const config = vscode.workspace.getConfiguration("caddy");
     if (!config.get("enableDiagnostics", true)) {
@@ -382,6 +456,17 @@ export class CaddyDiagnosticsProvider {
 
     const diagnostics: vscode.Diagnostic[] = [];
     const text = document.getText();
+
+    // File size guard - skip validation for large files
+    if (text.length > MAX_FILE_SIZE) {
+      this.log(
+        `Skipping validation for ${document.fileName}: file too large (${(text.length / 1024).toFixed(1)}KB > ${MAX_FILE_SIZE / 1024}KB)`
+      );
+      this.diagnosticCollection.delete(document.uri);
+      return;
+    }
+
+    this.log(`Validating ${document.fileName} (${(text.length / 1024).toFixed(1)}KB)`);
 
     // Try to parse JSON
     let data: unknown;
@@ -412,6 +497,9 @@ export class CaddyDiagnosticsProvider {
     }
 
     this.diagnosticCollection.set(document.uri, diagnostics);
+    this.log(
+      `Validation complete in ${(performance.now() - startTime).toFixed(2)}ms, ${diagnostics.length} diagnostics`
+    );
   }
 
   /**

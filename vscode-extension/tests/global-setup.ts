@@ -34,6 +34,7 @@ async function findFreePort(): Promise<number> {
 
 async function waitForServer(url: string, timeout = 30000): Promise<void> {
   const start = Date.now();
+  let delay = 100; // Start with 100ms, use exponential backoff
   while (Date.now() - start < timeout) {
     try {
       const response = await fetch(url);
@@ -41,7 +42,8 @@ async function waitForServer(url: string, timeout = 30000): Promise<void> {
     } catch {
       // Server not ready yet
     }
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, delay));
+    delay = Math.min(delay * 2, 2000); // 100 → 200 → 400 → 800 → 1600 → 2000
   }
   throw new Error(`Server at ${url} did not start within ${timeout}ms`);
 }
@@ -93,7 +95,12 @@ export default async function globalSetup() {
   const codeServerDir = path.join(asdWorkspace, "code/code-server");
   const codeServerBin = path.join(codeServerDir, "bin/code-server");
   const extensionsDir = path.join(asdWorkspace, "code/data/extensions");
-  const extensionVsix = path.join(__dirname, "../vscode-caddy-tools-0.1.0.vsix");
+  // Dynamically find the latest vsix file
+  const vsixFiles = fs.readdirSync(path.join(__dirname, "..")).filter((f) => f.endsWith(".vsix"));
+  const extensionVsix =
+    vsixFiles.length > 0
+      ? path.join(__dirname, "..", vsixFiles.sort().pop()!)
+      : path.join(__dirname, "../vscode-caddy-tools-0.1.5.vsix");
 
   // Check if code-server is installed
   if (!fs.existsSync(codeServerBin)) {
@@ -101,13 +108,23 @@ export default async function globalSetup() {
     await installCodeServer(codeServerDir);
   }
 
-  // Build and package extension if vsix doesn't exist
-  if (!fs.existsSync(extensionVsix)) {
+  // Build and package extension if vsix doesn't exist or is older than 1 hour
+  const shouldRebuild = (() => {
+    if (!fs.existsSync(extensionVsix)) return true;
+    const vsixStat = fs.statSync(extensionVsix);
+    const ageMs = Date.now() - vsixStat.mtimeMs;
+    const oneHourMs = 60 * 60 * 1000;
+    return ageMs > oneHourMs;
+  })();
+
+  if (shouldRebuild) {
     console.log("📦 Building extension...");
     execSync("npm run build && npm run package", {
       cwd: path.join(__dirname, ".."),
       stdio: "inherit",
     });
+  } else {
+    console.log("✅ Using cached extension vsix (less than 1 hour old)");
   }
 
   // Ensure extensions directory exists
@@ -140,6 +157,13 @@ export default async function globalSetup() {
   // Pre-configure workspace trust to avoid the trust dialog
   const userDataDir = path.join(asdWorkspace, "code/data");
   const userDir = path.join(userDataDir, "User");
+
+  // Clear workspace state to avoid stale cache issues
+  const workspaceStorageDir = path.join(userDataDir, "User/workspaceStorage");
+  if (fs.existsSync(workspaceStorageDir)) {
+    fs.rmSync(workspaceStorageDir, { recursive: true, force: true });
+  }
+
   fs.mkdirSync(userDir, { recursive: true });
 
   // Write settings to auto-trust the workspace
@@ -149,6 +173,8 @@ export default async function globalSetup() {
     "workbench.startupEditor": "none",
     "update.showReleaseNotes": false,
     "extensions.autoUpdate": false,
+    "explorer.autoReveal": true,
+    "files.autoSave": "off",
   };
   fs.writeFileSync(path.join(userDir, "settings.json"), JSON.stringify(settings, null, 2));
 
