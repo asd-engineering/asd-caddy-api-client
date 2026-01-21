@@ -561,6 +561,13 @@ describe.skipIf(skipIfNoSecurityStack)(
     }
 
     async function setupSecurityConfig(caddyClient: CaddyClient): Promise<void> {
+      // Delete any existing security config first
+      try {
+        await caddyClient.request("/config/apps/security", { method: "DELETE" });
+      } catch {
+        // Ignore if doesn't exist
+      }
+
       // Build local identity store
       const localStore = buildLocalIdentityStore({
         path: "/data/users.json",

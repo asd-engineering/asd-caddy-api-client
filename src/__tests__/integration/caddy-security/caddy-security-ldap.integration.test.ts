@@ -214,6 +214,15 @@ describe.skipIf(skipIfNoSecurityStack)(
     });
 
     describe("API Integration", () => {
+      beforeEach(async () => {
+        // Clean up any existing security config before each test
+        try {
+          await client.request("/config/apps/security", { method: "DELETE" });
+        } catch {
+          // Ignore if doesn't exist
+        }
+      });
+
       test("can apply LDAP security config via Caddy API", async () => {
         // Build complete configuration using our builders
         const ldapStore = buildLdapIdentityStore({

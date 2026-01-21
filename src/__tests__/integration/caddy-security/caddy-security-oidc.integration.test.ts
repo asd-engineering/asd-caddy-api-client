@@ -266,6 +266,15 @@ describe.skipIf(skipIfNoSecurityStack)(
     });
 
     describe("API Integration", () => {
+      beforeEach(async () => {
+        // Clean up any existing security config before each test
+        try {
+          await client.request("/config/apps/security", { method: "DELETE" });
+        } catch {
+          // Ignore if doesn't exist
+        }
+      });
+
       test("can apply OIDC security config via Caddy API", async () => {
         const oidcProvider = buildOidcProvider({
           provider: "keycloak",
