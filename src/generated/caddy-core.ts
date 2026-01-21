@@ -507,7 +507,7 @@ export interface SinkLog {
  * are populated, all logs are emitted.
  */
 export interface CustomLog {
-  BaseLog: BaseLog;
+  BaseLog?: BaseLog;
   /**
    * Include defines the names of loggers to emit in this
    * log. For example, to include only logs emitted by the

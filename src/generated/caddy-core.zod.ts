@@ -78,7 +78,7 @@ export const baseLogSchema = z.object({
 });
 
 export const customLogSchema = z.object({
-  BaseLog: baseLogSchema,
+  BaseLog: baseLogSchema.optional(),
   include: z.array(z.string()).optional(),
   exclude: z.array(z.string()).optional(),
 });
