@@ -192,15 +192,15 @@ jobs:
           echo "Final connectivity check..."
           curl -sf http://127.0.0.1:2020/config/ | head -c 100 && echo ""
 
-          # Test bun fetch with same env vars as test will use
-          echo "Testing bun fetch with env vars..."
-          CADDY_ADMIN_URL=http://127.0.0.1:2020 bun -e "
-            const url = process.env.CADDY_ADMIN_URL + '/config/';
-            console.log('Fetching:', url);
-            fetch(url).then(r => r.text()).then(t => console.log('OK:', t.slice(0,100))).catch(e => console.error('FAILED:', e.message));
+          # Test with node's fetch
+          echo "Testing node fetch..."
+          node -e "
+            const url = 'http://127.0.0.1:2020/config/';
+            console.log('Node fetching:', url);
+            fetch(url).then(r => r.text()).then(t => console.log('Node OK:', t.slice(0,100))).catch(e => console.error('Node FAILED:', e));
           "
 
-          # Run tests using npx (node) instead of bunx to avoid bun network issues
+          # Run tests using npx
           echo "Running tests with npx vitest..."
           CADDY_SECURITY_TEST=true CADDY_ADMIN_URL=http://127.0.0.1:2020 KEYCLOAK_URL=http://localhost:8081 npx vitest run --config vitest.integration.config.ts src/__tests__/integration/caddy-security/
         env:
