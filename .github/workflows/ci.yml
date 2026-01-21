@@ -200,9 +200,9 @@ jobs:
             fetch(url).then(r => r.text()).then(t => console.log('OK:', t.slice(0,100))).catch(e => console.error('FAILED:', e.message));
           "
 
-          # Run tests with integration config
-          echo "Running tests with vitest integration config..."
-          CADDY_SECURITY_TEST=true CADDY_ADMIN_URL=http://127.0.0.1:2020 KEYCLOAK_URL=http://localhost:8081 bunx vitest run --config vitest.integration.config.ts src/__tests__/integration/caddy-security/
+          # Run tests using npx (node) instead of bunx to avoid bun network issues
+          echo "Running tests with npx vitest..."
+          CADDY_SECURITY_TEST=true CADDY_ADMIN_URL=http://127.0.0.1:2020 KEYCLOAK_URL=http://localhost:8081 npx vitest run --config vitest.integration.config.ts src/__tests__/integration/caddy-security/
         env:
           CADDY_SECURITY_TEST: "true"
           CADDY_ADMIN_URL: "http://127.0.0.1:2020"

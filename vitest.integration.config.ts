@@ -15,13 +15,9 @@ export default defineConfig({
     sequence: {
       concurrent: false,
     },
-    // Use threads pool (default) - forks can have network isolation issues
-    pool: "threads",
-    poolOptions: {
-      threads: {
-        singleThread: true,
-      },
-    },
+    // Run in main process without worker isolation
+    browser: false,
+    threads: false,
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
