@@ -117,7 +117,8 @@ describe.skipIf(skipIfNoSecurityStack)(
         expect(config.identity_stores).toHaveLength(1);
         expect(config.authentication_portals).toHaveLength(1);
         expect(config.authorization_policies).toHaveLength(1);
-        expect(config.identity_stores?.[0].driver).toBe("ldap");
+        // Identity stores use kind field, not driver
+        expect(config.identity_stores?.[0].kind).toBe("ldap");
       });
 
       test("builds complete security app", () => {

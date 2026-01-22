@@ -284,10 +284,11 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         // Verify config structure was applied correctly
         const appliedConfig = await client.request<{
-          config: { identity_stores: { driver: string }[] };
+          config: { identity_stores: { kind: string }[] };
         }>("/config/apps/security");
 
-        expect(appliedConfig.config?.identity_stores?.[0].driver).toBe("ldap");
+        // Identity stores use kind field, not driver
+        expect(appliedConfig.config?.identity_stores?.[0].kind).toBe("ldap");
       });
 
       test("LDAP login attempt with valid credentials", async () => {
@@ -401,10 +402,11 @@ describe.skipIf(skipIfNoSecurityStack)(
         expect(response).toBeDefined();
 
         const appliedConfig = await client.request<{
-          config: { identity_providers: { driver: string }[] };
+          config: { identity_providers: { params: { driver: string } }[] };
         }>("/config/apps/security");
 
-        expect(appliedConfig.config?.identity_providers?.[0].driver).toBe("oidc");
+        // OIDC uses generic driver in params wrapper
+        expect(appliedConfig.config?.identity_providers?.[0].params?.driver).toBe("generic");
       });
 
       test("OIDC login redirects to identity provider", async () => {

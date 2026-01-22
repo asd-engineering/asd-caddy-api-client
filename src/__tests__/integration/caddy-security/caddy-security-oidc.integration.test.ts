@@ -77,14 +77,18 @@ describe.skipIf(skipIfNoSecurityStack)(
           scopes: ["openid", "email", "profile", "roles"],
         });
 
+        // Builder uses wrapper structure: { name, kind, params }
         expect(provider).toMatchObject({
-          driver: "oidc",
-          realm: "keycloak",
-          provider: "keycloak",
-          client_id: KEYCLOAK_CLIENT_ID,
-          client_secret: KEYCLOAK_CLIENT_SECRET,
-          discovery_url: expect.stringContaining(".well-known/openid-configuration"),
-          scopes: ["openid", "email", "profile", "roles"],
+          name: "keycloak",
+          kind: "oauth",
+          params: {
+            driver: "generic", // OIDC uses generic driver with base_auth_url
+            realm: "keycloak",
+            client_id: KEYCLOAK_CLIENT_ID,
+            client_secret: KEYCLOAK_CLIENT_SECRET,
+            base_auth_url: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`,
+            scopes: ["openid", "email", "profile", "roles"],
+          },
         });
       });
 
@@ -96,13 +100,17 @@ describe.skipIf(skipIfNoSecurityStack)(
           scopes: ["user:email", "read:user"],
         });
 
+        // Builder uses wrapper structure: { name, kind, params }
         expect(provider).toMatchObject({
-          driver: "oauth2",
-          realm: "github",
-          provider: "github",
-          client_id: "github-client-id",
-          client_secret: "github-client-secret",
-          scopes: ["user:email", "read:user"],
+          name: "github",
+          kind: "oauth",
+          params: {
+            driver: "github", // OAuth2 uses provider-specific driver
+            realm: "github",
+            client_id: "github-client-id",
+            client_secret: "github-client-secret",
+            scopes: ["user:email", "read:user"],
+          },
         });
       });
 
@@ -196,10 +204,10 @@ describe.skipIf(skipIfNoSecurityStack)(
         expect(config.authentication_portals).toHaveLength(1);
         expect(config.authorization_policies).toHaveLength(1);
 
-        // Verify providers have correct drivers
-        expect(config.identity_providers?.[0].driver).toBe("oidc");
-        expect(config.identity_providers?.[1].driver).toBe("oauth2");
-        expect(config.identity_providers?.[2].driver).toBe("oauth2");
+        // Verify providers have correct drivers (in params wrapper)
+        expect(config.identity_providers?.[0].params?.driver).toBe("generic"); // OIDC uses generic
+        expect(config.identity_providers?.[1].params?.driver).toBe("github"); // OAuth2 uses provider name
+        expect(config.identity_providers?.[2].params?.driver).toBe("google"); // OAuth2 uses provider name
       });
     });
 
