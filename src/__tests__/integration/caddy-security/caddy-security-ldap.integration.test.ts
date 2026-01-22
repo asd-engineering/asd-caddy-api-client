@@ -314,6 +314,28 @@ describe.skipIf(skipIfNoSecurityStack)(
       });
 
       test("can retrieve applied security config", async () => {
+        // First apply a config (beforeEach clears it)
+        const ldapStore = buildLdapIdentityStore({
+          servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
+          bindUsername: LDAP_BIND_DN,
+          bindPassword: LDAP_BIND_PASSWORD,
+          searchBaseDn: LDAP_SEARCH_BASE_DN,
+          realm: "ldap",
+        });
+
+        const config = buildSecurityConfig({
+          identityStores: [createRequiredLocalStore(), ldapStore],
+          portals: [createRequiredPortal()],
+          policies: [createRequiredPolicy()],
+        });
+
+        const app = buildSecurityApp({ config });
+        await client.request("/config/apps/security", {
+          method: "PUT",
+          body: JSON.stringify(app),
+        });
+
+        // Now retrieve it
         const securityConfig =
           await client.request<Record<string, unknown>>("/config/apps/security");
 
@@ -365,6 +387,19 @@ describe.skipIf(skipIfNoSecurityStack)(
       });
 
       test("can delete security config", async () => {
+        // First create a config (beforeEach clears it)
+        const config = buildSecurityConfig({
+          identityStores: [createRequiredLocalStore()],
+          portals: [createRequiredPortal()],
+          policies: [createRequiredPolicy()],
+        });
+        const app = buildSecurityApp({ config });
+        await client.request("/config/apps/security", {
+          method: "PUT",
+          body: JSON.stringify(app),
+        });
+
+        // Now delete it
         await client.request("/config/apps/security", {
           method: "DELETE",
         });
