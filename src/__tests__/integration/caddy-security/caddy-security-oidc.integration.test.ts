@@ -285,11 +285,9 @@ describe.skipIf(skipIfNoSecurityStack)(
           hosts: ["auth.example.com"],
           portalName: "oidc-portal",
           routeId: "oidc-auth-route",
-          priority: 10,
         });
 
         expect(route["@id"]).toBe("oidc-auth-route");
-        expect(route.priority).toBe(10);
         expect(route.terminal).toBe(true);
       });
 
@@ -300,12 +298,10 @@ describe.skipIf(skipIfNoSecurityStack)(
           gatekeeperName: "oidc-policy",
           dial: "localhost:3000",
           routeId: "oidc-protected-api",
-          priority: 50,
         });
 
         expect(route["@id"]).toBe("oidc-protected-api");
         expect(route.match?.[0].path).toHaveLength(2);
-        expect(route.priority).toBe(50);
       });
     });
 
