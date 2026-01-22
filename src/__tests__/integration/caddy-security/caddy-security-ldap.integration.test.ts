@@ -10,7 +10,7 @@
  *
  * Run with: npm run test:integration:caddy-security-ldap
  */
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import { CaddyClient } from "../../../caddy/client.js";
 import {
   buildLocalIdentityStore,
@@ -257,20 +257,8 @@ describe.skipIf(skipIfNoSecurityStack)(
     });
 
     describe("API Integration", () => {
-      beforeEach(async () => {
-        // Restore baseline security config before each test
-        // We can't DELETE because the Caddyfile routes depend on mypolicy/myportal
-        const baselineConfig = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore()],
-          portals: [createRequiredPortal()],
-          policies: [createRequiredPolicy()],
-        });
-        const baselineApp = buildSecurityApp({ config: baselineConfig });
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(baselineApp),
-        });
-      });
+      // Note: No beforeEach cleanup - each test is self-contained and applies its own config
+      // The Caddyfile provides a base security config that we extend
 
       test("can apply LDAP security config via Caddy API", async () => {
         // Build complete configuration using our builders

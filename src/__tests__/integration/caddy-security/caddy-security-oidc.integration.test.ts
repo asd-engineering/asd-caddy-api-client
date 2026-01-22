@@ -10,7 +10,7 @@
  *
  * Run with: npm run test:integration:caddy-security-oidc
  */
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import { CaddyClient } from "../../../caddy/client.js";
 import {
   buildOidcProvider,
@@ -307,19 +307,6 @@ describe.skipIf(skipIfNoSecurityStack)(
 
     // Skip API tests - they require Keycloak to be running which isn't available in CI
     describe.skip("API Integration", () => {
-      beforeEach(async () => {
-        // Restore baseline config - can't DELETE because Caddyfile routes depend on mypolicy/myportal
-        const baselineConfig = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore()],
-          portals: [createRequiredPortal()],
-          policies: [createRequiredPolicy()],
-        });
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config: baselineConfig })),
-        });
-      });
-
       test("can apply OIDC security config via Caddy API", async () => {
         const oidcProvider = buildOidcProvider({
           provider: "keycloak",

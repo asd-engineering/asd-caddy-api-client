@@ -11,7 +11,7 @@
  *
  * Run with: DOCKER_TEST=1 npm run test:integration:caddy-security-e2e
  */
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import { CaddyClient } from "../../../caddy/client.js";
 import {
   buildLocalIdentityStore,
@@ -115,19 +115,8 @@ describe.skipIf(skipIfNoSecurityStack)(
     });
 
     describe("HTTP Authentication Flow Tests", () => {
-      beforeEach(async () => {
-        // Restore baseline config for each test
-        // We can't DELETE because the Caddyfile routes depend on mypolicy/myportal
-        const baselineConfig = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore()],
-          portals: [createRequiredPortal()],
-          policies: [createRequiredPolicy()],
-        });
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config: baselineConfig })),
-        });
-      });
+      // Note: No beforeEach cleanup - each test is self-contained and applies its own config
+      // The Caddyfile provides a base security config that we extend
 
       test("unauthenticated request to protected route returns 401/403", async () => {
         // 1. Setup security config with local identity store
@@ -278,18 +267,7 @@ describe.skipIf(skipIfNoSecurityStack)(
     });
 
     describe("LDAP Authentication Flow", () => {
-      beforeEach(async () => {
-        // Restore baseline config - can't DELETE because Caddyfile routes depend on mypolicy/myportal
-        const baselineConfig = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore()],
-          portals: [createRequiredPortal()],
-          policies: [createRequiredPolicy()],
-        });
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config: baselineConfig })),
-        });
-      });
+      // Note: No beforeEach cleanup - each test is self-contained
 
       test("LDAP config can be applied and validated", async () => {
         const ldapStore = buildLdapIdentityStore({
@@ -416,19 +394,6 @@ describe.skipIf(skipIfNoSecurityStack)(
       const KEYCLOAK_URL = process.env.KEYCLOAK_URL ?? "http://keycloak:8081";
       const KEYCLOAK_REALM = "test-realm";
 
-      beforeEach(async () => {
-        // Restore baseline config - can't DELETE because Caddyfile routes depend on mypolicy/myportal
-        const baselineConfig = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore()],
-          portals: [createRequiredPortal()],
-          policies: [createRequiredPolicy()],
-        });
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config: baselineConfig })),
-        });
-      });
-
       test("OIDC config can be applied", async () => {
         const oidcProvider = buildOidcProvider({
           provider: "keycloak",
@@ -524,18 +489,7 @@ describe.skipIf(skipIfNoSecurityStack)(
     });
 
     describe("Token Validation", () => {
-      beforeEach(async () => {
-        // Restore baseline config - can't DELETE because Caddyfile routes depend on mypolicy/myportal
-        const baselineConfig = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore()],
-          portals: [createRequiredPortal()],
-          policies: [createRequiredPolicy()],
-        });
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config: baselineConfig })),
-        });
-      });
+      // Note: No beforeEach cleanup - each test is self-contained
 
       test("request with invalid token is rejected", async () => {
         const localStore = buildLocalIdentityStore({
@@ -617,18 +571,7 @@ describe.skipIf(skipIfNoSecurityStack)(
     });
 
     describe("Multi-Policy Authorization", () => {
-      beforeEach(async () => {
-        // Restore baseline config - can't DELETE because Caddyfile routes depend on mypolicy/myportal
-        const baselineConfig = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore()],
-          portals: [createRequiredPortal()],
-          policies: [createRequiredPolicy()],
-        });
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config: baselineConfig })),
-        });
-      });
+      // Note: No beforeEach cleanup - each test is self-contained
 
       test("admin policy restricts access to admin-only resources", async () => {
         const localStore = buildLocalIdentityStore({
