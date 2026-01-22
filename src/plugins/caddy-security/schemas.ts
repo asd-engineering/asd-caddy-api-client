@@ -196,11 +196,11 @@ export const OAuth2IdentityProviderSchema = z.object({
  * @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/idp/oauth#Config
  */
 export const OidcIdentityProviderParamsSchema = z.object({
-  driver: z.string().optional(), // oidc
+  driver: z.string().optional(), // generic for OIDC
   realm: z.string().optional(),
   client_id: z.string().optional(),
   client_secret: z.string().optional(),
-  metadata_url: z.string().optional(), // Note: metadata_url, not discovery_url
+  base_auth_url: z.string().optional(), // Base URL for OIDC discovery (without /.well-known/openid-configuration)
   scopes: z.array(z.string()).optional(),
 });
 

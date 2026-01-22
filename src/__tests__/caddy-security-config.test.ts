@@ -139,7 +139,7 @@ describe("Phase 1: caddy-security Config Generation", () => {
         kind: "ldap",
         params: {
           realm: "corporate",
-          servers: [{ address: "ldap.example.com", port: 389 }],
+          servers: [{ address: "ldap://ldap.example.com", port: 389 }],
           bind_username: "cn=admin,dc=example,dc=com",
           bind_password: "secret",
           search_base_dn: "ou=users,dc=example,dc=com",
@@ -174,7 +174,9 @@ describe("Phase 1: caddy-security Config Generation", () => {
       });
 
       expect(store.params.servers).toHaveLength(2);
-      expect(store.params.servers?.[0].address).toBe("ldap1.example.com");
+      // Builder auto-adds ldap:// prefix for port 389, ldaps:// for port 636
+      expect(store.params.servers?.[0].address).toBe("ldap://ldap1.example.com");
+      expect(store.params.servers?.[1].address).toBe("ldaps://ldap2.example.com");
       expect(store.params.servers?.[1].port).toBe(636);
     });
   });
@@ -241,13 +243,12 @@ describe("Phase 1: caddy-security Config Generation", () => {
         name: "keycloak",
         kind: "oauth",
         params: {
-          // OIDC providers use "generic" driver regardless of provider name
+          // OIDC providers use "generic" driver with base_auth_url
           driver: "generic",
           realm: "keycloak",
           client_id: "my-app",
           client_secret: "my-secret",
-          metadata_url:
-            "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",
+          base_auth_url: "https://keycloak.example.com/realms/myrealm",
           scopes: ["openid", "email", "profile", "roles"],
         },
       });

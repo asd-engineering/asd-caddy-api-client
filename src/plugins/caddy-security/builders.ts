@@ -194,10 +194,19 @@ export function buildLdapIdentityStore(options: BuildLdapIdentityStoreOptions): 
     kind: "ldap" as const,
     params: {
       realm: options.realm ?? "ldap",
-      servers: options.servers.map((s) => ({
-        address: s.address,
-        ...(s.port && { port: s.port }),
-      })),
+      servers: options.servers.map((s) => {
+        // Ensure address has ldap:// or ldaps:// prefix
+        let address = s.address;
+        if (!address.startsWith("ldap://") && !address.startsWith("ldaps://")) {
+          // Default to ldap:// if no port or port 389, ldaps:// for port 636
+          const prefix = s.port === 636 ? "ldaps://" : "ldap://";
+          address = prefix + address;
+        }
+        return {
+          address,
+          ...(s.port && { port: s.port }),
+        };
+      }),
       bind_username: options.bindUsername,
       bind_password: options.bindPassword,
       search_base_dn: options.searchBaseDn,
@@ -353,17 +362,23 @@ export interface BuildOidcProviderOptions {
  * ```
  */
 export function buildOidcProvider(options: BuildOidcProviderOptions): OidcIdentityProvider {
+  // Extract base URL from metadata URL (remove /.well-known/openid-configuration)
+  let baseAuthUrl = options.metadataUrl;
+  if (baseAuthUrl.endsWith("/.well-known/openid-configuration")) {
+    baseAuthUrl = baseAuthUrl.replace("/.well-known/openid-configuration", "");
+  }
+
   const provider = {
     name: options.name ?? options.provider,
     kind: "oauth" as const,
     params: {
-      // OIDC providers with metadata_url use "generic" driver
+      // OIDC providers use "generic" driver with base_auth_url for discovery
       // @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/idp/oauth
       driver: "generic",
       realm: options.realm ?? options.provider,
       client_id: options.clientId,
       client_secret: options.clientSecret,
-      metadata_url: options.metadataUrl,
+      base_auth_url: baseAuthUrl,
       scopes: options.scopes ?? ["openid", "email", "profile"],
     },
   };
