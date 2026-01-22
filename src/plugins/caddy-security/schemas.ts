@@ -135,7 +135,7 @@ export const LdapServerSchema = z.object({
  * @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/ids/ldap#UserGroup
  */
 export const LdapUserGroupSchema = z.object({
-  group_dn: z.string().optional(),
+  group_dn: z.string(), // Required: DN pattern for the group (e.g., "ou=users,dc=test,dc=local")
   roles: z.array(z.string()).optional(),
 });
 
@@ -297,7 +297,7 @@ export const CryptoKeyConfigSchema = z.object({
  * Bypass config schema for authorization policies
  */
 export const BypassConfigSchema = z.object({
-  match_type: z.string().optional(),
+  match_type: z.string(), // Required: "exact", "prefix", "suffix", "contains", or "regex"
   uri: z.string().optional(),
 });
 

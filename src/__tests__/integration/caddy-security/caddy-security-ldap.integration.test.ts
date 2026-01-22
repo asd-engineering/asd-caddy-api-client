@@ -89,7 +89,7 @@ describe.skipIf(skipIfNoSecurityStack)(
             bind_password: LDAP_BIND_PASSWORD,
             search_base_dn: LDAP_SEARCH_BASE_DN,
             search_user_filter: LDAP_SEARCH_FILTER,
-            groups: [{ roles: ["authp/user"] }], // Default group
+            groups: [{ group_dn: LDAP_SEARCH_BASE_DN, roles: ["authp/user"] }], // Default group uses searchBaseDn
           },
         });
       });

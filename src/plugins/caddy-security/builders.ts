@@ -213,13 +213,14 @@ export function buildLdapIdentityStore(options: BuildLdapIdentityStoreOptions): 
       search_user_filter: options.searchUserFilter ?? "(uid={username})",
       // Groups field is required by authcrunch, must have at least one group
       // If no groups provided, create a default catch-all group
+      // Each group requires group_dn (use search_base_dn as default catch-all)
       groups:
         options.groups && options.groups.length > 0
           ? options.groups.map((g) => ({
-              ...(g.groupDn && { group_dn: g.groupDn }),
+              group_dn: g.groupDn ?? options.searchBaseDn,
               ...(g.roles && { roles: g.roles }),
             }))
-          : [{ roles: ["authp/user"] }], // Default group assigns user role to all LDAP users
+          : [{ group_dn: options.searchBaseDn, roles: ["authp/user"] }], // Default group assigns user role to all LDAP users
     },
   };
 
@@ -666,8 +667,10 @@ export function buildAuthorizationPolicy(
 
   if (options.bypass && options.bypass.length > 0) {
     // Note: bypass_configs (array of objects), not bypass (array of strings)
+    // match_type is required: "exact", "prefix", "suffix", "contains", or "regex"
     policy.bypass_configs = options.bypass.map((uri) => ({
       uri,
+      match_type: "prefix",
     }));
   }
 

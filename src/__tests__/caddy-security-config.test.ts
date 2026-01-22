@@ -144,8 +144,8 @@ describe("Phase 1: caddy-security Config Generation", () => {
           bind_password: "secret",
           search_base_dn: "ou=users,dc=example,dc=com",
           search_user_filter: "(uid={username})",
-          // Default group assigns user role to all LDAP users
-          groups: [{ roles: ["authp/user"] }],
+          // Default group assigns user role to all LDAP users (uses searchBaseDn as group_dn)
+          groups: [{ group_dn: "ou=users,dc=example,dc=com", roles: ["authp/user"] }],
         },
       });
     });
@@ -373,7 +373,11 @@ describe("Phase 1: caddy-security Config Generation", () => {
             source: "cookie",
           },
         ],
-        bypass_configs: [{ uri: "/health" }, { uri: "/metrics" }, { uri: "/public/*" }],
+        bypass_configs: [
+          { uri: "/health", match_type: "prefix" },
+          { uri: "/metrics", match_type: "prefix" },
+          { uri: "/public/*", match_type: "prefix" },
+        ],
       });
     });
   });
