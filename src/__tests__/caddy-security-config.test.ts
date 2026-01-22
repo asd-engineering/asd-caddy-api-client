@@ -468,7 +468,6 @@ describe("Phase 1: caddy-security Config Generation", () => {
           },
         ],
         terminal: true,
-        priority: 10,
       });
     });
 
@@ -499,7 +498,6 @@ describe("Phase 1: caddy-security Config Generation", () => {
           },
         ],
         terminal: true,
-        priority: 50,
       });
     });
   });

@@ -292,7 +292,7 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const portal = buildAuthenticationPortal({
           name: "ldap-portal",
-          identityStores: ["ldap"],
+          identityStores: ["ldapdb"],
         });
 
         const policy = buildAuthorizationPolicy({
@@ -339,7 +339,7 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const portal = buildAuthenticationPortal({
           name: "ldap-login-portal",
-          identityStores: ["ldap"],
+          identityStores: ["ldapdb"],
         });
 
         const config = buildSecurityConfig({

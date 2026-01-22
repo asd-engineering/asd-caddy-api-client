@@ -939,11 +939,6 @@ export interface BuildAuthenticationRouteOptions {
    * Route ID for tracking
    */
   routeId?: string;
-  /**
-   * Route priority (lower = higher priority)
-   * @default 10 (AUTH_DOMAIN priority)
-   */
-  priority?: number;
 }
 
 /**
@@ -977,7 +972,6 @@ export function buildAuthenticatorRoute(options: BuildAuthenticationRouteOptions
     match: [{ host: options.hosts }],
     handle: [handler],
     terminal: true,
-    priority: options.priority ?? 10,
   };
 }
 
@@ -1005,11 +999,6 @@ export interface BuildProtectedRouteOptions {
    * Route ID for tracking
    */
   routeId?: string;
-  /**
-   * Route priority (lower = higher priority)
-   * @default 50 (SERVICE priority)
-   */
-  priority?: number;
 }
 
 /**
@@ -1060,6 +1049,5 @@ export function buildProtectedRoute(options: BuildProtectedRouteOptions): CaddyR
       },
     ],
     terminal: true,
-    priority: options.priority ?? 50,
   };
 }
