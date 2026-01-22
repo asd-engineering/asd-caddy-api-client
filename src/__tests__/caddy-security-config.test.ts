@@ -244,12 +244,13 @@ describe("Phase 1: caddy-security Config Generation", () => {
         name: "keycloak",
         kind: "oauth",
         params: {
-          // OIDC providers use "generic" driver with base_auth_url
+          // OIDC providers use "generic" driver with metadata_url for discovery
           driver: "generic",
           realm: "keycloak",
           client_id: "my-app",
           client_secret: "my-secret",
-          base_auth_url: "https://keycloak.example.com/realms/myrealm",
+          metadata_url:
+            "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",
           scopes: ["openid", "email", "profile", "roles"],
         },
       });
@@ -572,13 +573,13 @@ describe("Phase 1: caddy-security Config Generation", () => {
         realm: "keycloak",
         client_id: "caddy-app",
         client_secret: "test-secret",
-        base_auth_url: "http://keycloak:8080/realms/test-realm",
+        metadata_url: "http://keycloak:8080/realms/test-realm/.well-known/openid-configuration",
         scopes: ["openid", "email", "profile"],
         metadata_discovery_disabled: false,
       };
 
       expect(keycloakConfig.driver).toBe("generic");
-      expect(keycloakConfig.base_auth_url).toContain("keycloak");
+      expect(keycloakConfig.metadata_url).toContain("keycloak");
     });
 
     test("github OAuth provider config structure", () => {

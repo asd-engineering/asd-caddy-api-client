@@ -38,12 +38,12 @@ const LDAP_SEARCH_FILTER = "(uid={username})";
 const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 
 /**
- * Helper to create the "local" identity store required by the Caddyfile.
- * The Caddyfile has "myportal" referencing this store.
+ * Helper to create the "localdb" identity store required by the Caddyfile.
+ * The Caddyfile has "myportal" referencing this store as "localdb".
  */
 function createRequiredLocalStore() {
   return buildLocalIdentityStore({
-    name: "local",
+    name: "localdb",
     path: "/data/users.json",
     realm: "local",
   });
@@ -56,7 +56,7 @@ function createRequiredLocalStore() {
 function createRequiredPortal() {
   return buildAuthenticationPortal({
     name: "myportal",
-    identityStores: ["local"],
+    identityStores: ["localdb"],
   });
 }
 

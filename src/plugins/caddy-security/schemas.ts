@@ -200,7 +200,9 @@ export const OidcIdentityProviderParamsSchema = z.object({
   realm: z.string().optional(),
   client_id: z.string().optional(),
   client_secret: z.string().optional(),
-  base_auth_url: z.string().optional(), // Base URL for OIDC discovery (without /.well-known/openid-configuration)
+  // metadata_url is the full URL to .well-known/openid-configuration
+  // authcrunch uses this for OIDC discovery
+  metadata_url: z.string().optional(),
   scopes: z.array(z.string()).optional(),
 });
 
@@ -226,7 +228,7 @@ export const IdentityStoreSchema = z.discriminatedUnion("kind", [
  * Identity provider union schema
  *
  * Note: We use passthrough() on the params schemas to preserve fields that
- * might only exist in one schema (e.g., base_auth_url for OIDC, authorization_url for OAuth2).
+ * might only exist in one schema (e.g., metadata_url for OIDC, authorization_url for OAuth2).
  * This is necessary because Zod union validation picks the first matching schema
  * and would otherwise strip fields not in that schema.
  */

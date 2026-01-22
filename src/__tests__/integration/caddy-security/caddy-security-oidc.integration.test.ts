@@ -37,12 +37,12 @@ const KEYCLOAK_CLIENT_SECRET = "test-client-secret";
 const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 
 /**
- * Helper to create the "local" identity store required by the Caddyfile.
- * The Caddyfile has "myportal" referencing this store.
+ * Helper to create the "localdb" identity store required by the Caddyfile.
+ * The Caddyfile has "myportal" referencing this store as "localdb".
  */
 function createRequiredLocalStore() {
   return buildLocalIdentityStore({
-    name: "local",
+    name: "localdb",
     path: "/data/users.json",
     realm: "local",
   });
@@ -55,7 +55,7 @@ function createRequiredLocalStore() {
 function createRequiredPortal() {
   return buildAuthenticationPortal({
     name: "myportal",
-    identityStores: ["local"],
+    identityStores: ["localdb"],
   });
 }
 
@@ -117,11 +117,11 @@ describe.skipIf(skipIfNoSecurityStack)(
           name: "keycloak",
           kind: "oauth",
           params: {
-            driver: "generic", // OIDC uses generic driver with base_auth_url
+            driver: "generic", // OIDC uses generic driver with metadata_url for discovery
             realm: "keycloak",
             client_id: KEYCLOAK_CLIENT_ID,
             client_secret: KEYCLOAK_CLIENT_SECRET,
-            base_auth_url: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`,
+            metadata_url: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
             scopes: ["openid", "email", "profile", "roles"],
           },
         });

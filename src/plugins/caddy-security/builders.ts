@@ -367,23 +367,23 @@ export interface BuildOidcProviderOptions {
  * ```
  */
 export function buildOidcProvider(options: BuildOidcProviderOptions): OidcIdentityProvider {
-  // Extract base URL from metadata URL (remove /.well-known/openid-configuration)
-  let baseAuthUrl = options.metadataUrl;
-  if (baseAuthUrl.endsWith("/.well-known/openid-configuration")) {
-    baseAuthUrl = baseAuthUrl.replace("/.well-known/openid-configuration", "");
+  // Ensure metadata URL ends with /.well-known/openid-configuration
+  let metadataUrl = options.metadataUrl;
+  if (!metadataUrl.endsWith("/.well-known/openid-configuration")) {
+    metadataUrl = metadataUrl.replace(/\/$/, "") + "/.well-known/openid-configuration";
   }
 
   const provider = {
     name: options.name ?? options.provider,
     kind: "oauth" as const,
     params: {
-      // OIDC providers use "generic" driver with base_auth_url for discovery
+      // OIDC providers use "generic" driver with metadata_url for discovery
       // @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/idp/oauth
       driver: "generic",
       realm: options.realm ?? options.provider,
       client_id: options.clientId,
       client_secret: options.clientSecret,
-      base_auth_url: baseAuthUrl,
+      metadata_url: metadataUrl,
       scopes: options.scopes ?? ["openid", "email", "profile"],
     },
   };

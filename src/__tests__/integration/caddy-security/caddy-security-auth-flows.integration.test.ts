@@ -84,6 +84,41 @@ class CookieJar {
 // Skip unless CADDY_SECURITY_TEST is explicitly set (requires caddy-security Docker stack)
 const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 
+/**
+ * Helper to create the "localdb" identity store required by the Caddyfile.
+ * The Caddyfile has "myportal" referencing this store as "localdb".
+ */
+function createRequiredLocalStore() {
+  return buildLocalIdentityStore({
+    name: "localdb",
+    path: "/data/users.json",
+    realm: "local",
+  });
+}
+
+/**
+ * Helper to create the "myportal" authentication portal required by the Caddyfile.
+ * The Caddyfile has routes using "authenticate with myportal".
+ */
+function createRequiredPortal() {
+  return buildAuthenticationPortal({
+    name: "myportal",
+    identityStores: ["localdb"],
+  });
+}
+
+/**
+ * Helper function to create the "mypolicy" authorization policy
+ * that the Caddyfile routes reference. This must be included in all
+ * security configs to avoid "gatekeeper not found" errors.
+ */
+function createRequiredPolicy() {
+  return buildAuthorizationPolicy({
+    name: "mypolicy",
+    accessLists: [{ claim: "roles", values: ["authp/admin", "authp/user"], action: "allow" }],
+  });
+}
+
 describe.skipIf(skipIfNoSecurityStack)(
   "caddy-security Authentication Flows",
   () => {
@@ -602,11 +637,11 @@ describe.skipIf(skipIfNoSecurityStack)(
         accessLists: [{ claim: "roles", values: ["editor", "admin"], action: "allow" }],
       });
 
-      // Build config
+      // Build config with required Caddyfile fixtures
       const config = buildSecurityConfig({
-        identityStores: [localStore],
-        portals: [portal],
-        policies: [userPolicy, adminPolicy, editorPolicy],
+        identityStores: [createRequiredLocalStore(), localStore],
+        portals: [createRequiredPortal(), portal],
+        policies: [createRequiredPolicy(), userPolicy, adminPolicy, editorPolicy],
       });
 
       // Apply security config
