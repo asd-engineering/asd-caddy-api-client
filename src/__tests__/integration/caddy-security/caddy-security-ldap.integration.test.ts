@@ -126,7 +126,7 @@ describe.skipIf(skipIfNoSecurityStack)(
             bind_password: LDAP_BIND_PASSWORD,
             search_base_dn: LDAP_SEARCH_BASE_DN,
             search_user_filter: LDAP_SEARCH_FILTER,
-            groups: [{ group_dn: LDAP_SEARCH_BASE_DN, roles: ["authp/user"] }], // Default group uses searchBaseDn
+            groups: [{ dn: LDAP_SEARCH_BASE_DN, roles: ["authp/user"] }], // Default group uses searchBaseDn
           },
         });
       });
@@ -141,7 +141,7 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const portal = buildAuthenticationPortal({
           name: "ldap-portal",
-          identityStores: ["ldap"],
+          identityStores: ["ldapdb"],
           cookie: { domain: "localhost", lifetime: "24h" },
         });
 
@@ -173,7 +173,7 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const portal = buildAuthenticationPortal({
           name: "ldap-portal",
-          identityStores: ["ldap"],
+          identityStores: ["ldapdb"],
         });
 
         const config = buildSecurityConfig({
@@ -279,7 +279,7 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const portal = buildAuthenticationPortal({
           name: "test-ldap-portal",
-          identityStores: ["ldap"],
+          identityStores: ["ldapdb"],
           cookie: {
             domain: "localhost",
             lifetime: "1h",
@@ -332,7 +332,7 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const portal = buildAuthenticationPortal({
           name: "updated-portal",
-          identityStores: ["ldap"],
+          identityStores: ["ldapdb"],
         });
 
         const adminPolicy = buildAuthorizationPolicy({
@@ -392,7 +392,7 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const portal = buildAuthenticationPortal({
           name: "e2e-portal",
-          identityStores: ["ldap"],
+          identityStores: ["ldapdb"],
         });
 
         const policy = buildAuthorizationPolicy({

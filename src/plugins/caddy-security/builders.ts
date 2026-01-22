@@ -213,14 +213,15 @@ export function buildLdapIdentityStore(options: BuildLdapIdentityStoreOptions): 
       search_user_filter: options.searchUserFilter ?? "(uid={username})",
       // Groups field is required by authcrunch, must have at least one group
       // If no groups provided, create a default catch-all group
-      // Each group requires group_dn (use search_base_dn as default catch-all)
+      // Each group requires dn field (use search_base_dn as default catch-all)
+      // @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/ids/ldap#UserGroup
       groups:
         options.groups && options.groups.length > 0
           ? options.groups.map((g) => ({
-              group_dn: g.groupDn ?? options.searchBaseDn,
+              dn: g.groupDn ?? options.searchBaseDn,
               ...(g.roles && { roles: g.roles }),
             }))
-          : [{ group_dn: options.searchBaseDn, roles: ["authp/user"] }], // Default group assigns user role to all LDAP users
+          : [{ dn: options.searchBaseDn, roles: ["authp/user"] }], // Default group assigns user role to all LDAP users
     },
   };
 

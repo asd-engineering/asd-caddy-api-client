@@ -144,8 +144,8 @@ describe("Phase 1: caddy-security Config Generation", () => {
           bind_password: "secret",
           search_base_dn: "ou=users,dc=example,dc=com",
           search_user_filter: "(uid={username})",
-          // Default group assigns user role to all LDAP users (uses searchBaseDn as group_dn)
-          groups: [{ group_dn: "ou=users,dc=example,dc=com", roles: ["authp/user"] }],
+          // Default group assigns user role to all LDAP users (uses searchBaseDn as dn)
+          groups: [{ dn: "ou=users,dc=example,dc=com", roles: ["authp/user"] }],
         },
       });
     });

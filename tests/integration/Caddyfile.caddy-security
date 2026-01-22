@@ -7,8 +7,9 @@
 
     security {
         # Local identity store with test users
+        # Uses realm "localdb" to avoid conflicts with tests that use default realm "local"
         local identity store localdb {
-            realm local
+            realm localdb
             path /data/users.json
         }
 
