@@ -37,6 +37,29 @@ const KEYCLOAK_CLIENT_SECRET = "test-client-secret";
 const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 
 /**
+ * Helper to create the "local" identity store required by the Caddyfile.
+ * The Caddyfile has "myportal" referencing this store.
+ */
+function createRequiredLocalStore() {
+  return buildLocalIdentityStore({
+    name: "local",
+    path: "/data/users.json",
+    realm: "local",
+  });
+}
+
+/**
+ * Helper to create the "myportal" authentication portal required by the Caddyfile.
+ * The Caddyfile has routes using "authenticate with myportal".
+ */
+function createRequiredPortal() {
+  return buildAuthenticationPortal({
+    name: "myportal",
+    identityStores: ["local"],
+  });
+}
+
+/**
  * Helper function to create the "mypolicy" authorization policy
  * that the Caddyfile routes reference. This must be included in all
  * security configs to avoid "gatekeeper not found" errors.
@@ -319,9 +342,10 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
+          identityStores: [createRequiredLocalStore()],
           identityProviders: [oidcProvider],
-          portals: [portal],
-          policies: [policy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy(), policy],
         });
 
         const app = buildSecurityApp({ config });
@@ -353,9 +377,10 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
+          identityStores: [createRequiredLocalStore()],
           identityProviders: [updatedProvider],
-          portals: [portal],
-          policies: [createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy()],
         });
 
         const app = buildSecurityApp({ config });
@@ -412,10 +437,10 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         // 5. Build complete security config
         const config = buildSecurityConfig({
-          identityStores: [localStore],
+          identityStores: [createRequiredLocalStore(), localStore],
           identityProviders: [oidcProvider],
-          portals: [portal],
-          policies: [userPolicy, adminPolicy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy(), userPolicy, adminPolicy],
         });
 
         const app = buildSecurityApp({ config });
@@ -506,14 +531,15 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
+          identityStores: [createRequiredLocalStore()],
           identityProviders: [keycloakProvider, githubProvider, googleProvider],
-          portals: [portal],
+          portals: [createRequiredPortal(), portal],
           policies: [
+            createRequiredPolicy(),
             buildAuthorizationPolicy({
               name: "multi-provider-policy",
               accessLists: [{ claim: "sub", values: ["*"], action: "allow" }],
             }),
-            createRequiredPolicy(), // Include mypolicy for Caddyfile routes
           ],
         });
 

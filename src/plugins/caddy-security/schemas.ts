@@ -224,11 +224,19 @@ export const IdentityStoreSchema = z.discriminatedUnion("kind", [
 
 /**
  * Identity provider union schema
+ *
+ * Note: We use passthrough() on the params schemas to preserve fields that
+ * might only exist in one schema (e.g., base_auth_url for OIDC, authorization_url for OAuth2).
+ * This is necessary because Zod union validation picks the first matching schema
+ * and would otherwise strip fields not in that schema.
  */
 export const IdentityProviderSchema = z.object({
   name: z.string(),
   kind: z.literal("oauth"),
-  params: z.union([OAuth2IdentityProviderParamsSchema, OidcIdentityProviderParamsSchema]),
+  params: z.union([
+    OAuth2IdentityProviderParamsSchema.passthrough(),
+    OidcIdentityProviderParamsSchema.passthrough(),
+  ]),
 });
 
 /**

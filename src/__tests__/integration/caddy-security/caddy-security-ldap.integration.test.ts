@@ -13,6 +13,7 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { CaddyClient } from "../../../caddy/client.js";
 import {
+  buildLocalIdentityStore,
   buildLdapIdentityStore,
   buildAuthenticationPortal,
   buildAuthorizationPolicy,
@@ -35,6 +36,29 @@ const LDAP_SEARCH_FILTER = "(uid={username})";
 
 // Skip unless CADDY_SECURITY_TEST is explicitly set (requires caddy-security Docker stack)
 const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
+
+/**
+ * Helper to create the "local" identity store required by the Caddyfile.
+ * The Caddyfile has "myportal" referencing this store.
+ */
+function createRequiredLocalStore() {
+  return buildLocalIdentityStore({
+    name: "local",
+    path: "/data/users.json",
+    realm: "local",
+  });
+}
+
+/**
+ * Helper to create the "myportal" authentication portal required by the Caddyfile.
+ * The Caddyfile has routes using "authenticate with myportal".
+ */
+function createRequiredPortal() {
+  return buildAuthenticationPortal({
+    name: "myportal",
+    identityStores: ["local"],
+  });
+}
 
 /**
  * Helper function to create the "mypolicy" authorization policy
@@ -268,9 +292,9 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
-          identityStores: [ldapStore],
-          portals: [portal],
-          policies: [policy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          identityStores: [createRequiredLocalStore(), ldapStore],
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy(), policy],
         });
 
         const app = buildSecurityApp({ config });
@@ -321,9 +345,9 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
-          identityStores: [ldapStore],
-          portals: [portal],
-          policies: [adminPolicy, userPolicy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          identityStores: [createRequiredLocalStore(), ldapStore],
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy(), adminPolicy, userPolicy],
         });
 
         const app = buildSecurityApp({ config });
@@ -336,7 +360,7 @@ describe.skipIf(skipIfNoSecurityStack)(
         const updated = await client.request<{
           config: { authorization_policies: unknown[] };
         }>("/config/apps/security");
-        expect(updated.config?.authorization_policies).toHaveLength(3); // adminPolicy, userPolicy, mypolicy
+        expect(updated.config?.authorization_policies).toHaveLength(3); // mypolicy, adminPolicy, userPolicy
       });
 
       test("can delete security config", async () => {
@@ -376,9 +400,9 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
-          identityStores: [ldapStore],
-          portals: [portal],
-          policies: [policy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          identityStores: [createRequiredLocalStore(), ldapStore],
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy(), policy],
         });
 
         const app = buildSecurityApp({ config });

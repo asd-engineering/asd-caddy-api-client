@@ -46,9 +46,31 @@ const _TEST_ADMIN = {
 const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 
 /**
- * Helper function to create the "mypolicy" authorization policy
- * that the Caddyfile routes reference. This must be included in all
- * security configs to avoid "gatekeeper not found" errors.
+ * Helper to create the "local" identity store required by the Caddyfile.
+ * The Caddyfile has "myportal" referencing this store.
+ */
+function createRequiredLocalStore() {
+  return buildLocalIdentityStore({
+    name: "local",
+    path: "/data/users.json",
+    realm: "local",
+  });
+}
+
+/**
+ * Helper to create the "myportal" authentication portal required by the Caddyfile.
+ * The Caddyfile has routes using "authenticate with myportal".
+ */
+function createRequiredPortal() {
+  return buildAuthenticationPortal({
+    name: "myportal",
+    identityStores: ["local"],
+  });
+}
+
+/**
+ * Helper to create the "mypolicy" authorization policy required by the Caddyfile.
+ * The Caddyfile has routes using "authorize with mypolicy".
  */
 function createRequiredPolicy() {
   return buildAuthorizationPolicy({
@@ -119,9 +141,9 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
-          identityStores: [localStore],
-          portals: [portal],
-          policies: [policy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          identityStores: [createRequiredLocalStore(), localStore],
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy(), policy],
         });
 
         await client.request("/config/apps/security", {
@@ -177,9 +199,9 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
-          identityStores: [localStore],
-          portals: [portal],
-          policies: [policy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          identityStores: [createRequiredLocalStore(), localStore],
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy(), policy],
         });
 
         await client.request("/config/apps/security", {
@@ -210,9 +232,9 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
-          identityStores: [localStore],
-          portals: [portal],
-          policies: [createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          identityStores: [createRequiredLocalStore(), localStore],
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy()],
         });
 
         await client.request("/config/apps/security", {
@@ -278,9 +300,9 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
-          identityStores: [ldapStore],
-          portals: [portal],
-          policies: [policy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          identityStores: [createRequiredLocalStore(), ldapStore],
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy(), policy],
         });
 
         const app = buildSecurityApp({ config });
@@ -300,8 +322,8 @@ describe.skipIf(skipIfNoSecurityStack)(
           config: { identity_stores: { kind: string }[] };
         }>("/config/apps/security");
 
-        // Identity stores use kind field, not driver
-        expect(appliedConfig.config?.identity_stores?.[0].kind).toBe("ldap");
+        // Identity stores use kind field, not driver (index 1 because required local store is first)
+        expect(appliedConfig.config?.identity_stores?.[1].kind).toBe("ldap");
       });
 
       test("LDAP login attempt with valid credentials", async () => {
@@ -320,9 +342,9 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
-          identityStores: [ldapStore],
-          portals: [portal],
-          policies: [createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          identityStores: [createRequiredLocalStore(), ldapStore],
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy()],
         });
 
         await client.request("/config/apps/security", {
@@ -404,9 +426,10 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
+          identityStores: [createRequiredLocalStore()],
           identityProviders: [oidcProvider],
-          portals: [portal],
-          policies: [createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy()],
         });
 
         const response = await client.request("/config/apps/security", {
@@ -438,9 +461,10 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
+          identityStores: [createRequiredLocalStore()],
           identityProviders: [oidcProvider],
-          portals: [portal],
-          policies: [createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy()],
         });
 
         await client.request("/config/apps/security", {
@@ -507,9 +531,9 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
-          identityStores: [localStore],
-          portals: [portal],
-          policies: [policy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          identityStores: [createRequiredLocalStore(), localStore],
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy(), policy],
         });
 
         await client.request("/config/apps/security", {
@@ -602,9 +626,9 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
-          identityStores: [localStore],
-          portals: [portal],
-          policies: [userPolicy, adminPolicy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
+          identityStores: [createRequiredLocalStore(), localStore],
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy(), userPolicy, adminPolicy],
         });
 
         await client.request("/config/apps/security", {
@@ -679,9 +703,10 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const config = buildSecurityConfig({
-          portals: [portal],
-          policies: [createRequiredPolicy()], // Include mypolicy for Caddyfile routes
-          // Note: no identity stores defined - portal references nonexistent-store
+          identityStores: [createRequiredLocalStore()],
+          portals: [createRequiredPortal(), portal],
+          policies: [createRequiredPolicy()],
+          // Note: broken-portal references nonexistent-store
         });
 
         // This might succeed at config time but fail at runtime
