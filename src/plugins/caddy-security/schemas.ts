@@ -231,12 +231,25 @@ export const PortalUiSchema = z.object({
 });
 
 /**
+ * Domain-specific cookie config schema
+ * @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/authn/cookie#DomainConfig
+ */
+export const DomainCookieConfigSchema = z.object({
+  lifetime: z.number().optional(), // Cookie lifetime in seconds
+  insecure: z.boolean().optional(),
+  same_site: z.string().optional(),
+});
+
+/**
  * Cookie configuration schema
+ * @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/authn/cookie#Config
  */
 export const CookieConfigSchema = z.object({
-  domain: z.string().optional(),
+  domains: z.record(z.string(), DomainCookieConfigSchema).optional(), // Map of domain names to config
   path: z.string().optional(),
-  lifetime: z.string().optional(),
+  lifetime: z.number().optional(), // Cookie lifetime in seconds
+  insecure: z.boolean().optional(),
+  same_site: z.string().optional(),
 });
 
 /**
@@ -253,12 +266,13 @@ export const AuthenticationPortalSchema = z.object({
 });
 
 /**
- * Access list entry schema
+ * Access list rule schema
+ * @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/acl#RuleConfiguration
  */
-export const AccessListEntrySchema = z.object({
+export const AccessListRuleSchema = z.object({
+  comment: z.string().optional(),
+  conditions: z.array(z.string()).optional(), // e.g., ["match roles admin", "match email *@example.com"]
   action: z.enum(["allow", "deny"]).optional(),
-  claim: z.string().optional(),
-  values: z.array(z.string()).optional(),
 });
 
 /**
@@ -283,7 +297,7 @@ export const BypassConfigSchema = z.object({
  */
 export const AuthorizationPolicySchema = z.object({
   name: z.string(),
-  access_list_rules: z.array(AccessListEntrySchema).optional(), // Note: access_list_rules, not access_lists
+  access_list_rules: z.array(AccessListRuleSchema).optional(), // Note: access_list_rules, not access_lists
   crypto_key_configs: z.array(CryptoKeyConfigSchema).optional(), // Note: crypto_key_configs (array), not crypto_key
   bypass_configs: z.array(BypassConfigSchema).optional(), // Note: bypass_configs, not bypass
 });

@@ -310,9 +310,9 @@ describe("Phase 1: caddy-security Config Generation", () => {
           custom_css: ".header { color: blue; }",
         },
         cookie_config: {
-          domain: ".example.com",
+          // Cookie domain is now in a domains map with numeric lifetime (24h = 86400s)
+          domains: { ".example.com": { lifetime: 86400 } },
           path: "/",
-          lifetime: "24h",
         },
         user_transformer_configs: [
           {
@@ -344,8 +344,9 @@ describe("Phase 1: caddy-security Config Generation", () => {
       expect(policy).toEqual({
         name: "admin-policy",
         access_list_rules: [
-          { action: "allow", claim: "roles", values: ["admin", "editor"] },
-          { action: "allow", claim: "email", values: ["*@example.com"] },
+          // Access list rules now use conditions array format: "match <claim> <values...>"
+          { action: "allow", conditions: ["match roles admin editor"] },
+          { action: "allow", conditions: ["match email *@example.com"] },
         ],
       });
     });

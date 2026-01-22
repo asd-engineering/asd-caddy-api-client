@@ -371,7 +371,7 @@ export interface PortalUiOptions {
  */
 export interface CookieOptions {
   /**
-   * Cookie domain
+   * Cookie domain (optional - used to create domain-specific config)
    */
   domain?: string;
   /**
@@ -380,10 +380,19 @@ export interface CookieOptions {
    */
   path?: string;
   /**
-   * Cookie lifetime
-   * @default "24h"
+   * Cookie lifetime in seconds
+   * @default 86400 (24 hours)
    */
-  lifetime?: string;
+  lifetime?: number | string;
+  /**
+   * Whether to allow insecure cookies (HTTP)
+   * @default false
+   */
+  insecure?: boolean;
+  /**
+   * SameSite attribute
+   */
+  sameSite?: string;
 }
 
 /**
@@ -450,12 +459,45 @@ export function buildAuthenticationPortal(
   }
 
   if (options.cookie) {
-    // Note: cookie_config, not cookie
-    portal.cookie_config = {
-      ...(options.cookie.domain && { domain: options.cookie.domain }),
-      ...(options.cookie.path && { path: options.cookie.path }),
-      ...(options.cookie.lifetime && { lifetime: options.cookie.lifetime }),
-    };
+    // Note: cookie_config uses domains map and numeric lifetime
+    // @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/authn/cookie#Config
+    const cookieConfig: Record<string, unknown> = {};
+
+    // Parse lifetime to seconds if provided as string (e.g., "24h", "1h", "30m")
+    let lifetimeSeconds: number | undefined;
+    if (options.cookie.lifetime !== undefined) {
+      if (typeof options.cookie.lifetime === "number") {
+        lifetimeSeconds = options.cookie.lifetime;
+      } else {
+        // Parse duration string like "24h", "1h", "30m"
+        const match = /^(\d+)(h|m|s)?$/.exec(options.cookie.lifetime);
+        if (match) {
+          const value = parseInt(match[1], 10);
+          const unit = match[2] ?? "s";
+          lifetimeSeconds = unit === "h" ? value * 3600 : unit === "m" ? value * 60 : value;
+        }
+      }
+    }
+
+    if (options.cookie.domain) {
+      // Domain-specific config in domains map
+      const domainConfig: Record<string, unknown> = {};
+      if (lifetimeSeconds !== undefined) domainConfig.lifetime = lifetimeSeconds;
+      if (options.cookie.insecure !== undefined) domainConfig.insecure = options.cookie.insecure;
+      if (options.cookie.sameSite) domainConfig.same_site = options.cookie.sameSite;
+      cookieConfig.domains = { [options.cookie.domain]: domainConfig };
+    } else {
+      // Global config
+      if (lifetimeSeconds !== undefined) cookieConfig.lifetime = lifetimeSeconds;
+      if (options.cookie.insecure !== undefined) cookieConfig.insecure = options.cookie.insecure;
+      if (options.cookie.sameSite) cookieConfig.same_site = options.cookie.sameSite;
+    }
+
+    if (options.cookie.path) cookieConfig.path = options.cookie.path;
+
+    if (Object.keys(cookieConfig).length > 0) {
+      portal.cookie_config = cookieConfig;
+    }
   }
 
   if (options.identityStores) {
@@ -558,11 +600,11 @@ export function buildAuthorizationPolicy(
   };
 
   if (options.accessLists && options.accessLists.length > 0) {
-    // Note: access_list_rules, not access_lists
+    // Note: access_list_rules with conditions array, format: "match <claim> <values...>"
+    // @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/acl#RuleConfiguration
     policy.access_list_rules = options.accessLists.map((entry) => ({
       action: entry.action ?? "allow",
-      claim: entry.claim,
-      values: entry.values,
+      conditions: [`match ${entry.claim} ${entry.values.join(" ")}`],
     }));
   }
 
