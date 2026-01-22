@@ -332,7 +332,9 @@ export function buildOidcProvider(options: BuildOidcProviderOptions): OidcIdenti
     name: options.name ?? options.provider,
     kind: "oauth" as const,
     params: {
-      driver: options.provider, // keycloak, okta, auth0, generic, etc.
+      // OIDC providers with metadata_url use "generic" driver
+      // @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/idp/oauth
+      driver: "generic",
       realm: options.realm ?? options.provider,
       client_id: options.clientId,
       client_secret: options.clientSecret,

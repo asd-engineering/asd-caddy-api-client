@@ -240,7 +240,8 @@ describe("Phase 1: caddy-security Config Generation", () => {
         name: "keycloak",
         kind: "oauth",
         params: {
-          driver: "keycloak",
+          // OIDC providers use "generic" driver regardless of provider name
+          driver: "generic",
           realm: "keycloak",
           client_id: "my-app",
           client_secret: "my-secret",
