@@ -237,6 +237,14 @@ describe.skipIf(skipIfNoSecurityStack)(
     });
 
     describe("LDAP Authentication Flow", () => {
+      beforeEach(async () => {
+        try {
+          await client.request("/config/apps/security", { method: "DELETE" });
+        } catch {
+          // Ignore if doesn't exist
+        }
+      });
+
       test("LDAP config can be applied and validated", async () => {
         const ldapStore = buildLdapIdentityStore({
           servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
@@ -359,6 +367,14 @@ describe.skipIf(skipIfNoSecurityStack)(
       const KEYCLOAK_URL = process.env.KEYCLOAK_URL ?? "http://keycloak:8081";
       const KEYCLOAK_REALM = "test-realm";
 
+      beforeEach(async () => {
+        try {
+          await client.request("/config/apps/security", { method: "DELETE" });
+        } catch {
+          // Ignore if doesn't exist
+        }
+      });
+
       test("OIDC config can be applied", async () => {
         const oidcProvider = buildOidcProvider({
           provider: "keycloak",
@@ -449,6 +465,14 @@ describe.skipIf(skipIfNoSecurityStack)(
     });
 
     describe("Token Validation", () => {
+      beforeEach(async () => {
+        try {
+          await client.request("/config/apps/security", { method: "DELETE" });
+        } catch {
+          // Ignore if doesn't exist
+        }
+      });
+
       test("request with invalid token is rejected", async () => {
         const localStore = buildLocalIdentityStore({
           path: "/data/users.json",
@@ -529,6 +553,14 @@ describe.skipIf(skipIfNoSecurityStack)(
     });
 
     describe("Multi-Policy Authorization", () => {
+      beforeEach(async () => {
+        try {
+          await client.request("/config/apps/security", { method: "DELETE" });
+        } catch {
+          // Ignore if doesn't exist
+        }
+      });
+
       test("admin policy restricts access to admin-only resources", async () => {
         const localStore = buildLocalIdentityStore({
           path: "/data/users.json",
