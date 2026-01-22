@@ -144,7 +144,8 @@ describe("Phase 1: caddy-security Config Generation", () => {
           bind_password: "secret",
           search_base_dn: "ou=users,dc=example,dc=com",
           search_user_filter: "(uid={username})",
-          groups: [], // Required by authcrunch
+          // Default group assigns user role to all LDAP users
+          groups: [{ roles: ["authp/user"] }],
         },
       });
     });

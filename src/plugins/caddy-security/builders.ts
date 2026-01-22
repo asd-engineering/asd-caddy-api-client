@@ -211,11 +211,15 @@ export function buildLdapIdentityStore(options: BuildLdapIdentityStoreOptions): 
       bind_password: options.bindPassword,
       search_base_dn: options.searchBaseDn,
       search_user_filter: options.searchUserFilter ?? "(uid={username})",
-      // Groups field is required by authcrunch
-      groups: (options.groups ?? []).map((g) => ({
-        ...(g.groupDn && { group_dn: g.groupDn }),
-        ...(g.roles && { roles: g.roles }),
-      })),
+      // Groups field is required by authcrunch, must have at least one group
+      // If no groups provided, create a default catch-all group
+      groups:
+        options.groups && options.groups.length > 0
+          ? options.groups.map((g) => ({
+              ...(g.groupDn && { group_dn: g.groupDn }),
+              ...(g.roles && { roles: g.roles }),
+            }))
+          : [{ roles: ["authp/user"] }], // Default group assigns user role to all LDAP users
     },
   };
 
