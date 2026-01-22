@@ -36,6 +36,18 @@ const KEYCLOAK_CLIENT_SECRET = "test-client-secret";
 // Skip unless CADDY_SECURITY_TEST is explicitly set (requires caddy-security Docker stack)
 const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 
+/**
+ * Helper function to create the "mypolicy" authorization policy
+ * that the Caddyfile routes reference. This must be included in all
+ * security configs to avoid "gatekeeper not found" errors.
+ */
+function createRequiredPolicy() {
+  return buildAuthorizationPolicy({
+    name: "mypolicy",
+    accessLists: [{ claim: "roles", values: ["authp/admin", "authp/user"], action: "allow" }],
+  });
+}
+
 describe.skipIf(skipIfNoSecurityStack)(
   "caddy-security OIDC Integration",
   () => {
@@ -309,7 +321,7 @@ describe.skipIf(skipIfNoSecurityStack)(
         const config = buildSecurityConfig({
           identityProviders: [oidcProvider],
           portals: [portal],
-          policies: [policy],
+          policies: [policy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
         });
 
         const app = buildSecurityApp({ config });
@@ -343,6 +355,7 @@ describe.skipIf(skipIfNoSecurityStack)(
         const config = buildSecurityConfig({
           identityProviders: [updatedProvider],
           portals: [portal],
+          policies: [createRequiredPolicy()], // Include mypolicy for Caddyfile routes
         });
 
         const app = buildSecurityApp({ config });
@@ -402,7 +415,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           identityStores: [localStore],
           identityProviders: [oidcProvider],
           portals: [portal],
-          policies: [userPolicy, adminPolicy],
+          policies: [userPolicy, adminPolicy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
         });
 
         const app = buildSecurityApp({ config });
@@ -457,7 +470,7 @@ describe.skipIf(skipIfNoSecurityStack)(
         expect(securityApp.config?.identity_stores).toHaveLength(1);
         expect(securityApp.config?.identity_providers).toHaveLength(1);
         expect(securityApp.config?.authentication_portals).toHaveLength(1);
-        expect(securityApp.config?.authorization_policies).toHaveLength(2);
+        expect(securityApp.config?.authorization_policies).toHaveLength(3); // userPolicy, adminPolicy, mypolicy
       });
 
       test("complete multi-provider setup workflow", async () => {
@@ -500,6 +513,7 @@ describe.skipIf(skipIfNoSecurityStack)(
               name: "multi-provider-policy",
               accessLists: [{ claim: "sub", values: ["*"], action: "allow" }],
             }),
+            createRequiredPolicy(), // Include mypolicy for Caddyfile routes
           ],
         });
 

@@ -36,6 +36,18 @@ const LDAP_SEARCH_FILTER = "(uid={username})";
 // Skip unless CADDY_SECURITY_TEST is explicitly set (requires caddy-security Docker stack)
 const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 
+/**
+ * Helper function to create the "mypolicy" authorization policy
+ * that the Caddyfile routes reference. This must be included in all
+ * security configs to avoid "gatekeeper not found" errors.
+ */
+function createRequiredPolicy() {
+  return buildAuthorizationPolicy({
+    name: "mypolicy",
+    accessLists: [{ claim: "roles", values: ["authp/admin", "authp/user"], action: "allow" }],
+  });
+}
+
 describe.skipIf(skipIfNoSecurityStack)(
   "caddy-security LDAP Integration",
   () => {
@@ -258,7 +270,7 @@ describe.skipIf(skipIfNoSecurityStack)(
         const config = buildSecurityConfig({
           identityStores: [ldapStore],
           portals: [portal],
-          policies: [policy],
+          policies: [policy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
         });
 
         const app = buildSecurityApp({ config });
@@ -311,7 +323,7 @@ describe.skipIf(skipIfNoSecurityStack)(
         const config = buildSecurityConfig({
           identityStores: [ldapStore],
           portals: [portal],
-          policies: [adminPolicy, userPolicy],
+          policies: [adminPolicy, userPolicy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
         });
 
         const app = buildSecurityApp({ config });
@@ -324,7 +336,7 @@ describe.skipIf(skipIfNoSecurityStack)(
         const updated = await client.request<{
           config: { authorization_policies: unknown[] };
         }>("/config/apps/security");
-        expect(updated.config?.authorization_policies).toHaveLength(2);
+        expect(updated.config?.authorization_policies).toHaveLength(3); // adminPolicy, userPolicy, mypolicy
       });
 
       test("can delete security config", async () => {
@@ -366,7 +378,7 @@ describe.skipIf(skipIfNoSecurityStack)(
         const config = buildSecurityConfig({
           identityStores: [ldapStore],
           portals: [portal],
-          policies: [policy],
+          policies: [policy, createRequiredPolicy()], // Include mypolicy for Caddyfile routes
         });
 
         const app = buildSecurityApp({ config });
