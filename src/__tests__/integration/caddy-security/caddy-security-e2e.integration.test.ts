@@ -80,6 +80,29 @@ function createRequiredPolicy() {
   });
 }
 
+/**
+ * Helper to apply security config with DELETE-first pattern.
+ * Caddy Admin API returns 409 Conflict if you PUT to an existing key,
+ * so we must DELETE first before applying new config.
+ */
+async function applySecurityConfig(
+  client: CaddyClient,
+  config: ReturnType<typeof buildSecurityApp>
+): Promise<void> {
+  // Delete any existing security config first
+  try {
+    await client.request("/config/apps/security", { method: "DELETE" });
+  } catch {
+    // Ignore if doesn't exist
+  }
+
+  // Apply new config
+  await client.request("/config/apps/security", {
+    method: "PUT",
+    body: JSON.stringify(config),
+  });
+}
+
 describe.skipIf(skipIfNoSecurityStack)(
   "caddy-security E2E Integration",
   () => {
@@ -138,10 +161,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           policies: [createRequiredPolicy(), policy],
         });
 
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config })),
-        });
+        await applySecurityConfig(client, buildSecurityApp({ config }));
 
         // 2. Add protected route
         const protectedRoute = buildProtectedRoute({
@@ -196,10 +216,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           policies: [createRequiredPolicy(), policy],
         });
 
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config })),
-        });
+        await applySecurityConfig(client, buildSecurityApp({ config }));
 
         // 2. Health endpoint should be accessible without auth
         const response = await fetch(`${CADDY_HTTP_URL}/health`);
@@ -229,10 +246,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           policies: [createRequiredPolicy()],
         });
 
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config })),
-        });
+        await applySecurityConfig(client, buildSecurityApp({ config }));
 
         // 2. Add auth route
         const authRoute = buildAuthenticatorRoute({
@@ -294,12 +308,7 @@ describe.skipIf(skipIfNoSecurityStack)(
         // This tests that Caddy accepts the LDAP configuration
         // If LDAP server is unreachable, Caddy should still accept the config
         // but authentication will fail at runtime
-        const response = await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(app),
-        });
-
-        expect(response).toBeDefined();
+        await applySecurityConfig(client, app);
 
         // Verify config structure was applied correctly
         const appliedConfig = await client.request<{
@@ -331,10 +340,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           policies: [createRequiredPolicy()],
         });
 
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config })),
-        });
+        await applySecurityConfig(client, buildSecurityApp({ config }));
 
         // Add auth route
         const authRoute = buildAuthenticatorRoute({
@@ -408,12 +414,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           policies: [createRequiredPolicy()],
         });
 
-        const response = await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config })),
-        });
-
-        expect(response).toBeDefined();
+        await applySecurityConfig(client, buildSecurityApp({ config }));
 
         const appliedConfig = await client.request<{
           config: { identity_providers: { params: { driver: string } }[] };
@@ -443,10 +444,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           policies: [createRequiredPolicy()],
         });
 
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config })),
-        });
+        await applySecurityConfig(client, buildSecurityApp({ config }));
 
         const authRoute = buildAuthenticatorRoute({
           hosts: ["localhost"],
@@ -504,10 +502,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           policies: [createRequiredPolicy(), policy],
         });
 
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config })),
-        });
+        await applySecurityConfig(client, buildSecurityApp({ config }));
 
         const protectedRoute = buildProtectedRoute({
           hosts: ["localhost"],
@@ -591,10 +586,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           policies: [createRequiredPolicy(), userPolicy, adminPolicy],
         });
 
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(buildSecurityApp({ config })),
-        });
+        await applySecurityConfig(client, buildSecurityApp({ config }));
 
         // Both routes should be created with different policies
         const userRoute = buildProtectedRoute({
@@ -632,6 +624,13 @@ describe.skipIf(skipIfNoSecurityStack)(
 
     describe("Error Handling", () => {
       test("invalid security config is rejected by Caddy", async () => {
+        // Delete first to avoid 409 Conflict masking validation error
+        try {
+          await client.request("/config/apps/security", { method: "DELETE" });
+        } catch {
+          // Ignore if doesn't exist
+        }
+
         // Try to apply config with missing required field
         const invalidConfig = {
           config: {
@@ -657,6 +656,13 @@ describe.skipIf(skipIfNoSecurityStack)(
       });
 
       test("referencing non-existent identity store fails gracefully", async () => {
+        // Delete first to avoid 409 Conflict masking validation error
+        try {
+          await client.request("/config/apps/security", { method: "DELETE" });
+        } catch {
+          // Ignore if doesn't exist
+        }
+
         const portal = buildAuthenticationPortal({
           name: "broken-portal",
           identityStores: ["nonexistent-store"], // This store doesn't exist

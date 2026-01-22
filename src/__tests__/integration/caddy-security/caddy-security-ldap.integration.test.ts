@@ -73,6 +73,29 @@ function createRequiredPolicy() {
   });
 }
 
+/**
+ * Helper to apply security config with DELETE-first pattern.
+ * Caddy Admin API returns 409 Conflict if you PUT to an existing key,
+ * so we must DELETE first before applying new config.
+ */
+async function applySecurityConfig(
+  client: CaddyClient,
+  app: ReturnType<typeof buildSecurityApp>
+): Promise<void> {
+  // Delete any existing security config first
+  try {
+    await client.request("/config/apps/security", { method: "DELETE" });
+  } catch {
+    // Ignore if doesn't exist
+  }
+
+  // Apply new config
+  await client.request("/config/apps/security", {
+    method: "PUT",
+    body: JSON.stringify(app),
+  });
+}
+
 describe.skipIf(skipIfNoSecurityStack)(
   "caddy-security LDAP Integration",
   () => {
@@ -291,13 +314,8 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const app = buildSecurityApp({ config });
 
-        // Apply via Caddy API
-        const response = await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(app),
-        });
-
-        expect(response).toBeDefined();
+        // Apply via Caddy API (DELETE first to avoid 409 Conflict)
+        await applySecurityConfig(client, app);
 
         // Verify the config was applied
         const currentConfig = await client.getConfig();
@@ -321,10 +339,7 @@ describe.skipIf(skipIfNoSecurityStack)(
         });
 
         const app = buildSecurityApp({ config });
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(app),
-        });
+        await applySecurityConfig(client, app);
 
         // Now retrieve it
         const securityConfig =
@@ -366,10 +381,7 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const app = buildSecurityApp({ config });
 
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(app),
-        });
+        await applySecurityConfig(client, app);
 
         const updated = await client.request<{
           config: { authorization_policies: unknown[] };
@@ -378,17 +390,14 @@ describe.skipIf(skipIfNoSecurityStack)(
       });
 
       test("can delete security config", async () => {
-        // First create a config (beforeEach clears it)
+        // First create a config
         const config = buildSecurityConfig({
           identityStores: [createRequiredLocalStore()],
           portals: [createRequiredPortal()],
           policies: [createRequiredPolicy()],
         });
         const app = buildSecurityApp({ config });
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(app),
-        });
+        await applySecurityConfig(client, app);
 
         // Now delete it
         await client.request("/config/apps/security", {
@@ -434,10 +443,7 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const app = buildSecurityApp({ config });
 
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(app),
-        });
+        await applySecurityConfig(client, app);
 
         // 2. Build and add auth route
         const authRoute = buildAuthenticatorRoute({

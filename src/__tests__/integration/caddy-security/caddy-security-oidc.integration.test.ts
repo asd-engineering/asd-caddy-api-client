@@ -72,6 +72,29 @@ function createRequiredPolicy() {
   });
 }
 
+/**
+ * Helper to apply security config with DELETE-first pattern.
+ * Caddy Admin API returns 409 Conflict if you PUT to an existing key,
+ * so we must DELETE first before applying new config.
+ */
+async function applySecurityConfig(
+  client: CaddyClient,
+  app: ReturnType<typeof buildSecurityApp>
+): Promise<void> {
+  // Delete any existing security config first
+  try {
+    await client.request("/config/apps/security", { method: "DELETE" });
+  } catch {
+    // Ignore if doesn't exist
+  }
+
+  // Apply new config
+  await client.request("/config/apps/security", {
+    method: "PUT",
+    body: JSON.stringify(app),
+  });
+}
+
 describe.skipIf(skipIfNoSecurityStack)(
   "caddy-security OIDC Integration",
   () => {
@@ -338,12 +361,7 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const app = buildSecurityApp({ config });
 
-        const response = await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(app),
-        });
-
-        expect(response).toBeDefined();
+        await applySecurityConfig(client, app);
 
         // Verify the config was applied
         const currentConfig = await client.getConfig();
@@ -373,10 +391,7 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const app = buildSecurityApp({ config });
 
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(app),
-        });
+        await applySecurityConfig(client, app);
 
         const updated = await client.request<{
           config: { identity_providers: { scopes: string[] }[] };
@@ -433,11 +448,8 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const app = buildSecurityApp({ config });
 
-        // 6. Apply via Caddy API
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(app),
-        });
+        // 6. Apply via Caddy API (DELETE first to avoid 409 Conflict)
+        await applySecurityConfig(client, app);
 
         // 7. Build routes
         const authRoute = buildAuthenticatorRoute({
@@ -533,10 +545,7 @@ describe.skipIf(skipIfNoSecurityStack)(
 
         const app = buildSecurityApp({ config });
 
-        await client.request("/config/apps/security", {
-          method: "PUT",
-          body: JSON.stringify(app),
-        });
+        await applySecurityConfig(client, app);
 
         const securityConfig = await client.request<{
           config: { identity_providers: unknown[] };
