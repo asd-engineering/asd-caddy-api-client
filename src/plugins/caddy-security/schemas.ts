@@ -131,6 +131,15 @@ export const LdapServerSchema = z.object({
 });
 
 /**
+ * LDAP user group schema for role mapping
+ * @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/ids/ldap#UserGroup
+ */
+export const LdapUserGroupSchema = z.object({
+  group_dn: z.string().optional(),
+  roles: z.array(z.string()).optional(),
+});
+
+/**
  * LDAP identity store params schema
  * Contains the actual configuration parameters for LDAP stores
  * @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/ids/ldap#Config
@@ -142,6 +151,7 @@ export const LdapIdentityStoreParamsSchema = z.object({
   bind_password: z.string().optional(),
   search_base_dn: z.string().optional(),
   search_user_filter: z.string().optional(), // Note: search_user_filter, not search_filter
+  groups: z.array(LdapUserGroupSchema).optional(), // Required by authcrunch
 });
 
 /**

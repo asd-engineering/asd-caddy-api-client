@@ -119,7 +119,7 @@ describe("Phase 1: caddy-security Config Generation", () => {
         path: "/etc/caddy/users.json",
       });
 
-      expect(store.name).toBe("localdb");
+      expect(store.name).toBe("local");
       expect(store.params.realm).toBe("local");
     });
 
@@ -144,6 +144,7 @@ describe("Phase 1: caddy-security Config Generation", () => {
           bind_password: "secret",
           search_base_dn: "ou=users,dc=example,dc=com",
           search_user_filter: "(uid={username})",
+          groups: [], // Required by authcrunch
         },
       });
     });
@@ -402,7 +403,7 @@ describe("Phase 1: caddy-security Config Generation", () => {
       });
       const portal = buildAuthenticationPortal({
         name: "myportal",
-        identityStores: ["localdb", "ldapdb"],
+        identityStores: ["local", "ldapdb"],
         identityProviders: ["keycloak"],
       });
       const policy = buildAuthorizationPolicy({

@@ -42,7 +42,7 @@ import type { CaddyRoute } from "../../types.js";
 export interface BuildLocalIdentityStoreOptions {
   /**
    * Name of the identity store (used to reference it in portals)
-   * @default "localdb"
+   * @default "local"
    */
   name?: string;
   /**
@@ -80,7 +80,7 @@ export function buildLocalIdentityStore(
   options: BuildLocalIdentityStoreOptions
 ): LocalIdentityStore {
   const store = {
-    name: options.name ?? "localdb",
+    name: options.name ?? "local",
     kind: "local" as const,
     params: {
       realm: options.realm ?? "local",
@@ -104,6 +104,21 @@ export interface LdapServerConfig {
    * @default 389
    */
   port?: number;
+}
+
+/**
+ * LDAP group to role mapping
+ */
+export interface LdapGroupConfig {
+  /**
+   * LDAP group DN
+   * @example "CN=Admins,OU=Groups,DC=example,DC=com"
+   */
+  groupDn?: string;
+  /**
+   * Roles to assign when user is member of this group
+   */
+  roles?: string[];
 }
 
 /**
@@ -143,6 +158,11 @@ export interface BuildLdapIdentityStoreOptions {
    * @default "(uid={username})"
    */
   searchUserFilter?: string;
+  /**
+   * Group to role mappings
+   * @default []
+   */
+  groups?: LdapGroupConfig[];
 }
 
 /**
@@ -182,6 +202,11 @@ export function buildLdapIdentityStore(options: BuildLdapIdentityStoreOptions): 
       bind_password: options.bindPassword,
       search_base_dn: options.searchBaseDn,
       search_user_filter: options.searchUserFilter ?? "(uid={username})",
+      // Groups field is required by authcrunch
+      groups: (options.groups ?? []).map((g) => ({
+        ...(g.groupDn && { group_dn: g.groupDn }),
+        ...(g.roles && { roles: g.roles }),
+      })),
     },
   };
 
