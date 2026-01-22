@@ -157,11 +157,12 @@ export const LdapIdentityStoreParamsSchema = z.object({
 /**
  * LDAP identity store schema
  * Uses the authcrunch wrapper structure: name, kind, params
+ * Uses passthrough() on params to ensure nested fields like groups are preserved
  */
 export const LdapIdentityStoreSchema = z.object({
   name: z.string(),
   kind: z.literal("ldap"),
-  params: LdapIdentityStoreParamsSchema,
+  params: LdapIdentityStoreParamsSchema.passthrough(),
 });
 
 /**

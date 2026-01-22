@@ -87,12 +87,13 @@ const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 /**
  * Helper to create the "localdb" identity store required by the Caddyfile.
  * The Caddyfile has "myportal" referencing this store as "localdb".
+ * Uses realm "localdb" to avoid duplicate realm errors with test stores.
  */
 function createRequiredLocalStore() {
   return buildLocalIdentityStore({
     name: "localdb",
     path: "/data/users.json",
-    realm: "local",
+    realm: "localdb",
   });
 }
 
