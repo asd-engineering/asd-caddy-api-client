@@ -78,14 +78,19 @@ describe.skipIf(skipIfNoSecurityStack)(
           realm: "ldap",
         });
 
+        // Builder uses wrapper structure: { name, kind, params }
         expect(store).toMatchObject({
-          driver: "ldap",
-          realm: "ldap",
-          servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
-          bind_dn: LDAP_BIND_DN,
-          bind_password: LDAP_BIND_PASSWORD,
-          search_base_dn: LDAP_SEARCH_BASE_DN,
-          search_filter: LDAP_SEARCH_FILTER,
+          name: "ldapdb",
+          kind: "ldap",
+          params: {
+            realm: "ldap",
+            servers: [{ address: `ldap://${LDAP_HOST}`, port: LDAP_PORT }],
+            bind_username: LDAP_BIND_DN,
+            bind_password: LDAP_BIND_PASSWORD,
+            search_base_dn: LDAP_SEARCH_BASE_DN,
+            search_user_filter: LDAP_SEARCH_FILTER,
+            groups: [{ roles: ["authp/user"] }], // Default group
+          },
         });
       });
 
