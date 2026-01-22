@@ -73,7 +73,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           provider: "keycloak",
           clientId: KEYCLOAK_CLIENT_ID,
           clientSecret: KEYCLOAK_CLIENT_SECRET,
-          discoveryUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
           scopes: ["openid", "email", "profile", "roles"],
         });
 
@@ -116,7 +116,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           provider: "keycloak",
           clientId: KEYCLOAK_CLIENT_ID,
           clientSecret: KEYCLOAK_CLIENT_SECRET,
-          discoveryUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
         });
 
         const portal = buildAuthenticationPortal({
@@ -150,7 +150,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           provider: "keycloak",
           clientId: KEYCLOAK_CLIENT_ID,
           clientSecret: KEYCLOAK_CLIENT_SECRET,
-          discoveryUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
         });
 
         const githubProvider = buildOAuth2Provider({
@@ -280,7 +280,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           provider: "keycloak",
           clientId: KEYCLOAK_CLIENT_ID,
           clientSecret: KEYCLOAK_CLIENT_SECRET,
-          discoveryUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
           scopes: ["openid", "email", "profile"],
         });
 
@@ -323,7 +323,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           provider: "keycloak",
           clientId: "updated-client-id",
           clientSecret: "updated-client-secret",
-          discoveryUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
           scopes: ["openid", "email", "profile", "roles", "groups"],
         });
 
@@ -365,7 +365,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           provider: "keycloak",
           clientId: KEYCLOAK_CLIENT_ID,
           clientSecret: KEYCLOAK_CLIENT_SECRET,
-          discoveryUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
         });
 
         // 3. Build portal with both local and OIDC
@@ -458,7 +458,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           provider: "keycloak",
           clientId: "keycloak-client",
           clientSecret: "keycloak-secret",
-          discoveryUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
         });
 
         const githubProvider = buildOAuth2Provider({

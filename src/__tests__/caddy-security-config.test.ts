@@ -99,56 +99,66 @@ describe("Phase 1: caddy-security Config Generation", () => {
   describe("Identity Store Builders", () => {
     test("buildLocalIdentityStore creates valid local store", () => {
       const store = buildLocalIdentityStore({
+        name: "localdb",
         path: "/etc/caddy/users.json",
         realm: "local",
       });
 
       expect(store).toEqual({
-        driver: "local",
-        realm: "local",
-        path: "/etc/caddy/users.json",
+        name: "localdb",
+        kind: "local",
+        params: {
+          realm: "local",
+          path: "/etc/caddy/users.json",
+        },
       });
     });
 
-    test("buildLocalIdentityStore uses default realm", () => {
+    test("buildLocalIdentityStore uses default name and realm", () => {
       const store = buildLocalIdentityStore({
         path: "/etc/caddy/users.json",
       });
 
-      expect(store.realm).toBe("local");
+      expect(store.name).toBe("localdb");
+      expect(store.params.realm).toBe("local");
     });
 
     test("buildLdapIdentityStore creates valid LDAP store", () => {
       const store = buildLdapIdentityStore({
+        name: "ldapdb",
         servers: [{ address: "ldap.example.com", port: 389 }],
-        bindDn: "cn=admin,dc=example,dc=com",
+        bindUsername: "cn=admin,dc=example,dc=com",
         bindPassword: "secret",
         searchBaseDn: "ou=users,dc=example,dc=com",
-        searchFilter: "(uid={username})",
+        searchUserFilter: "(uid={username})",
         realm: "corporate",
       });
 
       expect(store).toEqual({
-        driver: "ldap",
-        realm: "corporate",
-        servers: [{ address: "ldap.example.com", port: 389 }],
-        bind_dn: "cn=admin,dc=example,dc=com",
-        bind_password: "secret",
-        search_base_dn: "ou=users,dc=example,dc=com",
-        search_filter: "(uid={username})",
+        name: "ldapdb",
+        kind: "ldap",
+        params: {
+          realm: "corporate",
+          servers: [{ address: "ldap.example.com", port: 389 }],
+          bind_username: "cn=admin,dc=example,dc=com",
+          bind_password: "secret",
+          search_base_dn: "ou=users,dc=example,dc=com",
+          search_user_filter: "(uid={username})",
+        },
       });
     });
 
-    test("buildLdapIdentityStore uses default realm and filter", () => {
+    test("buildLdapIdentityStore uses default name, realm and filter", () => {
       const store = buildLdapIdentityStore({
         servers: [{ address: "ldap.example.com" }],
-        bindDn: "cn=admin,dc=example,dc=com",
+        bindUsername: "cn=admin,dc=example,dc=com",
         bindPassword: "secret",
         searchBaseDn: "ou=users,dc=example,dc=com",
       });
 
-      expect(store.realm).toBe("ldap");
-      expect(store.search_filter).toBe("(uid={username})");
+      expect(store.name).toBe("ldapdb");
+      expect(store.params.realm).toBe("ldap");
+      expect(store.params.search_user_filter).toBe("(uid={username})");
     });
 
     test("buildLdapIdentityStore with multiple servers", () => {
@@ -157,14 +167,14 @@ describe("Phase 1: caddy-security Config Generation", () => {
           { address: "ldap1.example.com", port: 389 },
           { address: "ldap2.example.com", port: 636 },
         ],
-        bindDn: "cn=admin,dc=example,dc=com",
+        bindUsername: "cn=admin,dc=example,dc=com",
         bindPassword: "secret",
         searchBaseDn: "ou=users,dc=example,dc=com",
       });
 
-      expect(store.servers).toHaveLength(2);
-      expect(store.servers?.[0].address).toBe("ldap1.example.com");
-      expect(store.servers?.[1].port).toBe(636);
+      expect(store.params.servers).toHaveLength(2);
+      expect(store.params.servers?.[0].address).toBe("ldap1.example.com");
+      expect(store.params.servers?.[1].port).toBe(636);
     });
   });
 
@@ -182,12 +192,15 @@ describe("Phase 1: caddy-security Config Generation", () => {
       });
 
       expect(provider).toEqual({
-        driver: "oauth2",
-        realm: "github",
-        provider: "github",
-        client_id: "my-client-id",
-        client_secret: "my-client-secret",
-        scopes: ["user:email", "read:user"],
+        name: "github",
+        kind: "oauth",
+        params: {
+          driver: "github",
+          realm: "github",
+          client_id: "my-client-id",
+          client_secret: "my-client-secret",
+          scopes: ["user:email", "read:user"],
+        },
       });
     });
 
@@ -198,18 +211,20 @@ describe("Phase 1: caddy-security Config Generation", () => {
         clientSecret: "my-client-secret",
       });
 
-      expect(provider.scopes).toEqual(["openid", "email", "profile"]);
+      expect(provider.params.scopes).toEqual(["openid", "email", "profile"]);
     });
 
-    test("buildOAuth2Provider with custom realm", () => {
+    test("buildOAuth2Provider with custom name and realm", () => {
       const provider = buildOAuth2Provider({
+        name: "custom-google",
         provider: "google",
         clientId: "my-client-id",
         clientSecret: "my-client-secret",
         realm: "custom-realm",
       });
 
-      expect(provider.realm).toBe("custom-realm");
+      expect(provider.name).toBe("custom-google");
+      expect(provider.params.realm).toBe("custom-realm");
     });
 
     test("buildOidcProvider creates valid OIDC provider", () => {
@@ -217,20 +232,22 @@ describe("Phase 1: caddy-security Config Generation", () => {
         provider: "keycloak",
         clientId: "my-app",
         clientSecret: "my-secret",
-        discoveryUrl:
-          "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",
+        metadataUrl: "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",
         scopes: ["openid", "email", "profile", "roles"],
       });
 
       expect(provider).toEqual({
-        driver: "oidc",
-        realm: "keycloak",
-        provider: "keycloak",
-        client_id: "my-app",
-        client_secret: "my-secret",
-        discovery_url:
-          "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",
-        scopes: ["openid", "email", "profile", "roles"],
+        name: "keycloak",
+        kind: "oauth",
+        params: {
+          driver: "keycloak",
+          realm: "keycloak",
+          client_id: "my-app",
+          client_secret: "my-secret",
+          metadata_url:
+            "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",
+          scopes: ["openid", "email", "profile", "roles"],
+        },
       });
     });
 
@@ -239,10 +256,10 @@ describe("Phase 1: caddy-security Config Generation", () => {
         provider: "okta",
         clientId: "my-app",
         clientSecret: "my-secret",
-        discoveryUrl: "https://okta.example.com/.well-known/openid-configuration",
+        metadataUrl: "https://okta.example.com/.well-known/openid-configuration",
       });
 
-      expect(provider.scopes).toEqual(["openid", "email", "profile"]);
+      expect(provider.params.scopes).toEqual(["openid", "email", "profile"]);
     });
   });
 
@@ -292,14 +309,16 @@ describe("Phase 1: caddy-security Config Generation", () => {
           logo_url: "https://example.com/logo.png",
           custom_css: ".header { color: blue; }",
         },
-        cookie: {
+        cookie_config: {
           domain: ".example.com",
           path: "/",
           lifetime: "24h",
         },
-        transform_user: {
-          "match origin local": { "add role": "user" },
-        },
+        user_transformer_configs: [
+          {
+            "match origin local": { "add role": "user" },
+          },
+        ],
       });
     });
 
@@ -324,7 +343,7 @@ describe("Phase 1: caddy-security Config Generation", () => {
 
       expect(policy).toEqual({
         name: "admin-policy",
-        access_lists: [
+        access_list_rules: [
           { action: "allow", claim: "roles", values: ["admin", "editor"] },
           { action: "allow", claim: "email", values: ["*@example.com"] },
         ],
@@ -343,11 +362,13 @@ describe("Phase 1: caddy-security Config Generation", () => {
 
       expect(policy).toEqual({
         name: "api-policy",
-        crypto_key: {
-          token_name: "access_token",
-          source: "cookie",
-        },
-        bypass: ["/health", "/metrics", "/public/*"],
+        crypto_key_configs: [
+          {
+            token_name: "access_token",
+            source: "cookie",
+          },
+        ],
+        bypass_configs: [{ uri: "/health" }, { uri: "/metrics" }, { uri: "/public/*" }],
       });
     });
   });
@@ -367,7 +388,7 @@ describe("Phase 1: caddy-security Config Generation", () => {
       const localStore = buildLocalIdentityStore({ path: "/etc/caddy/users.json" });
       const ldapStore = buildLdapIdentityStore({
         servers: [{ address: "ldap.example.com" }],
-        bindDn: "cn=admin,dc=example,dc=com",
+        bindUsername: "cn=admin,dc=example,dc=com",
         bindPassword: "secret",
         searchBaseDn: "ou=users,dc=example,dc=com",
       });
@@ -375,11 +396,11 @@ describe("Phase 1: caddy-security Config Generation", () => {
         provider: "keycloak",
         clientId: "my-app",
         clientSecret: "my-secret",
-        discoveryUrl: "https://keycloak.example.com/.well-known/openid-configuration",
+        metadataUrl: "https://keycloak.example.com/.well-known/openid-configuration",
       });
       const portal = buildAuthenticationPortal({
         name: "myportal",
-        identityStores: ["local", "ldap"],
+        identityStores: ["localdb", "ldapdb"],
         identityProviders: ["keycloak"],
       });
       const policy = buildAuthorizationPolicy({

@@ -248,10 +248,10 @@ describe.skipIf(skipIfNoSecurityStack)(
       test("LDAP config can be applied and validated", async () => {
         const ldapStore = buildLdapIdentityStore({
           servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
-          bindDn: "cn=admin,dc=test,dc=local",
+          bindUsername: "cn=admin,dc=test,dc=local",
           bindPassword: "admin",
           searchBaseDn: "ou=users,dc=test,dc=local",
-          searchFilter: "(uid={username})",
+          searchUserFilter: "(uid={username})",
         });
 
         const portal = buildAuthenticationPortal({
@@ -295,7 +295,7 @@ describe.skipIf(skipIfNoSecurityStack)(
         // Setup LDAP auth and attempt login
         const ldapStore = buildLdapIdentityStore({
           servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
-          bindDn: "cn=admin,dc=test,dc=local",
+          bindUsername: "cn=admin,dc=test,dc=local",
           bindPassword: "admin",
           searchBaseDn: "ou=users,dc=test,dc=local",
         });
@@ -380,7 +380,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           provider: "keycloak",
           clientId: "caddy-app",
           clientSecret: "test-secret",
-          discoveryUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
         });
 
         const portal = buildAuthenticationPortal({
@@ -412,7 +412,7 @@ describe.skipIf(skipIfNoSecurityStack)(
           provider: "keycloak",
           clientId: "caddy-app",
           clientSecret: "test-secret",
-          discoveryUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
         });
 
         const portal = buildAuthenticationPortal({

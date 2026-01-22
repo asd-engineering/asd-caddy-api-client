@@ -71,10 +71,10 @@ describe.skipIf(skipIfNoSecurityStack)(
       test("buildLdapIdentityStore creates valid LDAP store config", () => {
         const store = buildLdapIdentityStore({
           servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
-          bindDn: LDAP_BIND_DN,
+          bindUsername: LDAP_BIND_DN,
           bindPassword: LDAP_BIND_PASSWORD,
           searchBaseDn: LDAP_SEARCH_BASE_DN,
-          searchFilter: LDAP_SEARCH_FILTER,
+          searchUserFilter: LDAP_SEARCH_FILTER,
           realm: "ldap",
         });
 
@@ -92,7 +92,7 @@ describe.skipIf(skipIfNoSecurityStack)(
       test("builds complete security config with LDAP store", () => {
         const ldapStore = buildLdapIdentityStore({
           servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
-          bindDn: LDAP_BIND_DN,
+          bindUsername: LDAP_BIND_DN,
           bindPassword: LDAP_BIND_PASSWORD,
           searchBaseDn: LDAP_SEARCH_BASE_DN,
         });
@@ -123,7 +123,7 @@ describe.skipIf(skipIfNoSecurityStack)(
       test("builds complete security app", () => {
         const ldapStore = buildLdapIdentityStore({
           servers: [{ address: LDAP_HOST }],
-          bindDn: LDAP_BIND_DN,
+          bindUsername: LDAP_BIND_DN,
           bindPassword: LDAP_BIND_PASSWORD,
           searchBaseDn: LDAP_SEARCH_BASE_DN,
         });
@@ -227,10 +227,10 @@ describe.skipIf(skipIfNoSecurityStack)(
         // Build complete configuration using our builders
         const ldapStore = buildLdapIdentityStore({
           servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
-          bindDn: LDAP_BIND_DN,
+          bindUsername: LDAP_BIND_DN,
           bindPassword: LDAP_BIND_PASSWORD,
           searchBaseDn: LDAP_SEARCH_BASE_DN,
-          searchFilter: LDAP_SEARCH_FILTER,
+          searchUserFilter: LDAP_SEARCH_FILTER,
           realm: "ldap",
         });
 
@@ -282,7 +282,7 @@ describe.skipIf(skipIfNoSecurityStack)(
         // Create updated config with additional policy
         const ldapStore = buildLdapIdentityStore({
           servers: [{ address: LDAP_HOST }],
-          bindDn: LDAP_BIND_DN,
+          bindUsername: LDAP_BIND_DN,
           bindPassword: LDAP_BIND_PASSWORD,
           searchBaseDn: LDAP_SEARCH_BASE_DN,
         });
@@ -341,10 +341,10 @@ describe.skipIf(skipIfNoSecurityStack)(
         // 1. Build and apply security config
         const ldapStore = buildLdapIdentityStore({
           servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
-          bindDn: LDAP_BIND_DN,
+          bindUsername: LDAP_BIND_DN,
           bindPassword: LDAP_BIND_PASSWORD,
           searchBaseDn: LDAP_SEARCH_BASE_DN,
-          searchFilter: LDAP_SEARCH_FILTER,
+          searchUserFilter: LDAP_SEARCH_FILTER,
         });
 
         const portal = buildAuthenticationPortal({

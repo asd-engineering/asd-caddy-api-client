@@ -104,12 +104,22 @@ export const SecurityHandlerSchema = z.discriminatedUnion("handler", [
 // ============================================================================
 
 /**
- * Local identity store schema
+ * Local identity store params schema
+ * Contains the actual configuration parameters for local stores
  */
-export const LocalIdentityStoreSchema = z.object({
-  driver: z.literal("local"),
+export const LocalIdentityStoreParamsSchema = z.object({
   realm: z.string().optional(),
   path: z.string(),
+});
+
+/**
+ * Local identity store schema
+ * Uses the authcrunch wrapper structure: name, kind, params
+ */
+export const LocalIdentityStoreSchema = z.object({
+  name: z.string(),
+  kind: z.literal("local"),
+  params: LocalIdentityStoreParamsSchema,
 });
 
 /**
@@ -121,52 +131,95 @@ export const LdapServerSchema = z.object({
 });
 
 /**
- * LDAP identity store schema
+ * LDAP identity store params schema
+ * Contains the actual configuration parameters for LDAP stores
+ * @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/ids/ldap#Config
  */
-export const LdapIdentityStoreSchema = z.object({
-  driver: z.literal("ldap"),
+export const LdapIdentityStoreParamsSchema = z.object({
   realm: z.string().optional(),
   servers: z.array(LdapServerSchema).optional(),
-  bind_dn: z.string().optional(),
+  bind_username: z.string().optional(), // Note: bind_username, not bind_dn
   bind_password: z.string().optional(),
   search_base_dn: z.string().optional(),
-  search_filter: z.string().optional(),
+  search_user_filter: z.string().optional(), // Note: search_user_filter, not search_filter
+});
+
+/**
+ * LDAP identity store schema
+ * Uses the authcrunch wrapper structure: name, kind, params
+ */
+export const LdapIdentityStoreSchema = z.object({
+  name: z.string(),
+  kind: z.literal("ldap"),
+  params: LdapIdentityStoreParamsSchema,
+});
+
+/**
+ * OAuth 2.0 identity provider params schema
+ * Contains the actual configuration parameters for OAuth providers
+ * @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/idp/oauth#Config
+ */
+export const OAuth2IdentityProviderParamsSchema = z.object({
+  driver: z.string().optional(), // oauth2, generic, etc.
+  realm: z.string().optional(),
+  client_id: z.string().optional(),
+  client_secret: z.string().optional(),
+  scopes: z.array(z.string()).optional(),
+  // OAuth2 doesn't use metadata_url, only authorization_url and token_url
+  authorization_url: z.string().optional(),
+  token_url: z.string().optional(),
 });
 
 /**
  * OAuth 2.0 identity provider schema
+ * Uses the authcrunch wrapper structure: name, kind, params
  */
 export const OAuth2IdentityProviderSchema = z.object({
-  driver: z.literal("oauth2"),
+  name: z.string(),
+  kind: z.literal("oauth"),
+  params: OAuth2IdentityProviderParamsSchema,
+});
+
+/**
+ * OIDC identity provider params schema
+ * Contains the actual configuration parameters for OIDC providers
+ * @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/idp/oauth#Config
+ */
+export const OidcIdentityProviderParamsSchema = z.object({
+  driver: z.string().optional(), // oidc
   realm: z.string().optional(),
-  provider: z.string().optional(),
   client_id: z.string().optional(),
   client_secret: z.string().optional(),
+  metadata_url: z.string().optional(), // Note: metadata_url, not discovery_url
   scopes: z.array(z.string()).optional(),
 });
 
 /**
  * OIDC identity provider schema
+ * Uses the authcrunch wrapper structure: name, kind, params
  */
 export const OidcIdentityProviderSchema = z.object({
-  driver: z.literal("oidc"),
-  realm: z.string().optional(),
-  provider: z.string().optional(),
-  client_id: z.string().optional(),
-  client_secret: z.string().optional(),
-  discovery_url: z.string().optional(),
-  scopes: z.array(z.string()).optional(),
+  name: z.string(),
+  kind: z.literal("oauth"),
+  params: OidcIdentityProviderParamsSchema,
 });
 
 /**
  * Identity store union schema
  */
-export const IdentityStoreSchema = z.discriminatedUnion("driver", [
+export const IdentityStoreSchema = z.discriminatedUnion("kind", [
   LocalIdentityStoreSchema,
   LdapIdentityStoreSchema,
-  OAuth2IdentityProviderSchema,
-  OidcIdentityProviderSchema,
 ]);
+
+/**
+ * Identity provider union schema
+ */
+export const IdentityProviderSchema = z.object({
+  name: z.string(),
+  kind: z.literal("oauth"),
+  params: z.union([OAuth2IdentityProviderParamsSchema, OidcIdentityProviderParamsSchema]),
+});
 
 /**
  * Authentication portal UI schema
@@ -188,14 +241,15 @@ export const CookieConfigSchema = z.object({
 
 /**
  * Authentication portal schema
+ * @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/authn#PortalConfig
  */
 export const AuthenticationPortalSchema = z.object({
   name: z.string(),
   ui: PortalUiSchema.optional(),
-  cookie: CookieConfigSchema.optional(),
+  cookie_config: CookieConfigSchema.optional(), // Note: cookie_config, not cookie
   identity_stores: z.array(z.string()).optional(),
   identity_providers: z.array(z.string()).optional(),
-  transform_user: z.record(z.string(), z.unknown()).optional(),
+  user_transformer_configs: z.array(z.record(z.string(), z.unknown())).optional(),
 });
 
 /**
@@ -216,13 +270,22 @@ export const CryptoKeyConfigSchema = z.object({
 });
 
 /**
+ * Bypass config schema for authorization policies
+ */
+export const BypassConfigSchema = z.object({
+  match_type: z.string().optional(),
+  uri: z.string().optional(),
+});
+
+/**
  * Authorization policy (gatekeeper) schema
+ * @see https://pkg.go.dev/github.com/greenpau/go-authcrunch/pkg/authz#PolicyConfig
  */
 export const AuthorizationPolicySchema = z.object({
   name: z.string(),
-  access_lists: z.array(AccessListEntrySchema).optional(),
-  crypto_key: CryptoKeyConfigSchema.optional(),
-  bypass: z.array(z.string()).optional(),
+  access_list_rules: z.array(AccessListEntrySchema).optional(), // Note: access_list_rules, not access_lists
+  crypto_key_configs: z.array(CryptoKeyConfigSchema).optional(), // Note: crypto_key_configs (array), not crypto_key
+  bypass_configs: z.array(BypassConfigSchema).optional(), // Note: bypass_configs, not bypass
 });
 
 /**
@@ -242,7 +305,7 @@ export const SecurityConfigSchema = z.object({
   authorization_policies: z.array(AuthorizationPolicySchema).optional(),
   credentials: CredentialsSchema.optional(),
   identity_stores: z.array(IdentityStoreSchema).optional(),
-  identity_providers: z.array(IdentityStoreSchema).optional(),
+  identity_providers: z.array(IdentityProviderSchema).optional(),
 });
 
 /**
@@ -284,12 +347,18 @@ export type SecurityAuthenticatorHandler = z.infer<typeof SecurityAuthenticatorH
 export type SecurityAuthorizerProvider = z.infer<typeof SecurityAuthorizerProviderSchema>;
 export type SecurityAuthorizationHandler = z.infer<typeof SecurityAuthorizationHandlerSchema>;
 export type SecurityHandler = z.infer<typeof SecurityHandlerSchema>;
+export type LocalIdentityStoreParams = z.infer<typeof LocalIdentityStoreParamsSchema>;
 export type LocalIdentityStore = z.infer<typeof LocalIdentityStoreSchema>;
+export type LdapIdentityStoreParams = z.infer<typeof LdapIdentityStoreParamsSchema>;
 export type LdapIdentityStore = z.infer<typeof LdapIdentityStoreSchema>;
+export type OAuth2IdentityProviderParams = z.infer<typeof OAuth2IdentityProviderParamsSchema>;
 export type OAuth2IdentityProvider = z.infer<typeof OAuth2IdentityProviderSchema>;
+export type OidcIdentityProviderParams = z.infer<typeof OidcIdentityProviderParamsSchema>;
 export type OidcIdentityProvider = z.infer<typeof OidcIdentityProviderSchema>;
 export type IdentityStore = z.infer<typeof IdentityStoreSchema>;
+export type IdentityProvider = z.infer<typeof IdentityProviderSchema>;
 export type AuthenticationPortal = z.infer<typeof AuthenticationPortalSchema>;
 export type AuthorizationPolicy = z.infer<typeof AuthorizationPolicySchema>;
+export type BypassConfig = z.infer<typeof BypassConfigSchema>;
 export type SecurityConfig = z.infer<typeof SecurityConfigSchema>;
 export type SecurityApp = z.infer<typeof SecurityAppSchema>;

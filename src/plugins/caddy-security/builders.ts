@@ -41,6 +41,11 @@ import type { CaddyRoute } from "../../types.js";
  */
 export interface BuildLocalIdentityStoreOptions {
   /**
+   * Name of the identity store (used to reference it in portals)
+   * @default "localdb"
+   */
+  name?: string;
+  /**
    * Path to the JSON file containing user credentials
    */
   path: string;
@@ -55,6 +60,7 @@ export interface BuildLocalIdentityStoreOptions {
  * Build a local identity store configuration
  *
  * Creates a local JSON file-based identity store for user credentials.
+ * Uses the authcrunch wrapper structure: name, kind, params
  *
  * @param options - Store options
  * @returns Validated local identity store configuration
@@ -64,6 +70,7 @@ export interface BuildLocalIdentityStoreOptions {
  * import { buildLocalIdentityStore } from "@.../caddy-api-client/plugins/caddy-security";
  *
  * const store = buildLocalIdentityStore({
+ *   name: "localdb",
  *   path: "/etc/caddy/users.json",
  *   realm: "local",
  * });
@@ -73,9 +80,12 @@ export function buildLocalIdentityStore(
   options: BuildLocalIdentityStoreOptions
 ): LocalIdentityStore {
   const store = {
-    driver: "local" as const,
-    realm: options.realm ?? "local",
-    path: options.path,
+    name: options.name ?? "localdb",
+    kind: "local" as const,
+    params: {
+      realm: options.realm ?? "local",
+      path: options.path,
+    },
   };
 
   return validateOrThrow(LocalIdentityStoreSchema, store, "buildLocalIdentityStore");
@@ -101,6 +111,11 @@ export interface LdapServerConfig {
  */
 export interface BuildLdapIdentityStoreOptions {
   /**
+   * Name of the identity store (used to reference it in portals)
+   * @default "ldapdb"
+   */
+  name?: string;
+  /**
    * Realm name for this identity store
    * @default "ldap"
    */
@@ -110,10 +125,10 @@ export interface BuildLdapIdentityStoreOptions {
    */
   servers: LdapServerConfig[];
   /**
-   * Bind DN for LDAP queries
+   * Bind username for LDAP queries (full DN)
    * @example "cn=admin,dc=example,dc=com"
    */
-  bindDn: string;
+  bindUsername: string;
   /**
    * Bind password for LDAP authentication
    */
@@ -124,16 +139,17 @@ export interface BuildLdapIdentityStoreOptions {
    */
   searchBaseDn: string;
   /**
-   * LDAP search filter template
+   * LDAP search filter template for users
    * @default "(uid={username})"
    */
-  searchFilter?: string;
+  searchUserFilter?: string;
 }
 
 /**
  * Build an LDAP identity store configuration
  *
  * Creates an LDAP-based identity store for user authentication.
+ * Uses the authcrunch wrapper structure: name, kind, params
  *
  * @param options - Store options
  * @returns Validated LDAP identity store configuration
@@ -143,26 +159,30 @@ export interface BuildLdapIdentityStoreOptions {
  * import { buildLdapIdentityStore } from "@.../caddy-api-client/plugins/caddy-security";
  *
  * const store = buildLdapIdentityStore({
+ *   name: "ldapdb",
  *   servers: [{ address: "ldap.example.com", port: 389 }],
- *   bindDn: "cn=admin,dc=example,dc=com",
+ *   bindUsername: "cn=admin,dc=example,dc=com",
  *   bindPassword: "secret",
  *   searchBaseDn: "ou=users,dc=example,dc=com",
- *   searchFilter: "(uid={username})",
+ *   searchUserFilter: "(uid={username})",
  * });
  * ```
  */
 export function buildLdapIdentityStore(options: BuildLdapIdentityStoreOptions): LdapIdentityStore {
   const store = {
-    driver: "ldap" as const,
-    realm: options.realm ?? "ldap",
-    servers: options.servers.map((s) => ({
-      address: s.address,
-      ...(s.port && { port: s.port }),
-    })),
-    bind_dn: options.bindDn,
-    bind_password: options.bindPassword,
-    search_base_dn: options.searchBaseDn,
-    search_filter: options.searchFilter ?? "(uid={username})",
+    name: options.name ?? "ldapdb",
+    kind: "ldap" as const,
+    params: {
+      realm: options.realm ?? "ldap",
+      servers: options.servers.map((s) => ({
+        address: s.address,
+        ...(s.port && { port: s.port }),
+      })),
+      bind_username: options.bindUsername,
+      bind_password: options.bindPassword,
+      search_base_dn: options.searchBaseDn,
+      search_user_filter: options.searchUserFilter ?? "(uid={username})",
+    },
   };
 
   return validateOrThrow(LdapIdentityStoreSchema, store, "buildLdapIdentityStore");
@@ -177,11 +197,15 @@ export function buildLdapIdentityStore(options: BuildLdapIdentityStoreOptions): 
  */
 export interface BuildOAuth2ProviderOptions {
   /**
+   * Name of the identity provider (used to reference it in portals)
+   */
+  name?: string;
+  /**
    * Realm name for this provider
    */
   realm?: string;
   /**
-   * Provider name (github, google, facebook, etc.)
+   * Provider name/driver (github, google, facebook, etc.)
    */
   provider: string;
   /**
@@ -197,10 +221,20 @@ export interface BuildOAuth2ProviderOptions {
    * @default ["openid", "email", "profile"]
    */
   scopes?: string[];
+  /**
+   * Authorization URL (for non-standard providers)
+   */
+  authorizationUrl?: string;
+  /**
+   * Token URL (for non-standard providers)
+   */
+  tokenUrl?: string;
 }
 
 /**
  * Build an OAuth2 identity provider configuration
+ *
+ * Uses the authcrunch wrapper structure: name, kind, params
  *
  * @param options - Provider options
  * @returns Validated OAuth2 provider configuration
@@ -210,6 +244,7 @@ export interface BuildOAuth2ProviderOptions {
  * import { buildOAuth2Provider } from "@.../caddy-api-client/plugins/caddy-security";
  *
  * const provider = buildOAuth2Provider({
+ *   name: "github",
  *   provider: "github",
  *   clientId: "your-client-id",
  *   clientSecret: "your-client-secret",
@@ -219,12 +254,17 @@ export interface BuildOAuth2ProviderOptions {
  */
 export function buildOAuth2Provider(options: BuildOAuth2ProviderOptions): OAuth2IdentityProvider {
   const provider = {
-    driver: "oauth2" as const,
-    realm: options.realm ?? options.provider,
-    provider: options.provider,
-    client_id: options.clientId,
-    client_secret: options.clientSecret,
-    scopes: options.scopes ?? ["openid", "email", "profile"],
+    name: options.name ?? options.provider,
+    kind: "oauth" as const,
+    params: {
+      driver: options.provider, // github, google, etc.
+      realm: options.realm ?? options.provider,
+      client_id: options.clientId,
+      client_secret: options.clientSecret,
+      scopes: options.scopes ?? ["openid", "email", "profile"],
+      ...(options.authorizationUrl && { authorization_url: options.authorizationUrl }),
+      ...(options.tokenUrl && { token_url: options.tokenUrl }),
+    },
   };
 
   return validateOrThrow(OAuth2IdentityProviderSchema, provider, "buildOAuth2Provider");
@@ -234,6 +274,10 @@ export function buildOAuth2Provider(options: BuildOAuth2ProviderOptions): OAuth2
  * Options for building an OIDC identity provider
  */
 export interface BuildOidcProviderOptions {
+  /**
+   * Name of the identity provider (used to reference it in portals)
+   */
+  name?: string;
   /**
    * Realm name for this provider
    */
@@ -251,10 +295,10 @@ export interface BuildOidcProviderOptions {
    */
   clientSecret: string;
   /**
-   * OIDC discovery URL (.well-known/openid-configuration)
+   * OIDC metadata/discovery URL (.well-known/openid-configuration)
    * @example "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration"
    */
-  discoveryUrl: string;
+  metadataUrl: string;
   /**
    * Scopes to request
    * @default ["openid", "email", "profile"]
@@ -265,6 +309,8 @@ export interface BuildOidcProviderOptions {
 /**
  * Build an OIDC identity provider configuration
  *
+ * Uses the authcrunch wrapper structure: name, kind, params
+ *
  * @param options - Provider options
  * @returns Validated OIDC provider configuration
  *
@@ -273,22 +319,26 @@ export interface BuildOidcProviderOptions {
  * import { buildOidcProvider } from "@.../caddy-api-client/plugins/caddy-security";
  *
  * const provider = buildOidcProvider({
+ *   name: "keycloak",
  *   provider: "keycloak",
  *   clientId: "my-app",
  *   clientSecret: "secret",
- *   discoveryUrl: "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",
+ *   metadataUrl: "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",
  * });
  * ```
  */
 export function buildOidcProvider(options: BuildOidcProviderOptions): OidcIdentityProvider {
   const provider = {
-    driver: "oidc" as const,
-    realm: options.realm ?? options.provider,
-    provider: options.provider,
-    client_id: options.clientId,
-    client_secret: options.clientSecret,
-    discovery_url: options.discoveryUrl,
-    scopes: options.scopes ?? ["openid", "email", "profile"],
+    name: options.name ?? options.provider,
+    kind: "oauth" as const,
+    params: {
+      driver: options.provider, // keycloak, okta, auth0, generic, etc.
+      realm: options.realm ?? options.provider,
+      client_id: options.clientId,
+      client_secret: options.clientSecret,
+      metadata_url: options.metadataUrl,
+      scopes: options.scopes ?? ["openid", "email", "profile"],
+    },
   };
 
   return validateOrThrow(OidcIdentityProviderSchema, provider, "buildOidcProvider");
@@ -400,7 +450,8 @@ export function buildAuthenticationPortal(
   }
 
   if (options.cookie) {
-    portal.cookie = {
+    // Note: cookie_config, not cookie
+    portal.cookie_config = {
       ...(options.cookie.domain && { domain: options.cookie.domain }),
       ...(options.cookie.path && { path: options.cookie.path }),
       ...(options.cookie.lifetime && { lifetime: options.cookie.lifetime }),
@@ -416,7 +467,7 @@ export function buildAuthenticationPortal(
   }
 
   if (options.transformUser) {
-    portal.transform_user = options.transformUser;
+    portal.user_transformer_configs = [options.transformUser];
   }
 
   return validateOrThrow(AuthenticationPortalSchema, portal, "buildAuthenticationPortal");
@@ -507,7 +558,8 @@ export function buildAuthorizationPolicy(
   };
 
   if (options.accessLists && options.accessLists.length > 0) {
-    policy.access_lists = options.accessLists.map((entry) => ({
+    // Note: access_list_rules, not access_lists
+    policy.access_list_rules = options.accessLists.map((entry) => ({
       action: entry.action ?? "allow",
       claim: entry.claim,
       values: entry.values,
@@ -515,14 +567,20 @@ export function buildAuthorizationPolicy(
   }
 
   if (options.cryptoKey) {
-    policy.crypto_key = {
-      ...(options.cryptoKey.tokenName && { token_name: options.cryptoKey.tokenName }),
-      ...(options.cryptoKey.source && { source: options.cryptoKey.source }),
-    };
+    // Note: crypto_key_configs (array), not crypto_key
+    policy.crypto_key_configs = [
+      {
+        ...(options.cryptoKey.tokenName && { token_name: options.cryptoKey.tokenName }),
+        ...(options.cryptoKey.source && { source: options.cryptoKey.source }),
+      },
+    ];
   }
 
   if (options.bypass && options.bypass.length > 0) {
-    policy.bypass = options.bypass;
+    // Note: bypass_configs (array of objects), not bypass (array of strings)
+    policy.bypass_configs = options.bypass.map((uri) => ({
+      uri,
+    }));
   }
 
   return validateOrThrow(AuthorizationPolicySchema, policy, "buildAuthorizationPolicy");
