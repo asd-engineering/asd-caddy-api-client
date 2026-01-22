@@ -256,9 +256,7 @@ describe.skipIf(skipIfNoSecurityStack)(
       });
     });
 
-    // Skip API tests - PUT requests conflict with Caddyfile's active security config
-    // These tests work locally but fail in CI due to config locking/concurrent modification
-    describe.skip("API Integration", () => {
+    describe("API Integration", () => {
       test("can apply LDAP security config via Caddy API", async () => {
         // Build complete configuration using our builders
         const ldapStore = buildLdapIdentityStore({
@@ -407,8 +405,7 @@ describe.skipIf(skipIfNoSecurityStack)(
       });
     });
 
-    // Skip E2E tests - PUT requests conflict with Caddyfile's active security config
-    describe.skip("End-to-End Flow", () => {
+    describe("End-to-End Flow", () => {
       test("complete LDAP authentication setup workflow", async () => {
         // 1. Build and apply security config
         const ldapStore = buildLdapIdentityStore({

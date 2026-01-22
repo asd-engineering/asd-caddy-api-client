@@ -114,8 +114,7 @@ describe.skipIf(skipIfNoSecurityStack)(
       }
     });
 
-    // Skip - PUT requests conflict with Caddyfile's active security config
-    describe.skip("HTTP Authentication Flow Tests", () => {
+    describe("HTTP Authentication Flow Tests", () => {
       test("unauthenticated request to protected route returns 401/403", async () => {
         // 1. Setup security config with local identity store
         const localStore = buildLocalIdentityStore({
@@ -264,8 +263,7 @@ describe.skipIf(skipIfNoSecurityStack)(
       });
     });
 
-    // Skip - PUT requests conflict with Caddyfile's active security config
-    describe.skip("LDAP Authentication Flow", () => {
+    describe("LDAP Authentication Flow", () => {
       test("LDAP config can be applied and validated", async () => {
         const ldapStore = buildLdapIdentityStore({
           servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
@@ -386,8 +384,7 @@ describe.skipIf(skipIfNoSecurityStack)(
       });
     });
 
-    // Skip OIDC tests - they require Keycloak to be running which isn't available in CI
-    describe.skip("OIDC Authentication Flow", () => {
+    describe("OIDC Authentication Flow", () => {
       const KEYCLOAK_URL = process.env.KEYCLOAK_URL ?? "http://keycloak:8081";
       const KEYCLOAK_REALM = "test-realm";
 
@@ -485,8 +482,7 @@ describe.skipIf(skipIfNoSecurityStack)(
       });
     });
 
-    // Skip - PUT requests conflict with Caddyfile's active security config
-    describe.skip("Token Validation", () => {
+    describe("Token Validation", () => {
       test("request with invalid token is rejected", async () => {
         const localStore = buildLocalIdentityStore({
           path: "/data/users.json",
@@ -566,8 +562,7 @@ describe.skipIf(skipIfNoSecurityStack)(
       });
     });
 
-    // Skip - PUT requests conflict with Caddyfile's active security config
-    describe.skip("Multi-Policy Authorization", () => {
+    describe("Multi-Policy Authorization", () => {
       test("admin policy restricts access to admin-only resources", async () => {
         const localStore = buildLocalIdentityStore({
           path: "/data/users.json",
