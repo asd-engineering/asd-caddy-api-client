@@ -258,12 +258,18 @@ describe.skipIf(skipIfNoSecurityStack)(
 
     describe("API Integration", () => {
       beforeEach(async () => {
-        // Clean up any existing security config before each test
-        try {
-          await client.request("/config/apps/security", { method: "DELETE" });
-        } catch {
-          // Ignore if doesn't exist
-        }
+        // Restore baseline security config before each test
+        // We can't DELETE because the Caddyfile routes depend on mypolicy/myportal
+        const baselineConfig = buildSecurityConfig({
+          identityStores: [createRequiredLocalStore()],
+          portals: [createRequiredPortal()],
+          policies: [createRequiredPolicy()],
+        });
+        const baselineApp = buildSecurityApp({ config: baselineConfig });
+        await client.request("/config/apps/security", {
+          method: "PUT",
+          body: JSON.stringify(baselineApp),
+        });
       });
 
       test("can apply LDAP security config via Caddy API", async () => {
