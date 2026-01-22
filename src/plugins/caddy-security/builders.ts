@@ -963,8 +963,10 @@ export interface BuildAuthenticationRouteOptions {
  * ```
  */
 export function buildAuthenticatorRoute(options: BuildAuthenticationRouteOptions): CaddyRoute {
+  // caddy-security requires a route_matcher - use catch-all pattern for auth portal
   const handler = buildAuthenticatorHandler({
     portalName: options.portalName,
+    routeMatcher: "*",
   });
 
   return {
@@ -1026,8 +1028,12 @@ export interface BuildProtectedRouteOptions {
  * ```
  */
 export function buildProtectedRoute(options: BuildProtectedRouteOptions): CaddyRoute {
+  // caddy-security requires a route_matcher in the authorizer
+  // Use the paths if provided, otherwise use a catch-all pattern
+  const routeMatcher = options.paths?.join(" ") ?? "*";
   const authHandler = buildAuthorizationHandler({
     gatekeeperName: options.gatekeeperName,
+    routeMatcher,
   });
 
   const match: { host: string[]; path?: string[] } = {
