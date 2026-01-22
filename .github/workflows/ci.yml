@@ -206,9 +206,9 @@ jobs:
           echo "CADDY_ADMIN_URL=$CADDY_ADMIN_URL"
           echo "CADDY_SECURITY_TEST=$CADDY_SECURITY_TEST"
 
-          # Run integration tests with bun test using sequential execution config
-          echo "Running caddy-security integration tests with bun..."
-          CADDY_SECURITY_TEST=true CADDY_ADMIN_URL=http://127.0.0.1:2020 bun test --config vitest.caddy-security.config.ts
+          # Run integration tests with vitest using sequential execution config
+          echo "Running caddy-security integration tests with vitest..."
+          CADDY_SECURITY_TEST=true CADDY_ADMIN_URL=http://127.0.0.1:2020 bunx vitest run --config vitest.caddy-security.config.ts
         env:
           CADDY_SECURITY_TEST: "true"
           CADDY_ADMIN_URL: "http://127.0.0.1:2020"
