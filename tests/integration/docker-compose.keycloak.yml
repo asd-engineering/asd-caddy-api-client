@@ -1,3 +1,7 @@
+networks:
+  caddy-keycloak-net:
+    driver: bridge
+
 services:
   keycloak:
     image: quay.io/keycloak/keycloak:23.0
@@ -21,6 +25,8 @@ services:
       timeout: 5s
       retries: 30
       start_period: 60s
+    networks:
+      - caddy-keycloak-net
 
   caddy:
     image: caddy:2-alpine
@@ -30,5 +36,8 @@ services:
       - "2019:2019"
     volumes:
       - ./Caddyfile.keycloak:/etc/caddy/Caddyfile:ro
-    # Note: removed depends_on:service_healthy to allow parallel startup
-    # CI workflow handles health check via "Wait for services to be ready" step
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    networks:
+      - caddy-keycloak-net

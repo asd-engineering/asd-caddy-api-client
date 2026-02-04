@@ -87,8 +87,6 @@
         respond "Public content - no auth required" 200
     }
 
-    # Default - redirect to auth
-    route {
-        respond "Caddy Security Test Server - visit /auth to login" 200
-    }
+    # NOTE: No catch-all route here so dynamically added routes can be appended
+    # and properly matched before falling through to Caddy's default 404 response.
 }

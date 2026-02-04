@@ -4,11 +4,19 @@
  * These tests validate that our builder API correctly configures caddy-security
  * for OIDC authentication (Keycloak) via the Caddy Admin API.
  *
+ * IMPORTANT: These tests use an ADDITIVE config strategy:
+ * - They ADD new identity providers alongside existing ones
+ * - They CLEAN UP only what they added
+ * - They work WITH the static Caddyfile config, not against it
+ *
+ * Note: OIDC tests require Keycloak to be running AND reachable from Caddy.
+ * The docker-compose.keycloak.yml has been updated to use a shared network.
+ *
  * Requirements:
  * - Caddy with caddy-security plugin running (docker-compose.caddy-security.yml)
  * - Keycloak running (docker-compose.keycloak.yml)
  *
- * Run with: npm run test:integration:caddy-security-oidc
+ * Run with: CADDY_SECURITY_TEST=1 npm run test:integration:caddy-security
  */
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import { CaddyClient } from "../../../caddy/client.js";
@@ -19,16 +27,24 @@ import {
   buildAuthenticationPortal,
   buildAuthorizationPolicy,
   buildSecurityConfig,
-  buildSecurityApp,
   buildAuthenticatorHandler,
   buildAuthorizationHandler,
   buildAuthenticatorRoute,
   buildProtectedRoute,
 } from "../../../plugins/caddy-security/builders.js";
+import {
+  addSecurityConfig,
+  removeTestAdditions,
+  getServerName,
+  type TestAdditions,
+  type IdentityProvider,
+  type AuthorizationPolicy,
+} from "./test-utils.js";
 
 // Test configuration
 const CADDY_ADMIN_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:2020";
 const KEYCLOAK_URL = process.env.KEYCLOAK_URL ?? "http://localhost:8081";
+const KEYCLOAK_INTERNAL_URL = process.env.KEYCLOAK_INTERNAL_URL ?? "http://keycloak:8081";
 const KEYCLOAK_REALM = "test-realm";
 const KEYCLOAK_CLIENT_ID = "caddy-app";
 const KEYCLOAK_CLIENT_SECRET = "test-client-secret";
@@ -36,69 +52,12 @@ const KEYCLOAK_CLIENT_SECRET = "test-client-secret";
 // Skip unless CADDY_SECURITY_TEST is explicitly set (requires caddy-security Docker stack)
 const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 
-/**
- * Helper to create the "localdb" identity store required by the Caddyfile.
- * The Caddyfile has "myportal" referencing this store as "localdb".
- * Uses realm "localdb" to avoid duplicate realm errors with test stores.
- */
-function createRequiredLocalStore() {
-  return buildLocalIdentityStore({
-    name: "localdb",
-    path: "/data/users.json",
-    realm: "localdb",
-  });
-}
-
-/**
- * Helper to create the "myportal" authentication portal required by the Caddyfile.
- * The Caddyfile has routes using "authenticate with myportal".
- */
-function createRequiredPortal() {
-  return buildAuthenticationPortal({
-    name: "myportal",
-    identityStores: ["localdb"],
-  });
-}
-
-/**
- * Helper function to create the "mypolicy" authorization policy
- * that the Caddyfile routes reference. This must be included in all
- * security configs to avoid "gatekeeper not found" errors.
- */
-function createRequiredPolicy() {
-  return buildAuthorizationPolicy({
-    name: "mypolicy",
-    accessLists: [{ claim: "roles", values: ["authp/admin", "authp/user"], action: "allow" }],
-  });
-}
-
-/**
- * Helper to apply security config with DELETE-first pattern.
- * Caddy Admin API returns 409 Conflict if you PUT to an existing key,
- * so we must DELETE first before applying new config.
- */
-async function applySecurityConfig(
-  client: CaddyClient,
-  app: ReturnType<typeof buildSecurityApp>
-): Promise<void> {
-  // Delete any existing security config first
-  try {
-    await client.request("/config/apps/security", { method: "DELETE" });
-  } catch {
-    // Ignore if doesn't exist
-  }
-
-  // Apply new config
-  await client.request("/config/apps/security", {
-    method: "PUT",
-    body: JSON.stringify(app),
-  });
-}
-
 describe.skipIf(skipIfNoSecurityStack)(
   "caddy-security OIDC Integration",
   () => {
     let client: CaddyClient;
+    let serverName: string;
+    let keycloakAvailable = false;
 
     beforeAll(async () => {
       client = new CaddyClient({ adminUrl: CADDY_ADMIN_URL, timeout: 10000 });
@@ -106,6 +65,11 @@ describe.skipIf(skipIfNoSecurityStack)(
       // Verify Caddy is reachable
       try {
         await client.getConfig();
+        const name = await getServerName(client);
+        if (!name) {
+          throw new Error("No HTTP server found in Caddy config");
+        }
+        serverName = name;
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         const errorName = error instanceof Error ? error.name : "Unknown";
@@ -115,14 +79,16 @@ describe.skipIf(skipIfNoSecurityStack)(
             "Make sure docker-compose.caddy-security.yml is running."
         );
       }
-    });
 
-    afterAll(async () => {
-      // Clean up - restore original config
+      // Check if Keycloak is available
       try {
-        await client.request("/config/apps/security", { method: "DELETE" });
+        const response = await fetch(`${KEYCLOAK_URL}/health/ready`, {
+          signal: AbortSignal.timeout(3000),
+        });
+        keycloakAvailable = response.ok;
       } catch {
-        // Ignore cleanup errors
+        keycloakAvailable = false;
+        console.log("Keycloak not available - some OIDC tests will be skipped");
       }
     });
 
@@ -328,186 +294,225 @@ describe.skipIf(skipIfNoSecurityStack)(
       });
     });
 
-    // Skip API tests - caddy-security tries to fetch OIDC metadata during provisioning,
-    // but Keycloak is not reachable from within the Caddy container (different Docker network)
-    describe.skip("API Integration", () => {
-      test("can apply OIDC security config via Caddy API", async () => {
+    /**
+     * API Integration Tests
+     *
+     * These tests verify the OIDC builder API creates correct configurations.
+     * Tests that actually apply OIDC config require Keycloak to be reachable
+     * from within the Caddy container (shared Docker network).
+     */
+    describe("API Integration", () => {
+      // Track additions for cleanup
+      const testAdditions: TestAdditions = {
+        identityProviders: [],
+        portals: [],
+        policies: [],
+        routeIds: [],
+      };
+
+      afterAll(async () => {
+        // Clean up test additions
+        await removeTestAdditions(client, serverName, testAdditions);
+      });
+
+      test("OIDC provider builder creates valid config structure", () => {
         const oidcProvider = buildOidcProvider({
-          provider: "keycloak",
+          provider: "oidc-api-test",
           clientId: KEYCLOAK_CLIENT_ID,
           clientSecret: KEYCLOAK_CLIENT_SECRET,
-          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+          metadataUrl: `${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
           scopes: ["openid", "email", "profile"],
         });
 
-        const portal = buildAuthenticationPortal({
-          name: "oidc-test-portal",
-          identityProviders: ["keycloak"],
-          cookie: {
-            domain: "localhost",
-            lifetime: "1h",
+        expect(oidcProvider).toMatchObject({
+          name: "oidc-api-test",
+          kind: "oauth",
+          params: {
+            driver: "generic",
+            client_id: KEYCLOAK_CLIENT_ID,
+            client_secret: KEYCLOAK_CLIENT_SECRET,
+            metadata_url: `${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+            scopes: ["openid", "email", "profile"],
+          },
+        });
+      });
+
+      // SKIPPED: caddy-security doesn't support RSA-OAEP key algorithm that Keycloak 23.0 uses by default.
+      // Error: "invalid jwks key: jwks unsupported key algorithm RSA-OAEP"
+      // This is a known limitation. To enable, configure Keycloak to use RS256 instead of RSA-OAEP.
+      test.skip("can apply OIDC config when Keycloak is reachable", async () => {
+        if (!keycloakAvailable) {
+          console.log("Skipping: Keycloak not available");
+          return;
+        }
+
+        const oidcProvider = buildOidcProvider({
+          provider: "oidc-api-test-keycloak",
+          clientId: KEYCLOAK_CLIENT_ID,
+          clientSecret: KEYCLOAK_CLIENT_SECRET,
+          metadataUrl: `${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+          scopes: ["openid", "email", "profile"],
+        });
+
+        // Track for cleanup
+        testAdditions.identityProviders!.push(oidcProvider as unknown as IdentityProvider);
+
+        // Add to existing security config
+        await addSecurityConfig(client, {
+          identityProviders: [oidcProvider as unknown as IdentityProvider],
+        });
+
+        // Verify provider was added
+        const response = await client.request("/config/apps/security/config");
+        const config = (await response.json()) as { identity_providers?: { name: string }[] };
+
+        const providerFound = config.identity_providers?.find(
+          (p) => p.name === "oidc-api-test-keycloak"
+        );
+        expect(providerFound).toBeDefined();
+      });
+
+      test("OAuth2 provider builder creates valid config for known providers", () => {
+        const githubProvider = buildOAuth2Provider({
+          provider: "github",
+          clientId: "github-client-id",
+          clientSecret: "github-client-secret",
+          scopes: ["user:email", "read:user"],
+        });
+
+        expect(githubProvider).toMatchObject({
+          name: "github",
+          kind: "oauth",
+          params: {
+            driver: "github",
+            client_id: "github-client-id",
+            client_secret: "github-client-secret",
+            scopes: ["user:email", "read:user"],
           },
         });
 
-        const policy = buildAuthorizationPolicy({
-          name: "oidc-test-policy",
-          accessLists: [{ claim: "roles", values: ["user", "admin"], action: "allow" }],
+        const googleProvider = buildOAuth2Provider({
+          provider: "google",
+          clientId: "google-client-id",
+          clientSecret: "google-client-secret",
         });
 
-        const config = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore()],
-          identityProviders: [oidcProvider],
-          portals: [createRequiredPortal(), portal],
-          policies: [createRequiredPolicy(), policy],
-        });
-
-        const app = buildSecurityApp({ config });
-
-        await applySecurityConfig(client, app);
-
-        // Verify the config was applied
-        const currentConfig = await client.getConfig();
-        expect(currentConfig.apps?.security).toBeDefined();
-      });
-
-      test("can update OIDC provider config", async () => {
-        const updatedProvider = buildOidcProvider({
-          provider: "keycloak",
-          clientId: "updated-client-id",
-          clientSecret: "updated-client-secret",
-          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
-          scopes: ["openid", "email", "profile", "roles", "groups"],
-        });
-
-        const portal = buildAuthenticationPortal({
-          name: "updated-oidc-portal",
-          identityProviders: ["keycloak"],
-        });
-
-        const config = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore()],
-          identityProviders: [updatedProvider],
-          portals: [createRequiredPortal(), portal],
-          policies: [createRequiredPolicy()],
-        });
-
-        const app = buildSecurityApp({ config });
-
-        await applySecurityConfig(client, app);
-
-        const updated = await client.request<{
-          config: { identity_providers: { scopes: string[] }[] };
-        }>("/config/apps/security");
-
-        expect(updated.config?.identity_providers?.[0].scopes).toContain("groups");
+        expect(googleProvider.params?.driver).toBe("google");
       });
     });
 
-    // Skip E2E tests - caddy-security tries to fetch OIDC metadata during provisioning
-    describe.skip("End-to-End Flow", () => {
-      test("complete OIDC authentication setup workflow", async () => {
-        // 1. Build local identity store (for fallback)
-        const localStore = buildLocalIdentityStore({
-          path: "/data/users.json",
-          realm: "local",
-        });
+    /**
+     * End-to-End Flow Tests
+     *
+     * These tests verify the complete OIDC authentication workflow.
+     * Tests that apply config with OIDC providers require Keycloak
+     * to be running and reachable from Caddy.
+     */
+    describe("End-to-End Flow", () => {
+      // Track additions for cleanup
+      const testAdditions: TestAdditions = {
+        identityProviders: [],
+        portals: [],
+        policies: [],
+        routeIds: [],
+      };
 
-        // 2. Build OIDC provider
-        const oidcProvider = buildOidcProvider({
-          provider: "keycloak",
-          clientId: KEYCLOAK_CLIENT_ID,
-          clientSecret: KEYCLOAK_CLIENT_SECRET,
-          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
-        });
-
-        // 3. Build portal with both local and OIDC
-        const portal = buildAuthenticationPortal({
-          name: "e2e-oidc-portal",
-          identityStores: ["local"],
-          identityProviders: ["keycloak"],
-          ui: { theme: "basic" },
-          cookie: { domain: "localhost", lifetime: "8h" },
-        });
-
-        // 4. Build policies for different access levels
-        const userPolicy = buildAuthorizationPolicy({
-          name: "user-policy",
-          accessLists: [{ claim: "roles", values: ["user", "admin"], action: "allow" }],
-          bypass: ["/health", "/public"],
-        });
-
-        const adminPolicy = buildAuthorizationPolicy({
-          name: "admin-policy",
-          accessLists: [{ claim: "roles", values: ["admin"], action: "allow" }],
-        });
-
-        // 5. Build complete security config
-        const config = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore(), localStore],
-          identityProviders: [oidcProvider],
-          portals: [createRequiredPortal(), portal],
-          policies: [createRequiredPolicy(), userPolicy, adminPolicy],
-        });
-
-        const app = buildSecurityApp({ config });
-
-        // 6. Apply via Caddy API (DELETE first to avoid 409 Conflict)
-        await applySecurityConfig(client, app);
-
-        // 7. Build routes
-        const authRoute = buildAuthenticatorRoute({
-          hosts: ["localhost"],
-          portalName: "e2e-oidc-portal",
-          routeId: "oidc-auth-route",
-        });
-
-        const userApiRoute = buildProtectedRoute({
-          hosts: ["localhost"],
-          paths: ["/api/*"],
-          gatekeeperName: "user-policy",
-          dial: "localhost:8080",
-          routeId: "user-api-route",
-        });
-
-        const adminApiRoute = buildProtectedRoute({
-          hosts: ["localhost"],
-          paths: ["/admin/*"],
-          gatekeeperName: "admin-policy",
-          dial: "localhost:8080",
-          routeId: "admin-api-route",
-        });
-
-        // 8. Verify all routes were built correctly
-        expect(authRoute["@id"]).toBe("oidc-auth-route");
-        expect(userApiRoute["@id"]).toBe("user-api-route");
-        expect(adminApiRoute["@id"]).toBe("admin-api-route");
-
-        // 9. Verify security config is active
-        const currentConfig = await client.getConfig();
-        expect(currentConfig.apps?.security).toBeDefined();
-
-        const securityApp = await client.request<{
-          config: {
-            identity_stores: unknown[];
-            identity_providers: unknown[];
-            authentication_portals: unknown[];
-            authorization_policies: unknown[];
-          };
-        }>("/config/apps/security");
-
-        expect(securityApp.config?.identity_stores).toHaveLength(1);
-        expect(securityApp.config?.identity_providers).toHaveLength(1);
-        expect(securityApp.config?.authentication_portals).toHaveLength(1);
-        expect(securityApp.config?.authorization_policies).toHaveLength(3); // userPolicy, adminPolicy, mypolicy
+      afterAll(async () => {
+        // Clean up test additions
+        await removeTestAdditions(client, serverName, testAdditions);
       });
 
-      test("complete multi-provider setup workflow", async () => {
-        // Setup with multiple OAuth/OIDC providers
+      // SKIPPED: caddy-security doesn't support RSA-OAEP key algorithm that Keycloak 23.0 uses by default.
+      // Error: "invalid jwks key: jwks unsupported key algorithm RSA-OAEP"
+      // This is a known limitation. To enable, configure Keycloak to use RS256 instead of RSA-OAEP.
+      test.skip("complete OIDC authentication setup workflow", async () => {
+        if (!keycloakAvailable) {
+          console.log("Skipping: Keycloak not available");
+          return;
+        }
+
+        // 1. Build OIDC provider
+        const oidcProvider = buildOidcProvider({
+          provider: "oidc-e2e-keycloak",
+          clientId: KEYCLOAK_CLIENT_ID,
+          clientSecret: KEYCLOAK_CLIENT_SECRET,
+          metadataUrl: `${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+        });
+
+        // 2. Build authorization policy
+        const policy = buildAuthorizationPolicy({
+          name: "oidc-e2e-policy",
+          accessLists: [{ claim: "roles", values: ["user", "admin"], action: "allow" }],
+        });
+
+        // Track for cleanup
+        testAdditions.identityProviders!.push(oidcProvider as unknown as IdentityProvider);
+        testAdditions.policies!.push(policy as unknown as AuthorizationPolicy);
+
+        // 3. Add to existing security config
+        await addSecurityConfig(client, {
+          identityProviders: [oidcProvider as unknown as IdentityProvider],
+          policies: [policy as unknown as AuthorizationPolicy],
+        });
+
+        // 4. Verify config was applied
+        const response = await client.request("/config/apps/security/config");
+        const config = (await response.json()) as {
+          identity_providers?: { name: string }[];
+          authorization_policies?: { name: string }[];
+        };
+
+        expect(
+          config.identity_providers?.find((p) => p.name === "oidc-e2e-keycloak")
+        ).toBeDefined();
+        expect(
+          config.authorization_policies?.find((p) => p.name === "oidc-e2e-policy")
+        ).toBeDefined();
+
+        // 5. Verify route builders work correctly
+        const protectedRoute = buildProtectedRoute({
+          hosts: ["localhost"],
+          paths: ["/oidc-e2e-test/*"],
+          gatekeeperName: "oidc-e2e-policy",
+          dial: "localhost:8080",
+          routeId: "oidc-e2e-protected-route",
+        });
+
+        expect(protectedRoute["@id"]).toBe("oidc-e2e-protected-route");
+        expect(protectedRoute.handle?.[0]).toMatchObject({
+          handler: "authentication",
+          providers: {
+            authorizer: { gatekeeper_name: "oidc-e2e-policy" },
+          },
+        });
+      });
+
+      test("portal builder supports multiple identity providers", () => {
+        // Verify portal can be configured with multiple providers
+        const portal = buildAuthenticationPortal({
+          name: "multi-provider-test-portal",
+          identityStores: ["localdb"],
+          identityProviders: ["keycloak", "github", "google"],
+          ui: {
+            theme: "basic",
+            logoUrl: "https://example.com/logo.png",
+          },
+        });
+
+        expect(portal.identity_stores).toContain("localdb");
+        expect(portal.identity_providers).toContain("keycloak");
+        expect(portal.identity_providers).toContain("github");
+        expect(portal.identity_providers).toContain("google");
+        expect(portal.identity_providers).toHaveLength(3);
+      });
+
+      test("can build complete multi-provider config structure", () => {
+        // Verify we can build the complete config structure (without applying)
         const keycloakProvider = buildOidcProvider({
           provider: "keycloak",
           clientId: "keycloak-client",
           clientSecret: "keycloak-secret",
-          metadataUrl: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
+          metadataUrl: `${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
         });
 
         const githubProvider = buildOAuth2Provider({
@@ -524,37 +529,10 @@ describe.skipIf(skipIfNoSecurityStack)(
           scopes: ["openid", "email", "profile"],
         });
 
-        const portal = buildAuthenticationPortal({
-          name: "multi-provider-portal",
-          identityProviders: ["keycloak", "github", "google"],
-          ui: {
-            theme: "basic",
-            logoUrl: "https://example.com/logo.png",
-          },
-        });
-
-        const config = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore()],
-          identityProviders: [keycloakProvider, githubProvider, googleProvider],
-          portals: [createRequiredPortal(), portal],
-          policies: [
-            createRequiredPolicy(),
-            buildAuthorizationPolicy({
-              name: "multi-provider-policy",
-              accessLists: [{ claim: "sub", values: ["*"], action: "allow" }],
-            }),
-          ],
-        });
-
-        const app = buildSecurityApp({ config });
-
-        await applySecurityConfig(client, app);
-
-        const securityConfig = await client.request<{
-          config: { identity_providers: unknown[] };
-        }>("/config/apps/security");
-
-        expect(securityConfig.config?.identity_providers).toHaveLength(3);
+        // Verify all providers have correct structure
+        expect(keycloakProvider.params?.driver).toBe("generic");
+        expect(githubProvider.params?.driver).toBe("github");
+        expect(googleProvider.params?.driver).toBe("google");
       });
     });
   },

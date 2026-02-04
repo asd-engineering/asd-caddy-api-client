@@ -4,16 +4,20 @@
  * These tests validate that our builder API correctly configures caddy-security
  * for LDAP authentication via the Caddy Admin API.
  *
+ * IMPORTANT: These tests use an ADDITIVE config strategy:
+ * - They ADD new identity stores/portals/policies alongside existing ones
+ * - They CLEAN UP only what they added
+ * - They work WITH the static Caddyfile config, not against it
+ *
  * Requirements:
  * - Caddy with caddy-security plugin running (docker-compose.caddy-security.yml)
- * - OpenLDAP running (docker-compose.ldap.yml)
+ * - OpenLDAP running (docker-compose.caddy-security-ldap.yml)
  *
- * Run with: npm run test:integration:caddy-security-ldap
+ * Run with: CADDY_SECURITY_TEST=1 npm run test:integration:caddy-security
  */
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import { CaddyClient } from "../../../caddy/client.js";
 import {
-  buildLocalIdentityStore,
   buildLdapIdentityStore,
   buildAuthenticationPortal,
   buildAuthorizationPolicy,
@@ -24,6 +28,14 @@ import {
   buildAuthenticatorRoute,
   buildProtectedRoute,
 } from "../../../plugins/caddy-security/builders.js";
+import {
+  addSecurityConfig,
+  removeTestAdditions,
+  getServerName,
+  type TestAdditions,
+  type IdentityStore,
+  type AuthorizationPolicy,
+} from "./test-utils.js";
 
 // Test configuration
 const CADDY_ADMIN_URL = process.env.CADDY_ADMIN_URL ?? "http://127.0.0.1:2020";
@@ -37,69 +49,11 @@ const LDAP_SEARCH_FILTER = "(uid={username})";
 // Skip unless CADDY_SECURITY_TEST is explicitly set (requires caddy-security Docker stack)
 const skipIfNoSecurityStack = !process.env.CADDY_SECURITY_TEST;
 
-/**
- * Helper to create the "localdb" identity store required by the Caddyfile.
- * The Caddyfile has "myportal" referencing this store as "localdb".
- * Uses realm "localdb" to avoid duplicate realm errors with test stores.
- */
-function createRequiredLocalStore() {
-  return buildLocalIdentityStore({
-    name: "localdb",
-    path: "/data/users.json",
-    realm: "localdb",
-  });
-}
-
-/**
- * Helper to create the "myportal" authentication portal required by the Caddyfile.
- * The Caddyfile has routes using "authenticate with myportal".
- */
-function createRequiredPortal() {
-  return buildAuthenticationPortal({
-    name: "myportal",
-    identityStores: ["localdb"],
-  });
-}
-
-/**
- * Helper function to create the "mypolicy" authorization policy
- * that the Caddyfile routes reference. This must be included in all
- * security configs to avoid "gatekeeper not found" errors.
- */
-function createRequiredPolicy() {
-  return buildAuthorizationPolicy({
-    name: "mypolicy",
-    accessLists: [{ claim: "roles", values: ["authp/admin", "authp/user"], action: "allow" }],
-  });
-}
-
-/**
- * Helper to apply security config with DELETE-first pattern.
- * Caddy Admin API returns 409 Conflict if you PUT to an existing key,
- * so we must DELETE first before applying new config.
- */
-async function applySecurityConfig(
-  client: CaddyClient,
-  app: ReturnType<typeof buildSecurityApp>
-): Promise<void> {
-  // Delete any existing security config first
-  try {
-    await client.request("/config/apps/security", { method: "DELETE" });
-  } catch {
-    // Ignore if doesn't exist
-  }
-
-  // Apply new config
-  await client.request("/config/apps/security", {
-    method: "PUT",
-    body: JSON.stringify(app),
-  });
-}
-
 describe.skipIf(skipIfNoSecurityStack)(
   "caddy-security LDAP Integration",
   () => {
     let client: CaddyClient;
+    let serverName: string;
 
     beforeAll(async () => {
       client = new CaddyClient({ adminUrl: CADDY_ADMIN_URL, timeout: 10000 });
@@ -107,6 +61,11 @@ describe.skipIf(skipIfNoSecurityStack)(
       // Verify Caddy is reachable
       try {
         await client.getConfig();
+        const name = await getServerName(client);
+        if (!name) {
+          throw new Error("No HTTP server found in Caddy config");
+        }
+        serverName = name;
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         const errorName = error instanceof Error ? error.name : "Unknown";
@@ -115,15 +74,6 @@ describe.skipIf(skipIfNoSecurityStack)(
             `Error: ${errorName}: ${errorMsg}. ` +
             "Make sure docker-compose.caddy-security.yml is running."
         );
-      }
-    });
-
-    afterAll(async () => {
-      // Clean up - restore original config
-      try {
-        await client.request("/config/apps/security", { method: "DELETE" });
-      } catch {
-        // Ignore cleanup errors
       }
     });
 
@@ -279,199 +229,195 @@ describe.skipIf(skipIfNoSecurityStack)(
       });
     });
 
-    // Skip API tests - auth-flows test creates routes that reference its portals
-    // When we DELETE security config and PUT a new one, the existing routes fail
-    // because they reference non-existent portals from the deleted config
-    describe.skip("API Integration", () => {
-      test("can apply LDAP security config via Caddy API", async () => {
-        // Build complete configuration using our builders
+    /**
+     * API Integration Tests
+     *
+     * These tests verify the LDAP builder API creates correct configurations
+     * and can add LDAP stores to existing security config.
+     */
+    describe("API Integration", () => {
+      // Track additions for cleanup
+      const testAdditions: TestAdditions = {
+        identityStores: [],
+        policies: [],
+        routeIds: [],
+      };
+
+      afterAll(async () => {
+        // Clean up test additions
+        await removeTestAdditions(client, serverName, testAdditions);
+      });
+
+      test("can add LDAP identity store to existing security config", async () => {
         const ldapStore = buildLdapIdentityStore({
+          name: "ldap-api-test-store",
           servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
           bindUsername: LDAP_BIND_DN,
           bindPassword: LDAP_BIND_PASSWORD,
           searchBaseDn: LDAP_SEARCH_BASE_DN,
           searchUserFilter: LDAP_SEARCH_FILTER,
-          realm: "ldap",
+          realm: "ldap-api-test",
         });
 
-        const portal = buildAuthenticationPortal({
-          name: "test-ldap-portal",
-          identityStores: ["ldapdb"],
-          cookie: {
-            domain: "localhost",
-            lifetime: "1h",
-          },
+        // Track for cleanup
+        testAdditions.identityStores!.push(ldapStore as unknown as IdentityStore);
+
+        // Add to existing security config
+        await addSecurityConfig(client, {
+          identityStores: [ldapStore as unknown as IdentityStore],
         });
 
-        const policy = buildAuthorizationPolicy({
-          name: "test-ldap-policy",
-          accessLists: [{ claim: "roles", values: ["user", "admin"], action: "allow" }],
-          bypass: ["/health", "/public"],
-        });
+        // Verify the store was added
+        const response = await client.request("/config/apps/security/config");
+        const config = (await response.json()) as { identity_stores?: { name: string }[] };
 
-        const config = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore(), ldapStore],
-          portals: [createRequiredPortal(), portal],
-          policies: [createRequiredPolicy(), policy],
-        });
-
-        const app = buildSecurityApp({ config });
-
-        // Apply via Caddy API (DELETE first to avoid 409 Conflict)
-        await applySecurityConfig(client, app);
-
-        // Verify the config was applied
-        const currentConfig = await client.getConfig();
-        expect(currentConfig.apps?.security).toBeDefined();
+        const storeFound = config.identity_stores?.find((s) => s.name === "ldap-api-test-store");
+        expect(storeFound).toBeDefined();
       });
 
       test("can retrieve applied security config", async () => {
-        // First apply a config (beforeEach clears it)
-        const ldapStore = buildLdapIdentityStore({
-          servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
-          bindUsername: LDAP_BIND_DN,
-          bindPassword: LDAP_BIND_PASSWORD,
-          searchBaseDn: LDAP_SEARCH_BASE_DN,
-          realm: "ldap",
-        });
-
-        const config = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore(), ldapStore],
-          portals: [createRequiredPortal()],
-          policies: [createRequiredPolicy()],
-        });
-
-        const app = buildSecurityApp({ config });
-        await applySecurityConfig(client, app);
-
-        // Now retrieve it
-        const securityConfig =
-          await client.request<Record<string, unknown>>("/config/apps/security");
+        // Retrieve security config
+        const response = await client.request("/config/apps/security");
+        const securityConfig = (await response.json()) as Record<string, unknown>;
 
         expect(securityConfig).toBeDefined();
         expect(securityConfig.config).toBeDefined();
       });
 
-      test("can update security config", async () => {
-        // Create updated config with additional policy
-        const ldapStore = buildLdapIdentityStore({
-          servers: [{ address: LDAP_HOST }],
-          bindUsername: LDAP_BIND_DN,
-          bindPassword: LDAP_BIND_PASSWORD,
-          searchBaseDn: LDAP_SEARCH_BASE_DN,
-        });
-
-        const portal = buildAuthenticationPortal({
-          name: "updated-portal",
-          identityStores: ["ldapdb"],
-        });
-
-        const adminPolicy = buildAuthorizationPolicy({
-          name: "admin-policy",
-          accessLists: [{ claim: "roles", values: ["admin"], action: "allow" }],
-        });
-
-        const userPolicy = buildAuthorizationPolicy({
-          name: "user-policy",
+      test("can add authorization policy alongside existing ones", async () => {
+        const testPolicy = buildAuthorizationPolicy({
+          name: "ldap-api-test-policy",
           accessLists: [{ claim: "roles", values: ["user", "admin"], action: "allow" }],
+          bypass: ["/health", "/public"],
         });
 
-        const config = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore(), ldapStore],
-          portals: [createRequiredPortal(), portal],
-          policies: [createRequiredPolicy(), adminPolicy, userPolicy],
+        // Track for cleanup
+        testAdditions.policies!.push(testPolicy as unknown as AuthorizationPolicy);
+
+        await addSecurityConfig(client, {
+          policies: [testPolicy as unknown as AuthorizationPolicy],
         });
 
-        const app = buildSecurityApp({ config });
+        // Verify policy was added
+        const response = await client.request("/config/apps/security/config");
+        const config = (await response.json()) as { authorization_policies?: { name: string }[] };
 
-        await applySecurityConfig(client, app);
-
-        const updated = await client.request<{
-          config: { authorization_policies: unknown[] };
-        }>("/config/apps/security");
-        expect(updated.config?.authorization_policies).toHaveLength(3); // mypolicy, adminPolicy, userPolicy
+        const policyFound = config.authorization_policies?.find(
+          (p) => p.name === "ldap-api-test-policy"
+        );
+        expect(policyFound).toBeDefined();
       });
 
-      test("can delete security config", async () => {
-        // First create a config
-        const config = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore()],
-          portals: [createRequiredPortal()],
-          policies: [createRequiredPolicy()],
-        });
-        const app = buildSecurityApp({ config });
-        await applySecurityConfig(client, app);
+      test("security config persists across API calls", async () => {
+        // Verify previously added items still exist
+        const response = await client.request("/config/apps/security/config");
+        const config = (await response.json()) as {
+          identity_stores?: { name: string }[];
+          authorization_policies?: { name: string }[];
+        };
 
-        // Now delete it
-        await client.request("/config/apps/security", {
-          method: "DELETE",
-        });
+        // Check if our test items still exist
+        const storeExists = config.identity_stores?.some((s) => s.name === "ldap-api-test-store");
+        const policyExists = config.authorization_policies?.some(
+          (p) => p.name === "ldap-api-test-policy"
+        );
 
-        // Verify deletion - should throw or return null
-        try {
-          const result = await client.request("/config/apps/security");
-          expect(result).toBeNull();
-        } catch {
-          // Expected - config was deleted
-        }
+        expect(storeExists).toBe(true);
+        expect(policyExists).toBe(true);
       });
     });
 
-    // Skip E2E tests - same reason as API Integration (routes reference deleted portals)
-    describe.skip("End-to-End Flow", () => {
+    /**
+     * End-to-End Flow Tests
+     *
+     * These tests verify the complete LDAP authentication workflow
+     * by building all required components and testing route creation.
+     */
+    describe("End-to-End Flow", () => {
+      // Track additions for cleanup
+      const testAdditions: TestAdditions = {
+        identityStores: [],
+        policies: [],
+        routeIds: [],
+      };
+
+      afterAll(async () => {
+        // Clean up test additions
+        await removeTestAdditions(client, serverName, testAdditions);
+      });
+
       test("complete LDAP authentication setup workflow", async () => {
-        // 1. Build and apply security config
+        // 1. Build LDAP identity store
         const ldapStore = buildLdapIdentityStore({
+          name: "ldap-e2e-store",
           servers: [{ address: LDAP_HOST, port: LDAP_PORT }],
           bindUsername: LDAP_BIND_DN,
           bindPassword: LDAP_BIND_PASSWORD,
           searchBaseDn: LDAP_SEARCH_BASE_DN,
           searchUserFilter: LDAP_SEARCH_FILTER,
+          realm: "ldap-e2e",
         });
 
-        const portal = buildAuthenticationPortal({
-          name: "e2e-portal",
-          identityStores: ["ldapdb"],
-        });
-
+        // 2. Build authorization policy
         const policy = buildAuthorizationPolicy({
-          name: "e2e-policy",
-          accessLists: [{ claim: "roles", values: ["user"] }],
+          name: "ldap-e2e-policy",
+          accessLists: [{ claim: "roles", values: ["user", "admin"], action: "allow" }],
         });
 
-        const config = buildSecurityConfig({
-          identityStores: [createRequiredLocalStore(), ldapStore],
-          portals: [createRequiredPortal(), portal],
-          policies: [createRequiredPolicy(), policy],
+        // Track for cleanup
+        testAdditions.identityStores!.push(ldapStore as unknown as IdentityStore);
+        testAdditions.policies!.push(policy as unknown as AuthorizationPolicy);
+
+        // 3. Add to existing security config
+        await addSecurityConfig(client, {
+          identityStores: [ldapStore as unknown as IdentityStore],
+          policies: [policy as unknown as AuthorizationPolicy],
         });
 
-        const app = buildSecurityApp({ config });
+        // 4. Verify config was applied
+        const response = await client.request("/config/apps/security/config");
+        const config = (await response.json()) as {
+          identity_stores?: { name: string }[];
+          authorization_policies?: { name: string }[];
+        };
 
-        await applySecurityConfig(client, app);
+        expect(config.identity_stores?.find((s) => s.name === "ldap-e2e-store")).toBeDefined();
+        expect(
+          config.authorization_policies?.find((p) => p.name === "ldap-e2e-policy")
+        ).toBeDefined();
 
-        // 2. Build and add auth route
-        const authRoute = buildAuthenticatorRoute({
-          hosts: ["localhost"],
-          portalName: "e2e-portal",
-          routeId: "e2e-auth-route",
-        });
-
-        // 3. Build and add protected route
+        // 5. Verify route builders work correctly
         const protectedRoute = buildProtectedRoute({
           hosts: ["localhost"],
-          paths: ["/api/*"],
-          gatekeeperName: "e2e-policy",
+          paths: ["/ldap-e2e-test/*"],
+          gatekeeperName: "ldap-e2e-policy",
           dial: "localhost:8080",
-          routeId: "e2e-protected-route",
+          routeId: "ldap-e2e-protected-route",
         });
 
-        // 4. Verify routes can be built correctly
-        expect(authRoute["@id"]).toBe("e2e-auth-route");
-        expect(protectedRoute["@id"]).toBe("e2e-protected-route");
+        expect(protectedRoute["@id"]).toBe("ldap-e2e-protected-route");
+        expect(protectedRoute.handle?.[0]).toMatchObject({
+          handler: "authentication",
+          providers: {
+            authorizer: { gatekeeper_name: "ldap-e2e-policy" },
+          },
+        });
+      });
 
-        // 5. Verify security config is active
-        const currentConfig = await client.getConfig();
-        expect(currentConfig.apps?.security).toBeDefined();
+      test("LDAP store and policy are retrievable after addition", async () => {
+        // Verify items added in previous test are still there
+        const response = await client.request("/config/apps/security/config");
+        const config = (await response.json()) as {
+          identity_stores?: { name: string; kind: string }[];
+          authorization_policies?: { name: string }[];
+        };
+
+        const ldapStore = config.identity_stores?.find((s) => s.name === "ldap-e2e-store");
+        expect(ldapStore).toBeDefined();
+        expect(ldapStore?.kind).toBe("ldap");
+
+        const policy = config.authorization_policies?.find((p) => p.name === "ldap-e2e-policy");
+        expect(policy).toBeDefined();
       });
     });
   },
