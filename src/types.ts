@@ -690,6 +690,35 @@ export interface ServiceRouteOptions {
    * Basic authentication configuration
    */
   basicAuth?: BasicAuthOptions;
+
+  /**
+   * Ingress tag value for X-ASD-Ingress header
+   * Set to null to explicitly disable
+   */
+  ingressTag?: string | null;
+
+  /**
+   * Origin for iframe embedding headers (CORS + CSP)
+   * Set to null to explicitly disable
+   */
+  iframeOrigin?: string | null;
+
+  /**
+   * Response headers to delete from reverse proxy response
+   * (e.g., ["Content-Security-Policy"] for iframe support)
+   */
+  deleteResponseHeaders?: string[];
+
+  /**
+   * Service type for X-ASD-Service-Type header
+   */
+  serviceType?: string;
+
+  /**
+   * Whether this is a tunnel domain route
+   * Used for selective auth (tunnel vs host route type)
+   */
+  isTunnelDomain?: boolean;
 }
 
 /**
@@ -719,6 +748,8 @@ export interface BasicAuthOptions {
     algorithm?: "bcrypt";
     cost?: number;
   };
+  /** Which route types should have auth applied (default: all) */
+  routes?: ("host" | "path" | "tunnel")[];
 }
 
 /**
@@ -728,6 +759,8 @@ export interface HealthCheckRouteOptions {
   host: string;
   serviceId: string;
   priority?: number;
+  /** Ingress tag value for X-ASD-Ingress header */
+  ingressTag?: string | null;
 }
 
 /**
@@ -739,6 +772,16 @@ export interface HostRouteOptions {
   securityHeaders?: SecurityHeaders;
   basicAuth?: BasicAuthOptions;
   priority?: number;
+  /** Ingress tag value for X-ASD-Ingress header */
+  ingressTag?: string | null;
+  /** Origin for iframe embedding headers */
+  iframeOrigin?: string | null;
+  /** Response headers to delete from reverse proxy */
+  deleteResponseHeaders?: string[];
+  /** Service ID for X-ASD-Service-ID header */
+  serviceId?: string;
+  /** Service type for X-ASD-Service-Type header */
+  serviceType?: string;
 }
 
 /**
@@ -752,6 +795,16 @@ export interface PathRouteOptions {
   securityHeaders?: SecurityHeaders;
   basicAuth?: BasicAuthOptions;
   priority?: number;
+  /** Ingress tag value for X-ASD-Ingress header */
+  ingressTag?: string | null;
+  /** Origin for iframe embedding headers */
+  iframeOrigin?: string | null;
+  /** Response headers to delete from reverse proxy */
+  deleteResponseHeaders?: string[];
+  /** Service ID for X-ASD-Service-ID header */
+  serviceId?: string;
+  /** Service type for X-ASD-Service-Type header */
+  serviceType?: string;
 }
 
 /**

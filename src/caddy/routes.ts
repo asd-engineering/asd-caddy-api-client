@@ -37,6 +37,16 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
   );
   const routes: CaddyRoute[] = [];
 
+  // Resolve selective auth: determine which route types should have auth
+  const authRoutes = validated.basicAuth?.routes ?? ["host", "path", "tunnel"];
+
+  // Resolve auth for a specific route type
+  const resolveAuth = (routeType: "host" | "path"): typeof validated.basicAuth | undefined => {
+    if (!validated.basicAuth) return undefined;
+    const effectiveType = validated.isTunnelDomain ? "tunnel" : routeType;
+    return authRoutes.includes(effectiveType) ? validated.basicAuth : undefined;
+  };
+
   // Build host-based routes
   if (validated.enableHostRoute && validated.host) {
     // Health check route (higher priority)
@@ -45,6 +55,7 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
         host: validated.host,
         serviceId: validated.serviceId ?? "unknown",
         priority: validated.priority !== undefined ? validated.priority + 1000 : undefined,
+        ingressTag: validated.ingressTag,
       })
     );
 
@@ -54,8 +65,13 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
         host: validated.host,
         dial: validated.dial,
         securityHeaders: validated.securityHeaders,
-        basicAuth: validated.basicAuth,
+        basicAuth: resolveAuth("host"),
         priority: validated.priority,
+        ingressTag: validated.ingressTag,
+        iframeOrigin: validated.iframeOrigin,
+        deleteResponseHeaders: validated.deleteResponseHeaders,
+        serviceId: validated.serviceId,
+        serviceType: validated.serviceType,
       })
     );
   }
@@ -70,6 +86,7 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
         host: pathHost,
         serviceId: validated.serviceId ?? "unknown",
         priority: validated.priority !== undefined ? validated.priority + 1000 : undefined,
+        ingressTag: validated.ingressTag,
       })
     );
 
@@ -81,8 +98,13 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
         dial: validated.dial,
         stripPrefix: validated.stripPrefix ?? true,
         securityHeaders: validated.securityHeaders,
-        basicAuth: validated.basicAuth,
+        basicAuth: resolveAuth("path"),
         priority: validated.priority,
+        ingressTag: validated.ingressTag,
+        iframeOrigin: validated.iframeOrigin,
+        deleteResponseHeaders: validated.deleteResponseHeaders,
+        serviceId: validated.serviceId,
+        serviceType: validated.serviceType,
       })
     );
   }
@@ -103,6 +125,34 @@ export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRo
     "buildHealthCheckRoute options"
   );
 
+  const handlers: CaddyRouteHandler[] = [];
+
+  // Add ingress tag header if configured
+  if (validated.ingressTag) {
+    handlers.push(buildIngressTagHeadersHandler(validated.ingressTag));
+  }
+
+  // Add health/instance metadata headers
+  handlers.push({
+    handler: "headers",
+    response: {
+      set: {
+        "X-ASD-Health": ["ok"],
+        "X-ASD-Instance": [validated.serviceId],
+      },
+    },
+  } as CaddyRouteHandler);
+
+  // Add static response handler
+  handlers.push({
+    handler: "static_response",
+    body: `{"status":"ok","service":"${validated.serviceId}","timestamp":"{http.time.now.unix}"}`,
+    status_code: 200,
+    headers: {
+      "Content-Type": ["application/json"],
+    },
+  });
+
   const route: CaddyRoute = {
     match: [
       {
@@ -110,20 +160,7 @@ export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRo
         path: ["/asd/healthcheck"],
       },
     ],
-    handle: [
-      {
-        handler: "static_response",
-        body: `{"status":"ok","service":"${validated.serviceId}","timestamp":"{http.time.now.unix}"}`,
-        status_code: 200,
-        headers: {
-          response: {
-            set: {
-              "Content-Type": ["application/json"],
-            },
-          },
-        },
-      },
-    ],
+    handle: handlers,
     terminal: true,
   };
 
@@ -144,6 +181,25 @@ export function buildHostRoute(options: HostRouteOptions): CaddyRoute {
   const validated = validateOrThrow(HostRouteOptionsSchema, options, "buildHostRoute options");
   const handlers: CaddyRouteHandler[] = [];
 
+  // Add ingress tag header if configured
+  if (validated.ingressTag) {
+    handlers.push(buildIngressTagHeadersHandler(validated.ingressTag));
+  }
+
+  // Add iframe headers if configured
+  if (validated.iframeOrigin) {
+    handlers.push(buildIframeHeadersHandler(validated.iframeOrigin));
+  }
+
+  // Add service metadata headers
+  const metadataHandler = buildServiceMetadataHeadersHandler(
+    validated.serviceId,
+    validated.serviceType
+  );
+  if (metadataHandler) {
+    handlers.push(metadataHandler);
+  }
+
   // Add security headers if configured
   if (validated.securityHeaders) {
     handlers.push(buildSecurityHeadersHandler(validated.securityHeaders));
@@ -159,7 +215,11 @@ export function buildHostRoute(options: HostRouteOptions): CaddyRoute {
   }
 
   // Add reverse proxy handler
-  handlers.push(buildReverseProxyHandler(validated.dial));
+  handlers.push(
+    buildReverseProxyHandler(validated.dial, {
+      deleteResponseHeaders: validated.deleteResponseHeaders,
+    })
+  );
 
   const route: CaddyRoute = {
     match: [
@@ -188,6 +248,25 @@ export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
   const validated = validateOrThrow(PathRouteOptionsSchema, options, "buildPathRoute options");
   const handlers: CaddyRouteHandler[] = [];
 
+  // Add ingress tag header if configured
+  if (validated.ingressTag) {
+    handlers.push(buildIngressTagHeadersHandler(validated.ingressTag));
+  }
+
+  // Add iframe headers if configured
+  if (validated.iframeOrigin) {
+    handlers.push(buildIframeHeadersHandler(validated.iframeOrigin));
+  }
+
+  // Add service metadata headers
+  const metadataHandler = buildServiceMetadataHeadersHandler(
+    validated.serviceId,
+    validated.serviceType
+  );
+  if (metadataHandler) {
+    handlers.push(metadataHandler);
+  }
+
   // Add rewrite handler if stripping prefix
   if (validated.stripPrefix) {
     handlers.push(buildRewriteHandler(validated.path));
@@ -208,7 +287,11 @@ export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
   }
 
   // Add reverse proxy handler
-  handlers.push(buildReverseProxyHandler(validated.dial));
+  handlers.push(
+    buildReverseProxyHandler(validated.dial, {
+      deleteResponseHeaders: validated.deleteResponseHeaders,
+    })
+  );
 
   const route: CaddyRoute = {
     match: [
@@ -310,6 +393,8 @@ export function buildReverseProxyHandler(
     tlsServerName?: string;
     tlsInsecureSkipVerify?: boolean;
     tlsTrustedCACerts?: string;
+    /** Response headers to delete (e.g., ["Content-Security-Policy"]) */
+    deleteResponseHeaders?: string[];
   }
 ): CaddyRouteHandler {
   // Auto-detect HTTPS from dial address
@@ -348,6 +433,15 @@ export function buildReverseProxyHandler(
     };
   }
 
+  // Add response header deletion if specified
+  if (options?.deleteResponseHeaders && options.deleteResponseHeaders.length > 0) {
+    handler.headers = {
+      response: {
+        delete: options.deleteResponseHeaders,
+      },
+    };
+  }
+
   return handler;
 }
 
@@ -371,12 +465,10 @@ export function buildSecurityHeadersHandler(headers: SecurityHeaders): CaddyRout
 
   return {
     handler: "headers",
-    headers: {
-      response: {
-        set: responseHeaders,
-      },
+    response: {
+      set: responseHeaders,
     },
-  };
+  } as CaddyRouteHandler;
 }
 
 /**
@@ -457,6 +549,30 @@ export function buildRewriteHandler(prefix: string): CaddyRouteHandler {
 }
 
 /**
+ * Build a service metadata headers handler
+ * Sets X-ASD-Service-ID and X-ASD-Service-Type headers
+ * @param serviceId - Service identifier
+ * @param serviceType - Service type
+ * @returns Headers handler or null if no metadata to set
+ */
+function buildServiceMetadataHeadersHandler(
+  serviceId?: string,
+  serviceType?: string
+): CaddyRouteHandler | null {
+  const headers: Record<string, string[]> = {};
+  if (serviceId) headers["X-ASD-Service-ID"] = [serviceId];
+  if (serviceType) headers["X-ASD-Service-Type"] = [serviceType];
+  return Object.keys(headers).length
+    ? ({
+        handler: "headers",
+        response: {
+          set: headers,
+        },
+      } as CaddyRouteHandler)
+    : null;
+}
+
+/**
  * Build an ingress tag header handler
  * @param tag - Ingress tag value
  * @returns Headers handler
@@ -464,14 +580,12 @@ export function buildRewriteHandler(prefix: string): CaddyRouteHandler {
 export function buildIngressTagHeadersHandler(tag: string): CaddyRouteHandler {
   return {
     handler: "headers",
-    headers: {
-      response: {
-        set: {
-          "X-ASD-Ingress": [tag],
-        },
+    response: {
+      set: {
+        "X-ASD-Ingress": [tag],
       },
     },
-  };
+  } as CaddyRouteHandler;
 }
 
 /**
@@ -482,17 +596,15 @@ export function buildIngressTagHeadersHandler(tag: string): CaddyRouteHandler {
 export function buildIframeHeadersHandler(allowedOrigin = "*"): CaddyRouteHandler {
   return {
     handler: "headers",
-    headers: {
-      response: {
-        set: {
-          "Access-Control-Allow-Origin": [allowedOrigin],
-          "Access-Control-Allow-Methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-          "Access-Control-Allow-Headers": ["Content-Type", "Authorization"],
-          "Content-Security-Policy": [`frame-ancestors ${allowedOrigin}`],
-        },
+    response: {
+      set: {
+        "Access-Control-Allow-Origin": [allowedOrigin],
+        "Access-Control-Allow-Methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "Access-Control-Allow-Headers": ["Content-Type", "Authorization"],
+        "Content-Security-Policy": [`frame-ancestors ${allowedOrigin}`],
       },
     },
-  };
+  } as CaddyRouteHandler;
 }
 
 /**

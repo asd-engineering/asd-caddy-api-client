@@ -22,7 +22,7 @@ import {
 } from "../caddy/routes.js";
 
 describe("buildHealthCheckRoute", () => {
-  test("creates health check route", () => {
+  test("creates health check route with metadata headers", () => {
     const route = buildHealthCheckRoute({
       host: "api.localhost",
       serviceId: "my-service",
@@ -31,8 +31,18 @@ describe("buildHealthCheckRoute", () => {
     expect(route.match).toBeDefined();
     expect(route.match![0].host).toEqual(["api.localhost"]);
     expect(route.match![0].path).toEqual(["/asd/healthcheck"]);
-    expect(route.handle[0].handler).toBe("static_response");
-    expect(route.handle[0].status_code).toBe(200);
+    // First handler: health metadata headers
+    const metadataHandler = route.handle[0] as Record<string, unknown>;
+    expect(metadataHandler.handler).toBe("headers");
+    const response = metadataHandler.response as {
+      set: Record<string, string[]>;
+    };
+    expect(response.set["X-ASD-Health"]).toEqual(["ok"]);
+    expect(response.set["X-ASD-Instance"]).toEqual(["my-service"]);
+    // Second handler: static response
+    const staticHandler = route.handle[1];
+    expect(staticHandler.handler).toBe("static_response");
+    expect(staticHandler.status_code).toBe(200);
     expect(route.terminal).toBe(true);
   });
 
@@ -44,6 +54,26 @@ describe("buildHealthCheckRoute", () => {
     });
 
     expect((route as { priority?: number }).priority).toBe(100);
+  });
+
+  test("includes ingress tag when specified", () => {
+    const route = buildHealthCheckRoute({
+      host: "api.localhost",
+      serviceId: "my-service",
+      ingressTag: "local-caddy",
+    });
+
+    // First handler should be ingress tag
+    const ingressHandler = route.handle[0] as Record<string, unknown>;
+    expect(ingressHandler.handler).toBe("headers");
+    const response = ingressHandler.response as {
+      set: Record<string, string[]>;
+    };
+    expect(response.set["X-ASD-Ingress"]).toEqual(["local-caddy"]);
+    // Second handler should be health metadata
+    expect(route.handle[1].handler).toBe("headers");
+    // Third handler should be static response
+    expect(route.handle[2].handler).toBe("static_response");
   });
 });
 
@@ -246,11 +276,12 @@ describe("buildSecurityHeadersHandler", () => {
       enableHsts: false,
       frameOptions: "DENY",
       enableCompression: true,
-    });
+    }) as Record<string, unknown>;
 
     expect(handler.handler).toBe("headers");
-    expect(handler.headers?.response?.set?.["X-Frame-Options"]).toEqual(["DENY"]);
-    expect(handler.headers?.response?.set?.["Strict-Transport-Security"]).toBeUndefined();
+    const response = handler.response as { set: Record<string, string[]> };
+    expect(response.set["X-Frame-Options"]).toEqual(["DENY"]);
+    expect(response.set["Strict-Transport-Security"]).toBeUndefined();
   });
 
   test("creates security headers with HSTS", () => {
@@ -259,12 +290,13 @@ describe("buildSecurityHeadersHandler", () => {
       hstsMaxAge: 31536000,
       frameOptions: "SAMEORIGIN",
       enableCompression: true,
-    });
+    }) as Record<string, unknown>;
 
-    expect(handler.headers?.response?.set?.["Strict-Transport-Security"]).toEqual([
+    const response = handler.response as { set: Record<string, string[]> };
+    expect(response.set["Strict-Transport-Security"]).toEqual([
       "max-age=31536000; includeSubDomains",
     ]);
-    expect(handler.headers?.response?.set?.["X-Frame-Options"]).toEqual(["SAMEORIGIN"]);
+    expect(response.set["X-Frame-Options"]).toEqual(["SAMEORIGIN"]);
   });
 });
 
@@ -434,49 +466,46 @@ describe("buildBasicAuthHandler", () => {
 
 describe("buildIngressTagHeadersHandler", () => {
   test("creates ingress tag header handler", () => {
-    const handler = buildIngressTagHeadersHandler("my-service-v1");
+    const handler = buildIngressTagHeadersHandler("my-service-v1") as Record<string, unknown>;
 
     expect(handler.handler).toBe("headers");
-    expect(handler.headers?.response?.set?.["X-ASD-Ingress"]).toEqual(["my-service-v1"]);
+    const response = handler.response as { set: Record<string, string[]> };
+    expect(response.set["X-ASD-Ingress"]).toEqual(["my-service-v1"]);
   });
 });
 
 describe("buildIframeHeadersHandler", () => {
   test("creates iframe headers with default wildcard origin", () => {
-    const handler = buildIframeHeadersHandler();
+    const handler = buildIframeHeadersHandler() as Record<string, unknown>;
 
     expect(handler.handler).toBe("headers");
-    expect(handler.headers?.response?.set?.["Access-Control-Allow-Origin"]).toEqual(["*"]);
-    expect(handler.headers?.response?.set?.["Content-Security-Policy"]).toEqual([
-      "frame-ancestors *",
-    ]);
+    const response = handler.response as { set: Record<string, string[]> };
+    expect(response.set["Access-Control-Allow-Origin"]).toEqual(["*"]);
+    expect(response.set["Content-Security-Policy"]).toEqual(["frame-ancestors *"]);
   });
 
   test("creates iframe headers with specific origin", () => {
-    const handler = buildIframeHeadersHandler("https://example.com");
+    const handler = buildIframeHeadersHandler("https://example.com") as Record<string, unknown>;
+    const response = handler.response as { set: Record<string, string[]> };
 
-    expect(handler.headers?.response?.set?.["Access-Control-Allow-Origin"]).toEqual([
-      "https://example.com",
-    ]);
-    expect(handler.headers?.response?.set?.["Content-Security-Policy"]).toEqual([
+    expect(response.set["Access-Control-Allow-Origin"]).toEqual(["https://example.com"]);
+    expect(response.set["Content-Security-Policy"]).toEqual([
       "frame-ancestors https://example.com",
     ]);
   });
 
   test("includes CORS headers", () => {
-    const handler = buildIframeHeadersHandler();
+    const handler = buildIframeHeadersHandler() as Record<string, unknown>;
+    const response = handler.response as { set: Record<string, string[]> };
 
-    expect(handler.headers?.response?.set?.["Access-Control-Allow-Methods"]).toEqual([
+    expect(response.set["Access-Control-Allow-Methods"]).toEqual([
       "GET",
       "POST",
       "PUT",
       "DELETE",
       "OPTIONS",
     ]);
-    expect(handler.headers?.response?.set?.["Access-Control-Allow-Headers"]).toEqual([
-      "Content-Type",
-      "Authorization",
-    ]);
+    expect(response.set["Access-Control-Allow-Headers"]).toEqual(["Content-Type", "Authorization"]);
   });
 });
 
@@ -673,5 +702,201 @@ describe("buildReverseProxyHandler with TLS", () => {
     });
 
     expect((handler.transport as { tls: { ca: string } }).tls.ca).toBe("/etc/certs/ca.pem");
+  });
+
+  test("includes deleteResponseHeaders", () => {
+    const handler = buildReverseProxyHandler("127.0.0.1:3000", {
+      deleteResponseHeaders: ["Content-Security-Policy", "X-Frame-Options"],
+    });
+
+    expect(handler.handler).toBe("reverse_proxy");
+    expect(handler.headers).toEqual({
+      response: {
+        delete: ["Content-Security-Policy", "X-Frame-Options"],
+      },
+    });
+  });
+
+  test("does not include headers when deleteResponseHeaders is empty", () => {
+    const handler = buildReverseProxyHandler("127.0.0.1:3000", {
+      deleteResponseHeaders: [],
+    });
+
+    expect(handler.headers).toBeUndefined();
+  });
+});
+
+describe("buildServiceRoutes with X-ASD headers", () => {
+  test("passes ingress tag to host and path routes", () => {
+    const routes = buildServiceRoutes({
+      host: "api.localhost",
+      path: "/api",
+      dial: "127.0.0.1:3000",
+      ingressTag: "local-caddy",
+    });
+
+    // Should have 4 routes: 2 health checks + 2 service routes
+    expect(routes.length).toBe(4);
+
+    // Health check routes should have ingress tag handler
+    const healthRoute = routes[0];
+    const ingressHandler = healthRoute.handle[0] as Record<string, unknown>;
+    expect(ingressHandler.handler).toBe("headers");
+    const response = ingressHandler.response as { set: Record<string, string[]> };
+    expect(response.set["X-ASD-Ingress"]).toEqual(["local-caddy"]);
+
+    // Host service route should have ingress tag handler
+    const hostRoute = routes[1];
+    const hostIngress = hostRoute.handle[0] as Record<string, unknown>;
+    expect(hostIngress.handler).toBe("headers");
+    const hostResponse = hostIngress.response as { set: Record<string, string[]> };
+    expect(hostResponse.set["X-ASD-Ingress"]).toEqual(["local-caddy"]);
+  });
+
+  test("passes iframe origin to service routes", () => {
+    const routes = buildServiceRoutes({
+      host: "api.localhost",
+      dial: "127.0.0.1:3000",
+      enablePathRoute: false,
+      iframeOrigin: "https://dashboard.asd.engineer",
+    });
+
+    const hostRoute = routes[1]; // Second route is the service route
+    // Should have ingress (none) + iframe + reverse_proxy handlers
+    // Find iframe handler
+    const iframeHandler = hostRoute.handle.find((h) => {
+      const hr = h as Record<string, unknown>;
+      const resp = hr.response as { set?: Record<string, string[]> } | undefined;
+      return resp?.set?.["Content-Security-Policy"] !== undefined;
+    }) as Record<string, unknown>;
+
+    expect(iframeHandler).toBeDefined();
+    const iframeResp = iframeHandler.response as { set: Record<string, string[]> };
+    expect(iframeResp.set["Access-Control-Allow-Origin"]).toEqual([
+      "https://dashboard.asd.engineer",
+    ]);
+  });
+
+  test("passes service metadata to routes", () => {
+    const routes = buildServiceRoutes({
+      host: "api.localhost",
+      dial: "127.0.0.1:3000",
+      enablePathRoute: false,
+      serviceId: "my-api",
+      serviceType: "api",
+    });
+
+    const hostRoute = routes[1];
+    // Find metadata handler
+    const metadataHandler = hostRoute.handle.find((h) => {
+      const hr = h as Record<string, unknown>;
+      const resp = hr.response as { set?: Record<string, string[]> } | undefined;
+      return resp?.set?.["X-ASD-Service-ID"] !== undefined;
+    }) as Record<string, unknown>;
+
+    expect(metadataHandler).toBeDefined();
+    const metaResp = metadataHandler.response as { set: Record<string, string[]> };
+    expect(metaResp.set["X-ASD-Service-ID"]).toEqual(["my-api"]);
+    expect(metaResp.set["X-ASD-Service-Type"]).toEqual(["api"]);
+  });
+
+  test("passes deleteResponseHeaders to reverse proxy", () => {
+    const routes = buildServiceRoutes({
+      host: "api.localhost",
+      dial: "127.0.0.1:3000",
+      enablePathRoute: false,
+      deleteResponseHeaders: ["Content-Security-Policy"],
+    });
+
+    const hostRoute = routes[1];
+    const proxyHandler = hostRoute.handle.find((h) => h.handler === "reverse_proxy");
+    expect(proxyHandler?.headers).toEqual({
+      response: {
+        delete: ["Content-Security-Policy"],
+      },
+    });
+  });
+});
+
+describe("buildServiceRoutes with selective auth", () => {
+  test("applies auth to all route types by default", () => {
+    const routes = buildServiceRoutes({
+      host: "api.localhost",
+      path: "/api",
+      dial: "127.0.0.1:3000",
+      basicAuth: {
+        enabled: true,
+        username: "admin",
+        passwordHash: "$2y$10$...",
+      },
+    });
+
+    // Host route should have auth
+    const hostRoute = routes[1];
+    expect(hostRoute.handle.some((h) => h.handler === "authentication")).toBe(true);
+
+    // Path route should have auth
+    const pathRoute = routes[3];
+    expect(pathRoute.handle.some((h) => h.handler === "authentication")).toBe(true);
+  });
+
+  test("applies auth only to host routes when routes=['host']", () => {
+    const routes = buildServiceRoutes({
+      host: "api.localhost",
+      path: "/api",
+      dial: "127.0.0.1:3000",
+      basicAuth: {
+        enabled: true,
+        username: "admin",
+        passwordHash: "$2y$10$...",
+        routes: ["host"],
+      },
+    });
+
+    // Host route should have auth
+    const hostRoute = routes[1];
+    expect(hostRoute.handle.some((h) => h.handler === "authentication")).toBe(true);
+
+    // Path route should NOT have auth
+    const pathRoute = routes[3];
+    expect(pathRoute.handle.some((h) => h.handler === "authentication")).toBe(false);
+  });
+
+  test("applies tunnel auth on tunnel domains", () => {
+    const routes = buildServiceRoutes({
+      host: "api.localhost",
+      dial: "127.0.0.1:3000",
+      enablePathRoute: false,
+      isTunnelDomain: true,
+      basicAuth: {
+        enabled: true,
+        username: "admin",
+        passwordHash: "$2y$10$...",
+        routes: ["tunnel"],
+      },
+    });
+
+    // Host route on tunnel domain should have auth (because routes includes "tunnel")
+    const hostRoute = routes[1];
+    expect(hostRoute.handle.some((h) => h.handler === "authentication")).toBe(true);
+  });
+
+  test("skips auth on tunnel domains when routes=['host']", () => {
+    const routes = buildServiceRoutes({
+      host: "api.localhost",
+      dial: "127.0.0.1:3000",
+      enablePathRoute: false,
+      isTunnelDomain: true,
+      basicAuth: {
+        enabled: true,
+        username: "admin",
+        passwordHash: "$2y$10$...",
+        routes: ["host"],
+      },
+    });
+
+    // Host route on tunnel domain should NOT have auth (routes only includes "host", not "tunnel")
+    const hostRoute = routes[1];
+    expect(hostRoute.handle.some((h) => h.handler === "authentication")).toBe(false);
   });
 });

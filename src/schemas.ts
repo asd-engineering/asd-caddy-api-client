@@ -340,6 +340,7 @@ export const BasicAuthOptionsSchema = z.object({
   username: z.string().min(1).optional(),
   passwordHash: z.string().min(1).optional(),
   realm: z.string().optional(),
+  routes: z.array(z.enum(["host", "path", "tunnel"])).optional(),
 });
 
 /**
@@ -357,6 +358,11 @@ export const ServiceRouteOptionsSchema = z.object({
   priority: z.number().int().optional().default(50),
   securityHeaders: SecurityHeadersSchema.optional(),
   basicAuth: BasicAuthOptionsSchema.optional(),
+  ingressTag: z.string().nullable().optional(),
+  iframeOrigin: z.string().nullable().optional(),
+  deleteResponseHeaders: z.array(z.string()).optional(),
+  serviceType: z.string().optional(),
+  isTunnelDomain: z.boolean().optional().default(false),
 });
 
 /**
@@ -366,6 +372,7 @@ export const HealthCheckRouteOptionsSchema = z.object({
   host: z.string().min(1),
   serviceId: z.string().min(1),
   priority: z.number().int().optional(),
+  ingressTag: z.string().nullable().optional(),
 });
 
 /**
@@ -377,6 +384,11 @@ export const HostRouteOptionsSchema = z.object({
   securityHeaders: SecurityHeadersSchema.optional(),
   basicAuth: BasicAuthOptionsSchema.optional(),
   priority: z.number().int().optional(),
+  ingressTag: z.string().nullable().optional(),
+  iframeOrigin: z.string().nullable().optional(),
+  deleteResponseHeaders: z.array(z.string()).optional(),
+  serviceId: z.string().optional(),
+  serviceType: z.string().optional(),
 });
 
 /**
@@ -390,6 +402,11 @@ export const PathRouteOptionsSchema = z.object({
   securityHeaders: SecurityHeadersSchema.optional(),
   basicAuth: BasicAuthOptionsSchema.optional(),
   priority: z.number().int().optional(),
+  ingressTag: z.string().nullable().optional(),
+  iframeOrigin: z.string().nullable().optional(),
+  deleteResponseHeaders: z.array(z.string()).optional(),
+  serviceId: z.string().optional(),
+  serviceType: z.string().optional(),
 });
 
 /**
