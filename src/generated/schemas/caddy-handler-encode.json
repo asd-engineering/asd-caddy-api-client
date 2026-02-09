@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://asd-engineering.github.io/asd-caddy-api-client/schemas/caddy-handler-encode.json",
+  "title": "Caddy Handler Encode",
+  "description": "Caddy encode/compression handler configuration",
+  "$ref": "#/definitions/caddy-handler-encode",
+  "definitions": {
+    "caddy-handler-encode": {
+      "type": "object",
+      "properties": {
+        "handler": {
+          "type": "string",
+          "const": "encode"
+        },
+        "encodings": {
+          "type": "object",
+          "properties": {
+            "gzip": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": true
+            },
+            "zstd": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": true
+            },
+            "br": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "prefer": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "minimum_length": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": ["handler"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -29,7 +29,7 @@ export const middlewareHandlerSchema = z.any();
 
 export const responseMatcherSchema = z.object({
   status_code: z.array(z.number()).optional(),
-  headers: z.any().optional(),
+  headers: z.record(z.string(), z.array(z.string())).optional(),
 });
 
 export const weakStringSchema = z.string();
@@ -72,18 +72,18 @@ export const stringArraySchema = z.array(z.string());
 export const extraLogFieldsSchema = z.object({});
 
 export const loggableHttpRequestSchema = z.object({
-  Request: z.any().optional(),
+  Request: z.unknown().optional(),
   ShouldLogCredentials: z.boolean(),
 });
 
 export const loggableHttpHeaderSchema = z.object({
-  Header: z.any(),
+  Header: z.record(z.string(), z.array(z.string())),
   ShouldLogCredentials: z.boolean(),
 });
 
 export const loggableStringArraySchema = z.array(z.string());
 
-export const loggableTlsConnStateSchema = z.any();
+export const loggableTlsConnStateSchema = z.unknown();
 
 export const matchHostSchema = z.array(z.string());
 
@@ -96,9 +96,9 @@ export const matchRegexpSchema = z.object({
 
 export const matchMethodSchema = z.array(z.string());
 
-export const matchQuerySchema = z.any();
+export const matchQuerySchema = z.record(z.string(), z.array(z.string()));
 
-export const matchHeaderSchema = z.any();
+export const matchHeaderSchema = z.record(z.string(), z.array(z.string()));
 
 export const matchHeaderReSchema = z.record(
   z.string(),
@@ -114,10 +114,10 @@ export const matchTlsSchema = z.object({
 export const matchNotSchema = z.object({});
 
 export const responseWriterWrapperSchema = z.object({
-  ResponseWriter: z.any(),
+  ResponseWriter: z.unknown(),
 });
 
-export const responseRecorderSchema = z.any();
+export const responseRecorderSchema = z.unknown();
 
 export const shouldBufferFuncSchema = z.any();
 
@@ -141,7 +141,7 @@ export const staticErrorSchema = z.object({
 
 export const staticResponseSchema = z.object({
   status_code: weakStringSchema.optional(),
-  headers: z.any().optional(),
+  headers: z.record(z.string(), z.array(z.string())).optional(),
   body: z.string().optional(),
   close: z.boolean().optional(),
   abort: z.boolean().optional(),
@@ -157,7 +157,7 @@ const durationSchema = z.any();
 
 const moduleMapSchema = z.any();
 
-const tlsConnectionPolicySchema = z.any();
+const connectionPoliciesSchema = z.any();
 
 export const matchPathReSchema = z.object({
   MatchRegexp: matchRegexpSchema,
@@ -198,7 +198,7 @@ export const serverSchema = z.object({
   routes: routeListSchema.optional(),
   errors: httpErrorConfigSchema.optional(),
   named_routes: z.record(z.string(), z.union([routeSchema, z.undefined()])).optional(),
-  tls_connection_policies: z.array(tlsConnectionPolicySchema).optional(),
+  tls_connection_policies: connectionPoliciesSchema.optional(),
   automatic_https: autoHttpsConfigSchema.optional(),
   strict_sni_host: z.boolean().optional(),
   trusted_proxies: z.unknown().optional(),

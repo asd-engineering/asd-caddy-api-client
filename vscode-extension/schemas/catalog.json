@@ -1,0 +1,109 @@
+{
+  "schemas": [
+    {
+      "name": "caddy-route",
+      "description": "Caddy HTTP route configuration",
+      "url": "./caddy-route.json",
+      "fileMatch": ["**/caddy-route.json", "**/*.caddy-route.json"]
+    },
+    {
+      "name": "caddy-route-matcher",
+      "description": "Caddy route matcher (host, path, method, etc.)",
+      "url": "./caddy-route-matcher.json"
+    },
+    {
+      "name": "caddy-handler",
+      "description": "Caddy HTTP handler (reverse_proxy, headers, etc.)",
+      "url": "./caddy-handler.json"
+    },
+    {
+      "name": "caddy-handler-reverse-proxy",
+      "description": "Caddy reverse proxy handler configuration",
+      "url": "./caddy-handler-reverse-proxy.json"
+    },
+    {
+      "name": "caddy-handler-headers",
+      "description": "Caddy headers handler configuration",
+      "url": "./caddy-handler-headers.json"
+    },
+    {
+      "name": "caddy-handler-static-response",
+      "description": "Caddy static response handler configuration",
+      "url": "./caddy-handler-static-response.json"
+    },
+    {
+      "name": "caddy-handler-encode",
+      "description": "Caddy encode/compression handler configuration",
+      "url": "./caddy-handler-encode.json"
+    },
+    {
+      "name": "caddy-handler-rewrite",
+      "description": "Caddy rewrite handler configuration",
+      "url": "./caddy-handler-rewrite.json"
+    },
+    {
+      "name": "caddy-handler-authentication",
+      "description": "Caddy authentication handler configuration",
+      "url": "./caddy-handler-authentication.json"
+    },
+    {
+      "name": "caddy-security-authenticator",
+      "description": "caddy-security authenticator portal handler",
+      "url": "./caddy-security-authenticator.json"
+    },
+    {
+      "name": "caddy-security-authorization",
+      "description": "caddy-security authorization handler",
+      "url": "./caddy-security-authorization.json"
+    },
+    {
+      "name": "caddy-security-local-store",
+      "description": "caddy-security local identity store configuration",
+      "url": "./caddy-security-local-store.json"
+    },
+    {
+      "name": "caddy-security-ldap-store",
+      "description": "caddy-security LDAP identity store configuration",
+      "url": "./caddy-security-ldap-store.json"
+    },
+    {
+      "name": "caddy-security-oauth2-provider",
+      "description": "caddy-security OAuth2 identity provider configuration",
+      "url": "./caddy-security-oauth2-provider.json"
+    },
+    {
+      "name": "caddy-security-oidc-provider",
+      "description": "caddy-security OIDC identity provider configuration",
+      "url": "./caddy-security-oidc-provider.json"
+    },
+    {
+      "name": "caddy-security-identity-store",
+      "description": "caddy-security identity store (local, LDAP, OAuth2, OIDC)",
+      "url": "./caddy-security-identity-store.json"
+    },
+    {
+      "name": "caddy-security-portal",
+      "description": "caddy-security authentication portal configuration",
+      "url": "./caddy-security-portal.json",
+      "fileMatch": ["**/.caddy-security-portal.json", "**/caddy-security-portal.json"]
+    },
+    {
+      "name": "caddy-security-policy",
+      "description": "caddy-security authorization policy (gatekeeper) configuration",
+      "url": "./caddy-security-policy.json",
+      "fileMatch": ["**/.caddy-security-policy.json", "**/caddy-security-policy.json"]
+    },
+    {
+      "name": "caddy-security-config",
+      "description": "caddy-security configuration (portals, policies, identity stores)",
+      "url": "./caddy-security-config.json",
+      "fileMatch": ["**/.caddy-security.json", "**/caddy-security.json"]
+    },
+    {
+      "name": "caddy-security-app",
+      "description": "Complete caddy-security app configuration for /config/apps/security",
+      "url": "./caddy-security-app.json",
+      "fileMatch": ["**/security-app.json"]
+    }
+  ]
+}

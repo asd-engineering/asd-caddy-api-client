@@ -2,14 +2,14 @@
 import { z } from "zod";
 
 export const mappingSchema = z.object({
-    input: z.string().optional(),
-    input_regexp: z.string().optional(),
-    outputs: z.array(z.any()).optional()
+  input: z.string().optional(),
+  input_regexp: z.string().optional(),
+  outputs: z.array(z.any()).optional(),
 });
 
 export const handlerSchema = z.object({
-    source: z.string().optional(),
-    destinations: z.array(z.string()).optional(),
-    mappings: z.array(mappingSchema).optional(),
-    defaults: z.array(z.string()).optional()
+  source: z.string().optional(),
+  destinations: z.array(z.string()).optional(),
+  mappings: z.array(mappingSchema).optional(),
+  defaults: z.array(z.string()).optional(),
 });

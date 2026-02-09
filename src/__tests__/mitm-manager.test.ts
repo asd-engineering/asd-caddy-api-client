@@ -2,7 +2,11 @@
  * Tests for MitmproxyManager
  */
 import { describe, test, expect, vi, beforeEach } from "vitest";
-import { MitmproxyManager, type MitmproxyInstance, type ServiceRegistration } from "../mitm/manager.js";
+import {
+  MitmproxyManager,
+  type MitmproxyInstance,
+  type ServiceRegistration,
+} from "../mitm/manager.js";
 import type { CaddyClient } from "../caddy/client.js";
 
 // Mock CaddyClient

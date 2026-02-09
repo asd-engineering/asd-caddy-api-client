@@ -3,6 +3,23 @@
  */
 
 // ============================================================================
+// Plugin Handler Types (re-exported for discriminated union)
+// ============================================================================
+
+// caddy-security plugin handlers
+import type {
+  SecurityAuthenticatorHandler,
+  SecurityAuthorizationHandler,
+  SecurityAuthorizerProvider,
+} from "./plugins/caddy-security/types.js";
+
+export type {
+  SecurityAuthenticatorHandler,
+  SecurityAuthorizationHandler,
+  SecurityAuthorizerProvider,
+};
+
+// ============================================================================
 // Basic Types
 // ============================================================================
 
@@ -219,12 +236,22 @@ export interface GenericHandler {
 }
 
 /**
- * Caddy route handler - discriminated union of all 20 known handlers with generic fallback
+ * Caddy route handler - discriminated union of all known handlers with generic fallback
  *
  * Known handlers get strict type checking. Unknown handlers (custom plugins)
  * use GenericHandler which allows any properties for extensibility.
+ *
+ * ## Core Handlers (20)
+ * Built-in Caddy HTTP handlers generated from Go source.
+ *
+ * ## Plugin Handlers
+ * - **caddy-security**: SecurityAuthenticatorHandler (portal), SecurityAuthorizationHandler (uses core authentication handler)
+ *
+ * Note: SecurityAuthorizationHandler uses Caddy's built-in `authentication` handler with the
+ * caddy-security `authorizer` provider. It's a type alias, not in the union (same discriminator).
  */
 export type CaddyRouteHandler =
+  // Core Caddy handlers
   | ReverseProxyHandler
   | HeadersHandler
   | StaticResponseHandler
@@ -245,6 +272,13 @@ export type CaddyRouteHandler =
   | ErrorHandler
   | CopyResponseHandler
   | CopyResponseHeadersHandler
+  // Plugin handlers (caddy-security)
+  // SecurityAuthenticatorHandler: Portal handler with handler: "authenticator"
+  // Note: SecurityAuthorizationHandler uses handler: "authentication" which is
+  // Caddy's core authentication handler with the "authorizer" provider configured.
+  // It's not in the union since it shares the same discriminator as AuthenticationHandler.
+  | SecurityAuthenticatorHandler
+  // Generic fallback for unknown handlers
   | GenericHandler;
 
 // Handler types for new handlers (minimal interfaces for backwards compatibility)
@@ -656,6 +690,35 @@ export interface ServiceRouteOptions {
    * Basic authentication configuration
    */
   basicAuth?: BasicAuthOptions;
+
+  /**
+   * Ingress tag value for X-ASD-Ingress header
+   * Set to null to explicitly disable
+   */
+  ingressTag?: string | null;
+
+  /**
+   * Origin for iframe embedding headers (CORS + CSP)
+   * Set to null to explicitly disable
+   */
+  iframeOrigin?: string | null;
+
+  /**
+   * Response headers to delete from reverse proxy response
+   * (e.g., ["Content-Security-Policy"] for iframe support)
+   */
+  deleteResponseHeaders?: string[];
+
+  /**
+   * Service type for X-ASD-Service-Type header
+   */
+  serviceType?: string;
+
+  /**
+   * Whether this is a tunnel domain route
+   * Used for selective auth (tunnel vs host route type)
+   */
+  isTunnelDomain?: boolean;
 }
 
 /**
@@ -685,6 +748,8 @@ export interface BasicAuthOptions {
     algorithm?: "bcrypt";
     cost?: number;
   };
+  /** Which route types should have auth applied (default: all) */
+  routes?: ("host" | "path" | "tunnel")[];
 }
 
 /**
@@ -694,6 +759,8 @@ export interface HealthCheckRouteOptions {
   host: string;
   serviceId: string;
   priority?: number;
+  /** Ingress tag value for X-ASD-Ingress header */
+  ingressTag?: string | null;
 }
 
 /**
@@ -705,6 +772,16 @@ export interface HostRouteOptions {
   securityHeaders?: SecurityHeaders;
   basicAuth?: BasicAuthOptions;
   priority?: number;
+  /** Ingress tag value for X-ASD-Ingress header */
+  ingressTag?: string | null;
+  /** Origin for iframe embedding headers */
+  iframeOrigin?: string | null;
+  /** Response headers to delete from reverse proxy */
+  deleteResponseHeaders?: string[];
+  /** Service ID for X-ASD-Service-ID header */
+  serviceId?: string;
+  /** Service type for X-ASD-Service-Type header */
+  serviceType?: string;
 }
 
 /**
@@ -718,6 +795,16 @@ export interface PathRouteOptions {
   securityHeaders?: SecurityHeaders;
   basicAuth?: BasicAuthOptions;
   priority?: number;
+  /** Ingress tag value for X-ASD-Ingress header */
+  ingressTag?: string | null;
+  /** Origin for iframe embedding headers */
+  iframeOrigin?: string | null;
+  /** Response headers to delete from reverse proxy */
+  deleteResponseHeaders?: string[];
+  /** Service ID for X-ASD-Service-ID header */
+  serviceId?: string;
+  /** Service type for X-ASD-Service-Type header */
+  serviceType?: string;
 }
 
 /**

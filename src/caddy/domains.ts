@@ -18,7 +18,7 @@ import {
 } from "../schemas.js";
 import { CaddyClient } from "./client.js";
 import { DomainNotFoundError, DomainAlreadyExistsError } from "../errors.js";
-import { validateOrThrow } from "../utils/validation.js";
+import { validateOrThrow, validateFilePath } from "../utils/validation.js";
 import {
   extractSerialNumber,
   generateCertTag,
@@ -293,17 +293,21 @@ export async function addDomainWithTls(options: AddDomainWithTlsOptions): Promis
   config.apps.tls.certificates ??= { load_files: [] };
   config.apps.tls.certificates.load_files ??= [];
 
+  // Validate certificate and key file paths to prevent path traversal attacks
+  const safeCertFile = validateFilePath(validated.certFile);
+  const safeKeyFile = validateFilePath(validated.keyFile);
+
   // Read certificate to extract serial number for tagging
   const fs = await import("fs/promises");
-  const certPem = await fs.readFile(validated.certFile, "utf-8");
+  const certPem = await fs.readFile(safeCertFile, "utf-8");
   const certBlocks = splitCertificateBundle(certPem);
   const mainCert = certBlocks[0]; // Use first cert in chain
   const serialNumber = extractSerialNumber(mainCert);
   const certTag = generateCertTag(validated.domain, serialNumber);
 
   config.apps.tls.certificates.load_files.push({
-    certificate: validated.certFile,
-    key: validated.keyFile,
+    certificate: safeCertFile,
+    key: safeKeyFile,
     tags: [certTag, "manual"],
   });
 
@@ -612,6 +616,11 @@ export async function rotateCertificate(
   adminUrl?: string
 ): Promise<string> {
   const validatedDomain = validateOrThrow(DomainSchema, domain, "domain");
+
+  // Validate certificate and key file paths to prevent path traversal attacks
+  const safeCertFile = validateFilePath(newCertFile);
+  const safeKeyFile = validateFilePath(newKeyFile);
+
   const client = new CaddyClient({ adminUrl });
 
   // Check if domain exists
@@ -637,7 +646,7 @@ export async function rotateCertificate(
 
   // Read new certificate to extract serial number
   const fs = await import("fs/promises");
-  const certPem = await fs.readFile(newCertFile, "utf-8");
+  const certPem = await fs.readFile(safeCertFile, "utf-8");
   const certBlocks = splitCertificateBundle(certPem);
   const mainCert = certBlocks[0];
   const serialNumber = extractSerialNumber(mainCert);
@@ -654,8 +663,8 @@ export async function rotateCertificate(
 
   // Add new certificate
   tlsConfig.apps.tls.certificates.load_files.push({
-    certificate: newCertFile,
-    key: newKeyFile,
+    certificate: safeCertFile,
+    key: safeKeyFile,
     tags: [newCertTag, "manual"],
   });
 

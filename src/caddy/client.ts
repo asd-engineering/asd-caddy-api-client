@@ -207,6 +207,8 @@ export class CaddyClient {
    * Add multiple routes to a server (convenience method to avoid loops)
    * This method adds routes one at a time and handles idempotency for each.
    *
+   * Performance: Fetches existing routes once and caches them to avoid N+1 API calls.
+   *
    * @param server - Server name
    * @param routes - Array of routes to add
    * @returns Object with counts of added and skipped routes
@@ -227,13 +229,36 @@ export class CaddyClient {
     let added = 0;
     let skipped = 0;
 
+    // Fetch existing routes ONCE to avoid N+1 API calls
+    let existingRoutes: CaddyRoute[] = [];
+    try {
+      existingRoutes = await this.getRoutes(server);
+    } catch {
+      // If we can't get routes, assume none exist (server might not exist yet)
+    }
+
+    const escapedServer = this.escapeServerName(server);
+
     for (const route of routes) {
-      const wasAdded = await this.addRoute(server, route);
-      if (wasAdded) {
-        added++;
-      } else {
+      // Validate route
+      validateOrThrow(CaddyRouteSchema, route, "route");
+
+      // Check if route already exists (idempotency) using cached routes
+      const routeMatch = route.match?.[0];
+      if (routeMatch && this.routeExists(existingRoutes, routeMatch)) {
         skipped++;
+        continue;
       }
+
+      // Add route
+      await this.request(`/config/apps/http/servers/${escapedServer}/routes`, {
+        method: "POST",
+        body: JSON.stringify(route),
+      });
+
+      // Add to cached routes for subsequent idempotency checks
+      existingRoutes.push(route);
+      added++;
     }
 
     return { added, skipped };

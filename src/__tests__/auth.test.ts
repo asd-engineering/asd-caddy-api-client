@@ -48,20 +48,9 @@ describe("verifyPassword", () => {
 });
 
 describe("hashPasswordWithCaddy", () => {
-  test("throws error when caddy CLI is not available", async () => {
-    await expect(hashPasswordWithCaddy("test-password")).rejects.toThrow(
-      /Failed to hash password with Caddy CLI/
-    );
-  });
-
-  test("error message includes alternative instructions", async () => {
-    try {
-      await hashPasswordWithCaddy("test-password");
-    } catch (error) {
-      const message = (error as Error).message;
-      expect(message).toContain("Use hashPassword()");
-      expect(message).toContain("caddy hash-password");
-    }
+  test("returns a bcrypt hash using caddy CLI", async () => {
+    const hash = await hashPasswordWithCaddy("test-password");
+    expect(hash).toMatch(/^\$2[aby]?\$/);
   });
 });
 
@@ -86,10 +75,9 @@ describe("createBasicAuthAccount", () => {
   });
 
   test("accepts useCaddyCLI option", async () => {
-    // This should fail because caddy CLI is not available in test env
-    await expect(
-      createBasicAuthAccount("admin", "secret123", { useCaddyCLI: true })
-    ).rejects.toThrow(/Failed to hash password with Caddy CLI/);
+    const account = await createBasicAuthAccount("admin", "secret123", { useCaddyCLI: true });
+    expect(account).toHaveProperty("username", "admin");
+    expect(account.password).toMatch(/^\$2[aby]?\$/);
   });
 });
 
@@ -118,10 +106,11 @@ describe("createBasicAuthAccounts", () => {
   });
 
   test("uses caddy CLI when specified", async () => {
-    await expect(
-      createBasicAuthAccounts([{ username: "admin", password: "pass" }], {
-        useCaddyCLI: true,
-      })
-    ).rejects.toThrow(/Failed to hash password with Caddy CLI/);
+    const accounts = await createBasicAuthAccounts([{ username: "admin", password: "pass" }], {
+      useCaddyCLI: true,
+    });
+    expect(accounts).toHaveLength(1);
+    expect(accounts[0]).toHaveProperty("username", "admin");
+    expect(accounts[0].password).toMatch(/^\$2[aby]?\$/);
   });
 });

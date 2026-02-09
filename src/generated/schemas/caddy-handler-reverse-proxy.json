@@ -1,0 +1,306 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://asd-engineering.github.io/asd-caddy-api-client/schemas/caddy-handler-reverse-proxy.json",
+  "title": "Caddy Handler Reverse Proxy",
+  "description": "Caddy reverse proxy handler configuration",
+  "$ref": "#/definitions/caddy-handler-reverse-proxy",
+  "definitions": {
+    "caddy-handler-reverse-proxy": {
+      "type": "object",
+      "properties": {
+        "handler": {
+          "type": "string",
+          "const": "reverse_proxy"
+        },
+        "upstreams": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "dial": {
+                "type": "string",
+                "minLength": 1
+              },
+              "max_requests": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": ["dial"],
+            "additionalProperties": false
+          }
+        },
+        "load_balancing": {
+          "type": "object",
+          "properties": {
+            "selection_policy": {
+              "type": "object",
+              "properties": {
+                "policy": {
+                  "type": "string",
+                  "enum": [
+                    "first",
+                    "random",
+                    "least_conn",
+                    "round_robin",
+                    "ip_hash",
+                    "uri_hash",
+                    "header",
+                    "cookie"
+                  ]
+                }
+              },
+              "required": ["policy"],
+              "additionalProperties": true
+            },
+            "retries": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "try_duration": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+                }
+              ]
+            },
+            "try_interval": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "health_checks": {
+          "type": "object",
+          "properties": {
+            "active": {
+              "type": "object",
+              "properties": {
+                "uri": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "port": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 65535
+                },
+                "headers": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "follow_redirects": {
+                  "type": "boolean"
+                },
+                "interval": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+                    }
+                  ]
+                },
+                "timeout": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+                    }
+                  ]
+                },
+                "passes": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "fails": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "max_size": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "expect_status": {
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 599
+                },
+                "expect_body": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "passive": {
+              "type": "object",
+              "properties": {
+                "fail_duration": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+                    }
+                  ]
+                },
+                "max_fails": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "unhealthy_request_count": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "unhealthy_status": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 599
+                  }
+                },
+                "unhealthy_latency": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "transport": {
+          "type": "object",
+          "properties": {
+            "protocol": {
+              "type": "string"
+            }
+          },
+          "required": ["protocol"],
+          "additionalProperties": true
+        },
+        "flush_interval": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+            }
+          ]
+        },
+        "request_buffers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "response_buffers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "headers": {
+          "type": "object",
+          "properties": {
+            "request": {
+              "type": "object",
+              "properties": {
+                "add": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "set": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "delete": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "response": {
+              "type": "object",
+              "properties": {
+                "add": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "set": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "delete": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["handler"],
+      "additionalProperties": false
+    }
+  }
+}

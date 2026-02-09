@@ -1,0 +1,25 @@
+{
+  "@id": "api-route",
+  "match": [
+    {
+      "host": ["api.example.com"],
+      "path": ["/v1/*"],
+      "method": ["GET", "POST"]
+    }
+  ],
+  "handle": [
+    {
+      "handler": "headers",
+      "response": {
+        "set": {
+          "X-API-Version": ["1.0"]
+        }
+      }
+    },
+    {
+      "handler": "reverse_proxy",
+      "upstreams": [{ "dial": "localhost:3000" }, { "dial": "localhost:3001" }]
+    }
+  ],
+  "terminal": true
+}

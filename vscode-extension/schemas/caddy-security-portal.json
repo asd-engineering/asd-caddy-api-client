@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://asd-engineering.github.io/asd-caddy-api-client/schemas/caddy-security-portal.json",
+  "title": "Caddy Security Portal",
+  "description": "caddy-security authentication portal configuration",
+  "$ref": "#/definitions/caddy-security-portal",
+  "definitions": {
+    "caddy-security-portal": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "ui": {
+          "type": "object",
+          "properties": {
+            "theme": {
+              "type": "string"
+            },
+            "logo_url": {
+              "type": "string"
+            },
+            "custom_css": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "cookie": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "lifetime": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "identity_stores": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "identity_providers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "transform_user": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    }
+  }
+}

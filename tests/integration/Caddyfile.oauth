@@ -1,0 +1,66 @@
+# Caddyfile for OAuth integration testing with mock-oauth2-server
+# Uses caddy-security plugin for authentication
+
+{
+    admin :2019
+    debug
+
+    order authenticate before respond
+    order authorize before basicauth
+
+    security {
+        oauth identity provider generic {
+            driver generic
+            realm generic
+            client_id {$OAUTH_CLIENT_ID:test-client}
+            client_secret {$OAUTH_CLIENT_SECRET:test-secret}
+            scopes openid email profile
+            base_auth_url http://mock-oauth:9000/default
+            metadata_url http://mock-oauth:9000/default/.well-known/openid-configuration
+        }
+
+        authentication portal myportal {
+            crypto default token lifetime 3600
+            enable identity provider generic
+            cookie domain localhost
+            ui {
+                links {
+                    "My Identity" "/whoami" icon "las la-user"
+                }
+            }
+            transform user {
+                match realm generic
+                action add role authp/user
+            }
+        }
+
+        authorization policy mypolicy {
+            set auth url /auth
+            allow roles authp/admin authp/user
+        }
+    }
+}
+
+:80 {
+    route /auth* {
+        authenticate with myportal
+    }
+
+    route /whoami {
+        authorize with mypolicy
+        respond "Hello {http.request.header.X-Token-User-Email}" 200
+    }
+
+    route /protected* {
+        authorize with mypolicy
+        respond "Protected content accessed by {http.request.header.X-Token-User-Name}" 200
+    }
+
+    route /public* {
+        respond "Public content - no auth required" 200
+    }
+
+    route /health {
+        respond "OK" 200
+    }
+}

@@ -1,0 +1,55 @@
+# Caddyfile for SAML integration testing
+# Note: Standard Caddy without caddy-security plugin
+# Tests focus on Keycloak SAML IdP endpoints directly
+
+{
+    admin :2019
+    debug
+}
+
+:80 {
+    # Health check endpoint
+    route /health {
+        respond "OK" 200
+    }
+
+    # SAML callback endpoint (Assertion Consumer Service)
+    route /saml/acs {
+        respond "SAML ACS - Assertion received" 200
+    }
+
+    # SAML metadata endpoint
+    route /saml/metadata {
+        respond `<?xml version="1.0"?>
+<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="caddy-saml-sp">
+  <SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <AssertionConsumerService
+      Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+      Location="http://localhost:8080/saml/acs"
+      index="0"/>
+  </SPSSODescriptor>
+</EntityDescriptor>` 200 {
+            Content-Type application/xml
+        }
+    }
+
+    # Single Logout endpoint
+    route /saml/slo {
+        respond "SAML SLO - Logout processed" 200
+    }
+
+    # Protected endpoint
+    route /protected* {
+        respond "Protected content - requires SAML authentication" 200
+    }
+
+    # Public endpoint
+    route /public* {
+        respond "Public content - no auth required" 200
+    }
+
+    # Default
+    route {
+        respond "Caddy SAML Test Server" 200
+    }
+}

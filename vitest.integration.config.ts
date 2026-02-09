@@ -15,11 +15,12 @@ export default defineConfig({
     sequence: {
       concurrent: false,
     },
-    // Use single thread to avoid race conditions
-    pool: "forks",
+    // Use threads pool with single thread for sequential execution
+    pool: "threads",
     poolOptions: {
-      forks: {
-        singleFork: true,
+      threads: {
+        singleThread: true,
+        isolate: false,
       },
     },
     coverage: {

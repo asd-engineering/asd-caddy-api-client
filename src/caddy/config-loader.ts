@@ -20,6 +20,7 @@
 import { readFile } from "fs/promises";
 import { CaddyClient } from "./client.js";
 import type { Config } from "../caddy-types.js";
+import { validateFilePath } from "../utils/validation.js";
 
 /**
  * Valid Caddy configuration adapters
@@ -105,7 +106,9 @@ export async function loadConfig(
   adapter?: CaddyAdapter,
   options?: LoadConfigOptions
 ): Promise<Config & Record<string, unknown>> {
-  const content = await readFile(path, "utf-8");
+  // Validate path to prevent directory traversal attacks
+  const safePath = validateFilePath(path);
+  const content = await readFile(safePath, "utf-8");
   const detectedAdapter = adapter ?? detectAdapter(path);
   const client = new CaddyClient(options);
   return client.adapt(content, detectedAdapter);

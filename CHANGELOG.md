@@ -5,6 +5,107 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-11
+
+### Added
+
+- **Plugin Framework** - Infrastructure for integrating Caddy plugins with type-safe builders
+  - Plugin type generation pipeline: Go source → tygo → TypeScript → Zod
+  - Scripts: `npm run generate:plugin-types`, `npm run sync:plugins`
+  - Template for adding new plugins documented in DEPENDENCIES.md
+
+- **caddy-security Plugin** (`src/plugins/caddy-security/`) - First official plugin integration
+  - Types generated from Go source (`local/caddy-security` v1.1.31)
+  - `SecurityAuthenticatorHandler` - Portal handler (`handler: "authenticator"`)
+  - `SecurityAuthorizationHandler` - Token validation via authentication handler with authorizer provider
+  - Builder functions: `buildAuthenticatorHandler()`, `buildAuthorizationHandler()`
+  - Zod schemas for runtime validation
+  - Re-exports generated types from `src/generated/plugins/caddy-security.zod.ts`
+
+- **Plugin Type Generation Scripts**
+  - `scripts/generate-plugin-types.ts` - Generate TypeScript from plugin Go source
+  - `scripts/generate-caddy-types.ts` - Unified core type generation script
+  - Plugin modules array in `scripts/generate-zod-schemas.ts`
+
+- **Generated Plugin Files** (`src/generated/plugins/`)
+  - `caddy-security.ts` - TypeScript types from tygo
+  - `caddy-security.zod.ts` - Zod schemas from ts-to-zod
+
+- **Authcrunch Type Generation** - Full type coverage for go-authcrunch (caddy-security dependency)
+  - 22 authcrunch modules: core, authn, authz, oauth, saml, sso, acl, ids, idp, kms, etc.
+  - Cross-package type references automatically resolved
+  - Name conflict handling with type aliases (e.g., `Config as OauthConfig`)
+
+- **Cross-Reference Resolver** (`scripts/resolve-cross-refs.ts`)
+  - Resolves tygo's `any /* package.Type */` patterns to proper imports
+  - Maps Go stdlib types (error, time.Time, big.Int) to TypeScript equivalents
+  - Adds missing unexported Go types automatically
+  - Handles 130+ cross-package references
+
+- **AGENTS.md** - AI agent guidelines for type safety
+  - Strict `no-any` rule enforcement
+  - ESLint `@typescript-eslint/no-explicit-any` set to error
+
+- **VSCode Extension** (`vscode-extension/`) - `vscode-caddy-tools` v0.1.0
+  - JSON validation for `caddy.json`, `caddy-security.json` files
+  - TypeScript/JavaScript snippets for builder patterns
+  - IntelliSense: completion provider for handler types
+  - Hover documentation with links to Caddy docs
+  - Diagnostics provider for real-time validation
+  - Code lens for quick documentation access
+  - Route Configuration Wizard - interactive multi-step route builder
+  - Security Configuration Wizard - guided caddy-security setup
+  - 5 commands: `caddy.showHandlerDocs`, `caddy.insertRoute`, `caddy.insertSecurityConfig`, `caddy.runRouteWizard`, `caddy.runSecurityWizard`
+  - Settings: `caddy.enableHoverDocs`, `caddy.showCaddyDocsLinks`, `caddy.showCodeLens`, `caddy.enableDiagnostics`
+  - 22 Playwright tests for extension functionality
+
+- **Comprehensive Authentication Integration Tests** (`src/__tests__/playwright/`)
+  - OAuth flow tests with mock-oauth2-server (token lifecycle, multiple users, error scenarios)
+  - Keycloak OIDC tests (authorization code flow, token refresh, userinfo)
+  - LDAP identity store tests (OpenLDAP integration, group mapping)
+  - SAML flow tests (SimpleSAMLphp IdP)
+  - Authentik advanced tests (full OIDC provider)
+  - caddy-security portal tests (local auth, two-step login, session management)
+  - Security tests: token tampering detection, refresh token rotation, concurrent sessions, CSRF
+  - Claims injection tests with auth-echo backend (verifies caddy-security → backend header injection)
+
+- **Test Infrastructure** (`tests/integration/`)
+  - Docker Compose stacks for OAuth, Keycloak, LDAP, SAML, Authentik, caddy-security
+  - `auth-echo-server.js` - Auth-aware backend that decodes JWTs and returns claims
+  - Caddyfiles for each authentication scenario
+  - npm scripts: `test:oauth`, `test:keycloak`, `test:ldap`, `test:saml`, `test:authentik`, `test:caddy-security`, `test:auth:security`, `test:auth:claims`
+
+### Changed
+
+- **Type Generation Architecture** - Cleaner separation of generated vs hand-written code
+  - Generated types in `src/generated/` (auto-generated, do not edit)
+  - Hand-written builders in `src/plugins/` (high-level API)
+  - Plugin schemas re-export from generated with handler discriminators added
+
+- **Package Scripts**
+  - `generate:types` now uses `scripts/generate-caddy-types.ts`
+  - Added `generate:plugin-types` for plugin-specific generation
+  - Added `generate:all` to run both core and plugin generation
+  - Added `sync:plugins` to update plugin sources and regenerate
+
+### Fixed
+
+- **Missing Unexported Go Types** - Added `substrReplacer`, `regexReplacer`, `queryOps` to caddy-rewrite types
+  - These types are unexported in Go but referenced by exported types
+  - Post-processing script now injects missing type definitions
+
+- **VSCode Extension Snippet Naming** - Fixed OAuth/OIDC/LDAP snippet prefixes and descriptions
+  - Prefixes now correctly use `caddy-oauth2-provider` (not `caddy-o-auth2-provider`)
+  - Descriptions now use proper acronyms: "Build OAuth2 Provider" (not "Build O Auth2 Provider")
+  - Fixed double spaces in generated snippet descriptions
+
+- **Windows Build Compatibility** - VSCode extension now builds on Windows
+  - Replaced Unix `cp -r` with cross-platform `shx` in `vscode-extension/package.json`
+
+- **CI Schema Validation** - Added Ajv-based JSON schema validation tests
+  - `src/__tests__/generated-schemas.test.ts` now validates all 20 generated JSON schemas
+  - Tests ensure schemas stay in sync with Zod source definitions
+
 ## [0.3.0] - 2026-01-09
 
 ### Added
@@ -331,6 +432,7 @@ Full feature parity with [caddy-api-client](https://github.com/migetapp/caddy-ap
 - ✅ Rich error messages with context
 - ✅ 100% test coverage for route builders and schemas
 
+[0.4.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.3.1...v0.4.0
 [0.3.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.2.0...v0.2.2
 [0.2.0]: https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.1.0...v0.2.0

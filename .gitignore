@@ -144,3 +144,7 @@ local
 # Generated API documentation
 docs/api/
 workspace/
+
+# Playwright
+playwright-report/
+test-results/

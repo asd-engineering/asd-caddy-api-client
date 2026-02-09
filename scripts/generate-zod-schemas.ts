@@ -12,15 +12,14 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const GENERATED_DIR = join(__dirname, "../src/generated");
+const ROOT_DIR = join(__dirname, "..");
+const GENERATED_DIR = join(ROOT_DIR, "src/generated");
 
-// List of all modules to generate Zod schemas for
-const modules = [
-  // Core modules
+// List of all core modules to generate Zod schemas for
+const coreModules = [
   "caddy-core",
   "caddy-http",
   "caddy-tls",
-  // Handler modules
   "caddy-reverseproxy",
   "caddy-fileserver",
   "caddy-encode",
@@ -36,28 +35,48 @@ const modules = [
   "caddy-logging",
 ];
 
-console.log("Generating Zod schemas...");
+// Plugin modules (in src/generated/plugins/)
+const pluginModules = ["plugins/caddy-security"];
 
-for (const module of modules) {
-  const inputFile = join(GENERATED_DIR, `${module}.ts`);
-  const outputFile = join(GENERATED_DIR, `${module}.zod.ts`);
+function generateZodSchema(
+  relativeInput: string,
+  relativeOutput: string,
+  moduleName: string
+): boolean {
+  const absoluteInput = join(ROOT_DIR, relativeInput);
 
-  if (!existsSync(inputFile)) {
-    console.log(`  - Skipping ${module} (source not found)`);
-    continue;
+  if (!existsSync(absoluteInput)) {
+    console.log(`  - Skipping ${moduleName} (source not found)`);
+    return false;
   }
 
   try {
-    // Use execFileSync with npx for safety (no shell injection possible)
-    execFileSync(
-      "npx",
-      ["ts-to-zod", inputFile, outputFile, "--skipValidation"],
-      { stdio: "pipe" }
-    );
-    console.log(`  ✓ Generated ${module}.zod.ts`);
+    execFileSync("npx", ["ts-to-zod", relativeInput, relativeOutput, "--skipValidation"], {
+      cwd: ROOT_DIR,
+      stdio: "pipe",
+    });
+    console.log(`  ✓ Generated ${moduleName}.zod.ts`);
+    return true;
   } catch {
-    console.error(`  ✗ Failed to generate ${module}.zod.ts`);
+    console.error(`  ✗ Failed to generate ${moduleName}.zod.ts`);
+    return false;
   }
 }
 
-console.log("Done!");
+console.log("Generating Zod schemas...\n");
+
+console.log("Core Caddy modules:");
+for (const module of coreModules) {
+  const relativeInput = `src/generated/${module}.ts`;
+  const relativeOutput = `src/generated/${module}.zod.ts`;
+  generateZodSchema(relativeInput, relativeOutput, module);
+}
+
+console.log("\nPlugin modules:");
+for (const module of pluginModules) {
+  const relativeInput = `src/generated/${module}.ts`;
+  const relativeOutput = `src/generated/${module}.zod.ts`;
+  generateZodSchema(relativeInput, relativeOutput, module);
+}
+
+console.log("\nDone!");

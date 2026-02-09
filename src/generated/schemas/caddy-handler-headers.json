@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://asd-engineering.github.io/asd-caddy-api-client/schemas/caddy-handler-headers.json",
+  "title": "Caddy Handler Headers",
+  "description": "Caddy headers handler configuration",
+  "$ref": "#/definitions/caddy-handler-headers",
+  "definitions": {
+    "caddy-handler-headers": {
+      "type": "object",
+      "properties": {
+        "handler": {
+          "type": "string",
+          "const": "headers"
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "deferred": {
+              "type": "boolean"
+            },
+            "set": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "add": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "delete": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "type": "object",
+          "properties": {
+            "set": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "add": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "delete": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["handler"],
+      "additionalProperties": false
+    }
+  }
+}

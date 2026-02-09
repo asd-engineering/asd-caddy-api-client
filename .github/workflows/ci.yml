@@ -60,6 +60,14 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Install Caddy CLI
+        run: |
+          sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
+          curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+          curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+          sudo apt-get update
+          sudo apt-get install -y caddy
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
@@ -129,6 +137,156 @@ jobs:
       - name: Cleanup Docker services
         if: always()
         run: docker compose -f docker-compose.test.yml down -v
+
+  caddy-security-tests:
+    name: Caddy Security Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Start caddy-security stack
+        run: |
+          docker compose -f tests/integration/docker-compose.caddy-security.yml up -d
+          docker compose -f tests/integration/docker-compose.keycloak.yml up -d keycloak
+          docker compose -f tests/integration/docker-compose.ldap.yml up -d
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for caddy-security HTTP..."
+          timeout 120 bash -c 'until curl -sf http://127.0.0.1:8084/health; do sleep 3; done' || (docker compose -f tests/integration/docker-compose.caddy-security.yml logs && exit 1)
+          echo "Waiting for caddy-security Admin API..."
+          timeout 60 bash -c 'until curl -sf http://127.0.0.1:2020/config/; do sleep 3; done' || (docker compose -f tests/integration/docker-compose.caddy-security.yml logs && exit 1)
+          echo "Waiting for Keycloak..."
+          timeout 180 bash -c 'until curl -sf http://localhost:8081/health/ready; do sleep 5; done' || (docker compose -f tests/integration/docker-compose.keycloak.yml logs && exit 1)
+          echo "Waiting for OpenLDAP..."
+          timeout 60 bash -c 'until docker exec openldap-test ldapsearch -x -H ldap://localhost -b "dc=test,dc=local" -D "cn=admin,dc=test,dc=local" -w admin "(objectClass=*)" > /dev/null 2>&1; do sleep 3; done' || (docker compose -f tests/integration/docker-compose.ldap.yml logs && exit 1)
+          echo "All caddy-security services ready!"
+
+      - name: Setup LDAP test data
+        run: |
+          # LDAP bootstrap data is loaded automatically via docker-compose volume mount
+          # This step is kept for any additional setup that might be needed
+          if [ -f tests/integration/setup-ldap.sh ]; then
+            chmod +x tests/integration/setup-ldap.sh
+            tests/integration/setup-ldap.sh || echo "LDAP setup script failed (may be OK if data exists)"
+          else
+            echo "No setup-ldap.sh script found - LDAP data loaded via docker-compose"
+          fi
+
+      - name: Verify services before tests
+        run: |
+          echo "Testing admin API connectivity..."
+          curl -sf http://127.0.0.1:2020/config/ | head -c 200 || echo "Admin API not responding"
+          echo ""
+          echo "Docker container status:"
+          docker ps --format "{{.Names}}: {{.Status}}"
+          echo ""
+          echo "Listening ports:"
+          ss -tlnp | grep -E "2020|8084" || true
+
+      - name: Run caddy-security integration tests
+        run: |
+          # Final connectivity check with curl
+          echo "Final connectivity check with curl..."
+          curl -sf http://127.0.0.1:2020/config/ | head -c 100 && echo ""
+
+          # Test with raw Node.js fetch
+          echo "Testing with Node.js fetch..."
+          node -e "
+            fetch('http://127.0.0.1:2020/config/')
+              .then(r => r.json())
+              .then(d => console.log('Node fetch OK:', JSON.stringify(d).slice(0, 100)))
+              .catch(e => { console.error('Node fetch FAILED:', e.message); process.exit(1); });
+          "
+
+          # Test environment variables
+          echo "Environment check:"
+          echo "CADDY_ADMIN_URL=$CADDY_ADMIN_URL"
+          echo "CADDY_SECURITY_TEST=$CADDY_SECURITY_TEST"
+
+          # Run integration tests with vitest using sequential execution config
+          echo "Running caddy-security integration tests with vitest..."
+          CADDY_SECURITY_TEST=true CADDY_ADMIN_URL=http://127.0.0.1:2020 bunx vitest run --config vitest.caddy-security.config.ts
+        env:
+          CADDY_SECURITY_TEST: "true"
+          CADDY_ADMIN_URL: "http://127.0.0.1:2020"
+          KEYCLOAK_URL: "http://localhost:8081"
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ./coverage/integration/coverage-final.json
+          flags: caddy-security
+          name: caddy-security-tests
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Cleanup Docker services
+        if: always()
+        run: |
+          docker compose -f tests/integration/docker-compose.caddy-security.yml down -v
+          docker compose -f tests/integration/docker-compose.keycloak.yml down -v
+          docker compose -f tests/integration/docker-compose.ldap.yml down -v
+
+  vscode-extension-tests:
+    name: VSCode Extension Tests
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install root dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build main library
+        run: bun run build
+
+      - name: Install extension dependencies
+        working-directory: vscode-extension
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: vscode-extension
+        run: npx playwright install chromium --with-deps
+
+      - name: Run VSCode extension tests
+        working-directory: vscode-extension
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm test
+        env:
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vscode-extension-test-results
+          path: |
+            vscode-extension/playwright-report/
+            vscode-extension/test-results/
+          retention-days: 7
 
   build:
     name: Build

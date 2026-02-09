@@ -1,0 +1,9 @@
+{
+  "@id": "broken-route",
+  "match": [
+    {
+      "host": ["example.com"]
+    }
+  ],
+  "terminal": true
+}

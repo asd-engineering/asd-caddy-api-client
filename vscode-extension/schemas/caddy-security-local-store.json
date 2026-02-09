@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://asd-engineering.github.io/asd-caddy-api-client/schemas/caddy-security-local-store.json",
+  "title": "Caddy Security Local Store",
+  "description": "caddy-security local identity store configuration",
+  "$ref": "#/definitions/caddy-security-local-store",
+  "definitions": {
+    "caddy-security-local-store": {
+      "type": "object",
+      "properties": {
+        "driver": {
+          "type": "string",
+          "const": "local"
+        },
+        "realm": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": ["driver", "path"],
+      "additionalProperties": false
+    }
+  }
+}

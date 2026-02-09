@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://asd-engineering.github.io/asd-caddy-api-client/schemas/caddy-handler-rewrite.json",
+  "title": "Caddy Handler Rewrite",
+  "description": "Caddy rewrite handler configuration",
+  "$ref": "#/definitions/caddy-handler-rewrite",
+  "definitions": {
+    "caddy-handler-rewrite": {
+      "type": "object",
+      "properties": {
+        "handler": {
+          "type": "string",
+          "const": "rewrite"
+        },
+        "uri": {
+          "type": "string"
+        },
+        "strip_path_prefix": {
+          "type": "string"
+        },
+        "strip_path_suffix": {
+          "type": "string"
+        },
+        "uri_substring": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "find": {
+                "type": "string"
+              },
+              "replace": {
+                "type": "string"
+              },
+              "limit": {
+                "type": "integer"
+              }
+            },
+            "required": ["find", "replace"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["handler"],
+      "additionalProperties": false
+    }
+  }
+}

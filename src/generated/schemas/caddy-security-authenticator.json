@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://asd-engineering.github.io/asd-caddy-api-client/schemas/caddy-security-authenticator.json",
+  "title": "Caddy Security Authenticator",
+  "description": "caddy-security authenticator portal handler",
+  "$ref": "#/definitions/caddy-security-authenticator",
+  "definitions": {
+    "caddy-security-authenticator": {
+      "type": "object",
+      "properties": {
+        "handler": {
+          "type": "string",
+          "const": "authenticator"
+        },
+        "portal_name": {
+          "type": "string"
+        },
+        "route_matcher": {
+          "type": "string"
+        }
+      },
+      "required": ["handler"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,116 @@
+# LDAP Bootstrap for Integration Testing
+# Organization: Test Organization
+# Domain: test.local
+
+# Organizational Units
+dn: ou=users,dc=test,dc=local
+objectClass: organizationalUnit
+ou: users
+description: User accounts
+
+dn: ou=groups,dc=test,dc=local
+objectClass: organizationalUnit
+ou: groups
+description: User groups
+
+dn: ou=services,dc=test,dc=local
+objectClass: organizationalUnit
+ou: services
+description: Service accounts
+
+# Groups
+dn: cn=users,ou=groups,dc=test,dc=local
+objectClass: groupOfNames
+cn: users
+description: Regular users group
+member: cn=testuser,ou=users,dc=test,dc=local
+member: cn=adminuser,ou=users,dc=test,dc=local
+
+dn: cn=admins,ou=groups,dc=test,dc=local
+objectClass: groupOfNames
+cn: admins
+description: Administrators group
+member: cn=adminuser,ou=users,dc=test,dc=local
+
+dn: cn=developers,ou=groups,dc=test,dc=local
+objectClass: groupOfNames
+cn: developers
+description: Developers group
+member: cn=testuser,ou=users,dc=test,dc=local
+member: cn=devuser,ou=users,dc=test,dc=local
+
+# Users
+dn: cn=testuser,ou=users,dc=test,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: testuser
+sn: User
+givenName: Test
+uid: testuser
+uidNumber: 1001
+gidNumber: 1001
+homeDirectory: /home/testuser
+loginShell: /bin/bash
+mail: test@test.local
+userPassword: password
+description: Standard test user
+
+dn: cn=adminuser,ou=users,dc=test,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: adminuser
+sn: Admin
+givenName: Admin
+uid: adminuser
+uidNumber: 1002
+gidNumber: 1002
+homeDirectory: /home/adminuser
+loginShell: /bin/bash
+mail: admin@test.local
+userPassword: admin123
+description: Administrator user
+
+dn: cn=devuser,ou=users,dc=test,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: devuser
+sn: Developer
+givenName: Dev
+uid: devuser
+uidNumber: 1003
+gidNumber: 1003
+homeDirectory: /home/devuser
+loginShell: /bin/bash
+mail: dev@test.local
+userPassword: dev123
+description: Developer user
+
+dn: cn=disableduser,ou=users,dc=test,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: disableduser
+sn: Disabled
+givenName: Disabled
+uid: disableduser
+uidNumber: 1004
+gidNumber: 1004
+homeDirectory: /home/disableduser
+loginShell: /bin/false
+mail: disabled@test.local
+userPassword: disabled
+shadowExpire: 0
+description: Disabled user account
+
+# Service Account for binding
+dn: cn=ldapbind,ou=services,dc=test,dc=local
+objectClass: inetOrgPerson
+cn: ldapbind
+sn: Bind
+uid: ldapbind
+mail: ldapbind@test.local
+userPassword: bindpassword
+description: Service account for LDAP bind operations

@@ -1,0 +1,77 @@
+services:
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: openldap-security-test
+    environment:
+      LDAP_ORGANISATION: "Test Organization"
+      LDAP_DOMAIN: "test.local"
+      LDAP_BASE_DN: "dc=test,dc=local"
+      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_CONFIG_PASSWORD: "config"
+      LDAP_TLS: "false"
+      LDAP_TLS_VERIFY_CLIENT: "never"
+      LDAP_REMOVE_CONFIG_AFTER_SETUP: "false"
+    volumes:
+      - ldap-security-data:/var/lib/ldap
+      - ldap-security-config:/etc/ldap/slapd.d
+      - ./fixtures/ldap-bootstrap.ldif:/ldif/bootstrap.ldif:ro
+    command: --copy-service --loglevel debug
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "ldapsearch",
+          "-x",
+          "-H",
+          "ldap://localhost",
+          "-b",
+          "dc=test,dc=local",
+          "-D",
+          "cn=admin,dc=test,dc=local",
+          "-w",
+          "admin",
+          "(objectClass=*)",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 30s
+    networks:
+      - caddy-ldap-net
+
+  caddy-security-ldap:
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy-security
+    container_name: caddy-security-ldap-test
+    ports:
+      - "8085:80"
+      - "8445:443"
+      - "2021:2019"
+    volumes:
+      - ./Caddyfile.caddy-security-ldap:/etc/caddy/Caddyfile:ro
+    environment:
+      LDAP_HOST: openldap
+      LDAP_PORT: "389"
+      LDAP_BIND_DN: "cn=admin,dc=test,dc=local"
+      LDAP_BIND_PASSWORD: "admin"
+      LDAP_SEARCH_BASE: "ou=users,dc=test,dc=local"
+    depends_on:
+      openldap:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - caddy-ldap-net
+
+networks:
+  caddy-ldap-net:
+    driver: bridge
+
+volumes:
+  ldap-security-data:
+  ldap-security-config:

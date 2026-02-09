@@ -306,6 +306,26 @@ glog:
 claude:
     claude --allow-dangerously-skip-permissions
 
+# VSCode Extension: run Playwright tests (headless)
+vscode-test:
+    cd vscode-extension && npm test
+
+# VSCode Extension: run Playwright tests with visible browser
+vscode-test-headed:
+    cd vscode-extension && npx playwright test --headed
+
+# VSCode Extension: run Playwright tests in debug mode
+vscode-test-debug:
+    cd vscode-extension && npx playwright test --debug
+
+# VSCode Extension: build and package
+vscode-build:
+    cd vscode-extension && npm run package
+
+# VSCode Extension: install in local VSCode
+vscode-install:
+    cd vscode-extension && code --install-extension vscode-caddy-tools-*.vsix --force
+
 # MITMproxy demo: just demo start|stop|url
 [no-cd]
 demo action:

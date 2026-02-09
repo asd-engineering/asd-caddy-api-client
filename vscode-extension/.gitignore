@@ -1,0 +1,15 @@
+# Build output
+dist/
+out/
+*.vsix
+
+# Test artifacts
+test-results/
+playwright-report/
+tests/.codeserver-port
+
+# Dependencies
+node_modules/
+
+# IDE
+.vscode/

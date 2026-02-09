@@ -1,0 +1,57 @@
+services:
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: openldap-test
+    environment:
+      LDAP_ORGANISATION: "Test Organization"
+      LDAP_DOMAIN: "test.local"
+      LDAP_BASE_DN: "dc=test,dc=local"
+      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_CONFIG_PASSWORD: "config"
+      LDAP_TLS: "false"
+      LDAP_TLS_VERIFY_CLIENT: "never"
+      LDAP_REMOVE_CONFIG_AFTER_SETUP: "false"
+    volumes:
+      - ldap-data:/var/lib/ldap
+      - ldap-config:/etc/ldap/slapd.d
+      - ./fixtures/ldap-bootstrap.ldif:/ldif/bootstrap.ldif:ro
+    command: --copy-service --loglevel debug
+    ports:
+      - "389:389"
+      - "636:636"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "ldapsearch",
+          "-x",
+          "-H",
+          "ldap://localhost",
+          "-b",
+          "dc=test,dc=local",
+          "-D",
+          "cn=admin,dc=test,dc=local",
+          "-w",
+          "admin",
+          "(objectClass=*)",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 30s
+
+  phpldapadmin:
+    image: osixia/phpldapadmin:0.9.0
+    container_name: phpldapadmin-test
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: openldap
+      PHPLDAPADMIN_HTTPS: "false"
+    ports:
+      - "8083:80"
+    depends_on:
+      openldap:
+        condition: service_healthy
+
+volumes:
+  ldap-data:
+  ldap-config:

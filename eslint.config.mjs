@@ -18,6 +18,8 @@ export default tseslint.config(
       "docs/api/**", // Generated TypeDoc documentation
       "src/generated/**", // Generated type files from Caddy Go source
       "scripts/**", // Build/generation scripts
+      "tests/integration/**/*.js", // Docker test helper scripts (Node.js)
+      "vscode-extension/**", // VSCode extension has its own tsconfig/linting
       "*.config.ts",
       "*.config.js",
       "*.config.mjs",
@@ -45,7 +47,8 @@ export default tseslint.config(
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
-      "@typescript-eslint/no-explicit-any": "warn",
+      // See AGENTS.md - any is prohibited unless explicitly justified
+      "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
