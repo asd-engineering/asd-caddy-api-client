@@ -1,9 +1,16 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### [0.4.1](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.4.0...v0.4.1) (2026-02-09)
+
+### Changed
+
+- **Package size reduced by ~80%** (5.1 MB → ~1 MB unpacked)
+  - Removed source maps from published package
+  - Dropped CJS format (ESM-only, package already requires Node >= 18)
+  - Enabled minification for JS bundles
+  - Disabled declaration maps in tsconfig
 
 ## [0.4.0] - 2026-01-11
 

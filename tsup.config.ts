@@ -10,13 +10,13 @@ export default defineConfig({
     "plugins/caddy-security/index": "src/plugins/caddy-security/index.ts",
     "generated/extension-assets": "src/generated/extension-assets.ts",
   },
-  format: ["esm", "cjs"],
+  format: ["esm"],
   dts: true,
   splitting: false,
-  sourcemap: true,
+  sourcemap: false,
   clean: true,
   treeshake: true,
-  minify: false,
+  minify: true,
   outDir: "dist",
   esbuildOptions(options) {
     // Enable JSON imports for VERSION sync from package.json

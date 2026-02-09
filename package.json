@@ -1,6 +1,6 @@
 {
   "name": "@accelerated-software-development/caddy-api-client",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "TypeScript client for Caddy Admin API with MITMproxy integration",
   "type": "module",
   "main": "./dist/index.js",
@@ -9,38 +9,31 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.js"
     },
     "./caddy": {
       "types": "./dist/caddy/index.d.ts",
-      "import": "./dist/caddy/index.js",
-      "require": "./dist/caddy/index.cjs"
+      "import": "./dist/caddy/index.js"
     },
     "./mitm": {
       "types": "./dist/mitm/index.d.ts",
-      "import": "./dist/mitm/index.js",
-      "require": "./dist/mitm/index.cjs"
+      "import": "./dist/mitm/index.js"
     },
     "./caddy-types": {
       "types": "./dist/caddy-types.d.ts",
-      "import": "./dist/caddy-types.js",
-      "require": "./dist/caddy-types.cjs"
+      "import": "./dist/caddy-types.js"
     },
     "./plugins": {
       "types": "./dist/plugins/index.d.ts",
-      "import": "./dist/plugins/index.js",
-      "require": "./dist/plugins/index.cjs"
+      "import": "./dist/plugins/index.js"
     },
     "./plugins/caddy-security": {
       "types": "./dist/plugins/caddy-security/index.d.ts",
-      "import": "./dist/plugins/caddy-security/index.js",
-      "require": "./dist/plugins/caddy-security/index.cjs"
+      "import": "./dist/plugins/caddy-security/index.js"
     },
     "./extension-assets": {
       "types": "./dist/generated/extension-assets.d.ts",
-      "import": "./dist/generated/extension-assets.js",
-      "require": "./dist/generated/extension-assets.cjs"
+      "import": "./dist/generated/extension-assets.js"
     }
   },
   "files": [
