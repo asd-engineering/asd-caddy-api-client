@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.4.2](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.4.1...v0.4.2) (2026-02-11)
+
+### Added
+
+- **`flushInterval` option** in `buildReverseProxyHandler()`, `buildHostRoute()`, `buildPathRoute()`, and `buildServiceRoutes()` — set to `-1` to disable response buffering for WebSocket/SSE streaming. Opt-in pass-through from `ServiceRouteOptions` to the underlying reverse proxy handler.
+
 ### [0.4.1](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.4.0...v0.4.1) (2026-02-09)
 
 ### Changed

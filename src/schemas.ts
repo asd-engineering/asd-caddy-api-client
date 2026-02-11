@@ -363,6 +363,7 @@ export const ServiceRouteOptionsSchema = z.object({
   deleteResponseHeaders: z.array(z.string()).optional(),
   serviceType: z.string().optional(),
   isTunnelDomain: z.boolean().optional().default(false),
+  flushInterval: z.number().optional(),
 });
 
 /**
@@ -389,6 +390,7 @@ export const HostRouteOptionsSchema = z.object({
   deleteResponseHeaders: z.array(z.string()).optional(),
   serviceId: z.string().optional(),
   serviceType: z.string().optional(),
+  flushInterval: z.number().optional(),
 });
 
 /**
@@ -407,6 +409,7 @@ export const PathRouteOptionsSchema = z.object({
   deleteResponseHeaders: z.array(z.string()).optional(),
   serviceId: z.string().optional(),
   serviceType: z.string().optional(),
+  flushInterval: z.number().optional(),
 });
 
 /**
