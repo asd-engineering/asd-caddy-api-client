@@ -719,6 +719,12 @@ export interface ServiceRouteOptions {
    * Used for selective auth (tunnel vs host route type)
    */
   isTunnelDomain?: boolean;
+
+  /**
+   * Flush interval for reverse proxy streaming support.
+   * Set to -1 to disable buffering (required for WebSocket/SSE).
+   */
+  flushInterval?: number;
 }
 
 /**
@@ -782,6 +788,8 @@ export interface HostRouteOptions {
   serviceId?: string;
   /** Service type for X-ASD-Service-Type header */
   serviceType?: string;
+  /** Flush interval for reverse proxy streaming (-1 disables buffering) */
+  flushInterval?: number;
 }
 
 /**
@@ -805,6 +813,8 @@ export interface PathRouteOptions {
   serviceId?: string;
   /** Service type for X-ASD-Service-Type header */
   serviceType?: string;
+  /** Flush interval for reverse proxy streaming (-1 disables buffering) */
+  flushInterval?: number;
 }
 
 /**

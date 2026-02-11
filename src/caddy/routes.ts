@@ -72,6 +72,7 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
         deleteResponseHeaders: validated.deleteResponseHeaders,
         serviceId: validated.serviceId,
         serviceType: validated.serviceType,
+        flushInterval: validated.flushInterval,
       })
     );
   }
@@ -105,6 +106,7 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
         deleteResponseHeaders: validated.deleteResponseHeaders,
         serviceId: validated.serviceId,
         serviceType: validated.serviceType,
+        flushInterval: validated.flushInterval,
       })
     );
   }
@@ -218,6 +220,7 @@ export function buildHostRoute(options: HostRouteOptions): CaddyRoute {
   handlers.push(
     buildReverseProxyHandler(validated.dial, {
       deleteResponseHeaders: validated.deleteResponseHeaders,
+      flushInterval: validated.flushInterval,
     })
   );
 
@@ -290,6 +293,7 @@ export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
   handlers.push(
     buildReverseProxyHandler(validated.dial, {
       deleteResponseHeaders: validated.deleteResponseHeaders,
+      flushInterval: validated.flushInterval,
     })
   );
 
@@ -395,6 +399,8 @@ export function buildReverseProxyHandler(
     tlsTrustedCACerts?: string;
     /** Response headers to delete (e.g., ["Content-Security-Policy"]) */
     deleteResponseHeaders?: string[];
+    /** Flush interval for streaming/WebSocket. -1 disables buffering. */
+    flushInterval?: number;
   }
 ): CaddyRouteHandler {
   // Auto-detect HTTPS from dial address
@@ -440,6 +446,11 @@ export function buildReverseProxyHandler(
         delete: options.deleteResponseHeaders,
       },
     };
+  }
+
+  // Set flush interval for streaming/WebSocket support
+  if (options?.flushInterval !== undefined) {
+    handler.flush_interval = options.flushInterval;
   }
 
   return handler;
