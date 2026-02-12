@@ -301,7 +301,7 @@ export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
     match: [
       {
         host: [validated.host],
-        path: [`${validated.path}*`],
+        path: [validated.path.endsWith("*") ? validated.path : `${validated.path}*`],
       },
     ],
     handle: handlers,
