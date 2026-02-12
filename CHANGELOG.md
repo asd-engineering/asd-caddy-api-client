@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.4.3](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.4.2...v0.4.3) (2026-02-12)
+
+### Fixed
+
+- **Path route matcher double-star bug** — `buildPathRoute()` appended `*` to every path unconditionally, turning paths like `/api/*` into `/api/**`. Caddy's path matcher treats `*` as single-segment only, so `/api/**` matched `/api/foo` but NOT `/api/v1/resource`. Now checks if path already ends with `*` before appending.
+
 ### [0.4.2](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.4.1...v0.4.2) (2026-02-11)
 
 ### Added
