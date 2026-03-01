@@ -134,26 +134,43 @@ export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRo
     handlers.push(buildIngressTagHeadersHandler(validated.ingressTag));
   }
 
-  // Add health/instance metadata headers
+  // Add health/service metadata headers
   handlers.push({
     handler: "headers",
     response: {
       set: {
         "X-ASD-Health": ["ok"],
-        "X-ASD-Instance": [validated.serviceId],
+        "X-ASD-Service-ID": [validated.serviceId],
       },
     },
   } as CaddyRouteHandler);
 
-  // Add static response handler
-  handlers.push({
-    handler: "static_response",
-    body: `{"status":"ok","service":"${validated.serviceId}","timestamp":"{http.time.now.unix}"}`,
-    status_code: 200,
-    headers: {
-      "Content-Type": ["application/json"],
-    },
-  });
+  if (validated.dial) {
+    // Dynamic health check — proxy to actual service
+    handlers.push({
+      handler: "reverse_proxy",
+      upstreams: [{ dial: validated.dial }],
+      headers: {
+        request: {
+          set: {
+            "X-Forwarded-Proto": ["{http.request.scheme}"],
+            "X-Forwarded-Host": ["{http.request.host}"],
+            "X-Forwarded-Port": ["{http.request.port}"],
+          },
+        },
+      },
+    });
+  } else {
+    // Static health check (backward compat)
+    handlers.push({
+      handler: "static_response",
+      body: `{"status":"ok","service":"${validated.serviceId}","timestamp":"{http.time.now.unix}"}`,
+      status_code: 200,
+      headers: {
+        "Content-Type": ["application/json"],
+      },
+    });
+  }
 
   const route: CaddyRoute = {
     match: [

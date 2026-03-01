@@ -767,6 +767,8 @@ export interface HealthCheckRouteOptions {
   priority?: number;
   /** Ingress tag value for X-ASD-Ingress header */
   ingressTag?: string | null;
+  /** Upstream dial address. When set, health check uses reverse_proxy instead of static_response */
+  dial?: string;
 }
 
 /**

@@ -38,8 +38,8 @@ describe("buildHealthCheckRoute", () => {
       set: Record<string, string[]>;
     };
     expect(response.set["X-ASD-Health"]).toEqual(["ok"]);
-    expect(response.set["X-ASD-Instance"]).toEqual(["my-service"]);
-    // Second handler: static response
+    expect(response.set["X-ASD-Service-ID"]).toEqual(["my-service"]);
+    // Second handler: static response (no dial = static_response)
     const staticHandler = route.handle[1];
     expect(staticHandler.handler).toBe("static_response");
     expect(staticHandler.status_code).toBe(200);
@@ -54,6 +54,46 @@ describe("buildHealthCheckRoute", () => {
     });
 
     expect((route as { priority?: number }).priority).toBe(100);
+  });
+
+  test("uses reverse_proxy handler when dial is specified", () => {
+    const route = buildHealthCheckRoute({
+      host: "api.localhost",
+      serviceId: "my-service",
+      dial: "127.0.0.1:3000",
+    });
+
+    // First handler: health metadata headers
+    const metadataHandler = route.handle[0] as Record<string, unknown>;
+    expect(metadataHandler.handler).toBe("headers");
+    const response = metadataHandler.response as {
+      set: Record<string, string[]>;
+    };
+    expect(response.set["X-ASD-Service-ID"]).toEqual(["my-service"]);
+
+    // Second handler: reverse_proxy (not static_response)
+    const proxyHandler = route.handle[1] as Record<string, unknown>;
+    expect(proxyHandler.handler).toBe("reverse_proxy");
+    expect(proxyHandler.upstreams).toEqual([{ dial: "127.0.0.1:3000" }]);
+    // Should include X-Forwarded headers
+    const headers = proxyHandler.headers as {
+      request: { set: Record<string, string[]> };
+    };
+    expect(headers.request.set["X-Forwarded-Proto"]).toEqual(["{http.request.scheme}"]);
+    expect(headers.request.set["X-Forwarded-Host"]).toEqual(["{http.request.host}"]);
+    expect(headers.request.set["X-Forwarded-Port"]).toEqual(["{http.request.port}"]);
+  });
+
+  test("uses static_response handler when dial is not specified (backward compat)", () => {
+    const route = buildHealthCheckRoute({
+      host: "api.localhost",
+      serviceId: "my-service",
+    });
+
+    // Should use static_response, not reverse_proxy
+    const staticHandler = route.handle[1];
+    expect(staticHandler.handler).toBe("static_response");
+    expect(staticHandler.status_code).toBe(200);
   });
 
   test("includes ingress tag when specified", () => {
