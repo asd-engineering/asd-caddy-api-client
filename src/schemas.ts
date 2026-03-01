@@ -374,7 +374,7 @@ export const HealthCheckRouteOptionsSchema = z.object({
   serviceId: z.string().min(1),
   priority: z.number().int().optional(),
   ingressTag: z.string().nullable().optional(),
-  dial: z.string().optional(),
+  dial: z.string().min(1).optional(),
 });
 
 /**
