@@ -230,7 +230,7 @@ describe("[CONTRACT] Route Ordering", () => {
         // Health endpoint should be accessible despite /* catch-all
         expect(healthResponse.statusCode).toBe(200);
         expect(healthResponse.headers["x-asd-health"]).toBe("ok");
-        expect(healthResponse.headers["x-asd-instance"]).toBe("contract-test");
+        expect(healthResponse.headers["x-asd-service-id"]).toBe("contract-test");
 
         // Parse JSON body
         const healthBody = JSON.parse(healthResponse.body);

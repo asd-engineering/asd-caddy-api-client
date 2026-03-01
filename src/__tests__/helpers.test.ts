@@ -33,7 +33,7 @@ describe("High-Level Helper Functions", () => {
 
       const headersHandler = route.handle?.find((h) => h.handler === "headers");
       expect(headersHandler).toBeDefined();
-      expect(headersHandler?.response?.set?.["X-ASD-Instance"]).toEqual(["test-instance"]);
+      expect(headersHandler?.response?.set?.["X-ASD-Service-ID"]).toEqual(["test-instance"]);
       expect(headersHandler?.response?.set?.["X-ASD-Health"]).toEqual(["ok"]);
     });
 

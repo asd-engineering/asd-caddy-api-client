@@ -109,7 +109,7 @@ export function buildHealthRoute(instanceId: string, services?: number): CaddyRo
         response: {
           set: {
             "X-ASD-Health": ["ok"],
-            "X-ASD-Instance": [instanceId],
+            "X-ASD-Service-ID": [instanceId],
           },
         },
       },

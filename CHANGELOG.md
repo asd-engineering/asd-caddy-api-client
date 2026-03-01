@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.5.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.4.3...v0.5.0) (2026-03-01)
+
+### Added
+
+- **`dial` option in `buildHealthCheckRoute()`** — when provided, generates a `reverse_proxy` handler with X-Forwarded headers instead of `static_response`. Enables real health checks that verify the upstream is responding. Without `dial`, behavior is unchanged (backward compatible).
+
+### Changed
+
+- **`X-ASD-Instance` header renamed to `X-ASD-Service-ID`** — affects `buildHealthCheckRoute()` and `createHealthRoute()`. Aligns with the `X-ASD-Service-ID` header already used in service routes via `buildServiceMetadataHeadersHandler()`.
+
 ### [0.4.3](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.4.2...v0.4.3) (2026-02-12)
 
 ### Fixed

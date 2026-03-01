@@ -151,7 +151,7 @@ export function createHealthRoute(options: HealthRouteOptions): CaddyRoute {
         response: {
           set: {
             "X-ASD-Health": ["ok"],
-            "X-ASD-Instance": [options.instanceId],
+            "X-ASD-Service-ID": [options.instanceId],
           },
         },
       },
