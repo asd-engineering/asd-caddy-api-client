@@ -721,7 +721,7 @@ describeIntegration("ASD Complex Production Scenario", () => {
           response: {
             set: {
               "X-ASD-Health": ["ok"],
-              "X-ASD-Instance": ["prod-cluster-1"],
+              "X-ASD-Service-ID": ["prod-cluster-1"],
             },
           },
         },
