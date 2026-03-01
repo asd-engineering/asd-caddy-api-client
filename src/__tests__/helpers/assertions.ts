@@ -168,7 +168,7 @@ export function expectHealthCheck(response: HttpResponse, instanceId?: string): 
   expect(response.headers["x-asd-health"]).toBe("ok");
 
   if (instanceId) {
-    expect(response.headers["x-asd-instance"]).toBe(instanceId);
+    expect(response.headers["x-asd-service-id"]).toBe(instanceId);
   }
 
   // Verify JSON body format
