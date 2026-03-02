@@ -1,6 +1,12 @@
 # @accelerated-software-development/caddy-api-client
 
 TypeScript client for Caddy Admin API with MITMproxy integration.
+Maintained by [asd.host](https://asd.host).
+
+Package pages:
+
+- npm: https://www.npmjs.com/package/@accelerated-software-development/caddy-api-client
+- Yarn Classic: https://classic.yarnpkg.com/en/package/@accelerated-software-development/caddy-api-client
 
 ## Features
 
@@ -27,6 +33,8 @@ Run locally: `docker compose -f demo/docker-compose.yml up -d` → http://localh
 
 ```bash
 npm install @accelerated-software-development/caddy-api-client zod
+# or
+yarn add @accelerated-software-development/caddy-api-client zod
 # or
 bun add @accelerated-software-development/caddy-api-client zod
 ```
