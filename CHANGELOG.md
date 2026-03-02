@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.5.1](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.5.0...v0.5.1) (2026-03-02)
+
+### Changed
+
+- Add Yarn Classic package reference in README and installation instructions.
+- Add `asd.host` as the package maintainer website in package metadata and README.
+
 ## [0.5.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.4.3...v0.5.0) (2026-03-01)
 
 ### Added
