@@ -70,3 +70,4 @@ jobs:
         with:
           generateReleaseNotes: true
           makeLatest: true
+          allowUpdates: true
