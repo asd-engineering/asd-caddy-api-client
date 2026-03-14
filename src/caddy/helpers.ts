@@ -22,6 +22,8 @@ export interface HealthRouteOptions {
   services?: number;
   /** Instance version */
   version?: string;
+  /** Project identifier for X-ASD-Project header */
+  projectId?: string;
 }
 
 /**
@@ -46,6 +48,8 @@ export interface ServiceRouteOptions {
   headers?: Record<string, string[]>;
   /** Explicit priority (optional) */
   priority?: number;
+  /** Project identifier for X-ASD-Project header */
+  projectId?: string;
 }
 
 /**
@@ -72,6 +76,8 @@ export interface BasicAuthRouteOptions {
   headers?: Record<string, string[]>;
   /** Explicit priority (optional) */
   priority?: number;
+  /** Project identifier for X-ASD-Project header */
+  projectId?: string;
 }
 
 /**
@@ -152,6 +158,7 @@ export function createHealthRoute(options: HealthRouteOptions): CaddyRoute {
           set: {
             "X-ASD-Health": ["ok"],
             "X-ASD-Service-ID": [options.instanceId],
+            ...(options.projectId ? { "X-ASD-Project": [options.projectId] } : {}),
           },
         },
       },
@@ -205,6 +212,10 @@ export function createServiceRoute(options: ServiceRouteOptions): CaddyRoute {
 
   if (options.serviceType) {
     headers["X-ASD-Service-Type"] = [options.serviceType];
+  }
+
+  if (options.projectId) {
+    headers["X-ASD-Project"] = [options.projectId];
   }
 
   const handlers: CaddyRouteHandler[] = [];
@@ -300,6 +311,10 @@ export function createBasicAuthRoute(options: BasicAuthRouteOptions): CaddyRoute
 
   if (options.serviceType) {
     headers["X-ASD-Service-Type"] = [options.serviceType];
+  }
+
+  if (options.projectId) {
+    headers["X-ASD-Project"] = [options.projectId];
   }
 
   // Calculate priority

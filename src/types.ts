@@ -725,6 +725,12 @@ export interface ServiceRouteOptions {
    * Set to -1 to disable buffering (required for WebSocket/SSE).
    */
   flushInterval?: number;
+
+  /**
+   * Project identifier for X-ASD-Project header.
+   * Used to identify which project's Caddy handled the request.
+   */
+  projectId?: string | null;
 }
 
 /**
@@ -769,6 +775,8 @@ export interface HealthCheckRouteOptions {
   ingressTag?: string | null;
   /** Upstream dial address. When set, health check uses reverse_proxy instead of static_response */
   dial?: string;
+  /** Project identifier for X-ASD-Project header */
+  projectId?: string | null;
 }
 
 /**
@@ -792,6 +800,8 @@ export interface HostRouteOptions {
   serviceType?: string;
   /** Flush interval for reverse proxy streaming (-1 disables buffering) */
   flushInterval?: number;
+  /** Project identifier for X-ASD-Project header */
+  projectId?: string | null;
 }
 
 /**
@@ -817,6 +827,8 @@ export interface PathRouteOptions {
   serviceType?: string;
   /** Flush interval for reverse proxy streaming (-1 disables buffering) */
   flushInterval?: number;
+  /** Project identifier for X-ASD-Project header */
+  projectId?: string | null;
 }
 
 /**
