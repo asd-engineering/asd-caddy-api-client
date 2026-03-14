@@ -364,6 +364,7 @@ export const ServiceRouteOptionsSchema = z.object({
   serviceType: z.string().optional(),
   isTunnelDomain: z.boolean().optional().default(false),
   flushInterval: z.number().optional(),
+  projectId: z.string().nullable().optional(),
 });
 
 /**
@@ -375,6 +376,7 @@ export const HealthCheckRouteOptionsSchema = z.object({
   priority: z.number().int().optional(),
   ingressTag: z.string().nullable().optional(),
   dial: z.string().min(1).optional(),
+  projectId: z.string().nullable().optional(),
 });
 
 /**
@@ -392,6 +394,7 @@ export const HostRouteOptionsSchema = z.object({
   serviceId: z.string().optional(),
   serviceType: z.string().optional(),
   flushInterval: z.number().optional(),
+  projectId: z.string().nullable().optional(),
 });
 
 /**
@@ -411,6 +414,7 @@ export const PathRouteOptionsSchema = z.object({
   serviceId: z.string().optional(),
   serviceType: z.string().optional(),
   flushInterval: z.number().optional(),
+  projectId: z.string().nullable().optional(),
 });
 
 /**

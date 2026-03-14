@@ -56,6 +56,7 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
         serviceId: validated.serviceId ?? "unknown",
         priority: validated.priority !== undefined ? validated.priority + 1000 : undefined,
         ingressTag: validated.ingressTag,
+        projectId: validated.projectId,
       })
     );
 
@@ -73,6 +74,7 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
         serviceId: validated.serviceId,
         serviceType: validated.serviceType,
         flushInterval: validated.flushInterval,
+        projectId: validated.projectId,
       })
     );
   }
@@ -88,6 +90,7 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
         serviceId: validated.serviceId ?? "unknown",
         priority: validated.priority !== undefined ? validated.priority + 1000 : undefined,
         ingressTag: validated.ingressTag,
+        projectId: validated.projectId,
       })
     );
 
@@ -107,6 +110,7 @@ export function buildServiceRoutes(options: ServiceRouteOptions): CaddyRoute[] {
         serviceId: validated.serviceId,
         serviceType: validated.serviceType,
         flushInterval: validated.flushInterval,
+        projectId: validated.projectId,
       })
     );
   }
@@ -132,6 +136,11 @@ export function buildHealthCheckRoute(options: HealthCheckRouteOptions): CaddyRo
   // Add ingress tag header if configured
   if (validated.ingressTag) {
     handlers.push(buildIngressTagHeadersHandler(validated.ingressTag));
+  }
+
+  // Add project identity header if configured
+  if (validated.projectId) {
+    handlers.push(buildProjectIdHeadersHandler(validated.projectId));
   }
 
   // Add health/service metadata headers
@@ -205,6 +214,11 @@ export function buildHostRoute(options: HostRouteOptions): CaddyRoute {
     handlers.push(buildIngressTagHeadersHandler(validated.ingressTag));
   }
 
+  // Add project identity header if configured
+  if (validated.projectId) {
+    handlers.push(buildProjectIdHeadersHandler(validated.projectId));
+  }
+
   // Add iframe headers if configured
   if (validated.iframeOrigin) {
     handlers.push(buildIframeHeadersHandler(validated.iframeOrigin));
@@ -271,6 +285,11 @@ export function buildPathRoute(options: PathRouteOptions): CaddyRoute {
   // Add ingress tag header if configured
   if (validated.ingressTag) {
     handlers.push(buildIngressTagHeadersHandler(validated.ingressTag));
+  }
+
+  // Add project identity header if configured
+  if (validated.projectId) {
+    handlers.push(buildProjectIdHeadersHandler(validated.projectId));
   }
 
   // Add iframe headers if configured
@@ -611,6 +630,22 @@ export function buildIngressTagHeadersHandler(tag: string): CaddyRouteHandler {
     response: {
       set: {
         "X-ASD-Ingress": [tag],
+      },
+    },
+  } as CaddyRouteHandler;
+}
+
+/**
+ * Build a project identity header handler
+ * @param projectId - Project identifier value
+ * @returns Headers handler
+ */
+export function buildProjectIdHeadersHandler(projectId: string): CaddyRouteHandler {
+  return {
+    handler: "headers",
+    response: {
+      set: {
+        "X-ASD-Project": [projectId],
       },
     },
   } as CaddyRouteHandler;

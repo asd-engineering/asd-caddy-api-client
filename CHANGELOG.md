@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.5.2](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.5.1...v0.5.2) (2026-03-14)
+
+### Added
+
+- **`projectId` option across all route builders** — new optional `projectId` field in `ServiceRouteOptions`, `HealthCheckRouteOptions`, `HostRouteOptions`, `PathRouteOptions`, and their Zod schemas. When set, adds `X-ASD-Project` response header identifying which project's Caddy handled the request. Enables cross-project routing detection in multi-project tunnel environments.
+- **`buildProjectIdHeadersHandler()`** — new exported builder for `X-ASD-Project` response header, following the same pattern as `buildIngressTagHeadersHandler()`.
+- **`projectId` in high-level helpers** — `createHealthRoute()`, `createServiceRoute()`, and `createBasicAuthRoute()` all accept optional `projectId` and include it in their response headers.
+
 ### [0.5.1](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.5.0...v0.5.1) (2026-03-02)
 
 ### Changed
