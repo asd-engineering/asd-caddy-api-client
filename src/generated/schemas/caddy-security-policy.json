@@ -11,44 +11,57 @@
         "name": {
           "type": "string"
         },
-        "access_lists": {
+        "access_list_rules": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "action": {
-                "type": "string",
-                "enum": ["allow", "deny"]
-              },
-              "claim": {
+              "comment": {
                 "type": "string"
               },
-              "values": {
+              "conditions": {
                 "type": "array",
                 "items": {
                   "type": "string"
                 }
+              },
+              "action": {
+                "type": "string",
+                "enum": ["allow", "deny"]
               }
             },
             "additionalProperties": false
           }
         },
-        "crypto_key": {
-          "type": "object",
-          "properties": {
-            "token_name": {
-              "type": "string"
-            },
-            "source": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        },
-        "bypass": {
+        "crypto_key_configs": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "token_name": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "bypass_configs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "match_type": {
+                "type": "string"
+              },
+              "uri": {
+                "type": "string"
+              }
+            },
+            "required": ["match_type"],
+            "additionalProperties": false
           }
         }
       },

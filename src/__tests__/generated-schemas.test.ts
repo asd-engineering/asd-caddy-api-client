@@ -588,7 +588,7 @@ describe("JSON Schema Validation", () => {
 
       const validPolicy = {
         name: "default",
-        access_lists: [{ action: "allow", claim: "roles", values: ["admin", "user"] }],
+        access_list_rules: [{ action: "allow", conditions: ["match roles admin user"] }],
       };
 
       expect(validate(validPolicy)).toBe(true);

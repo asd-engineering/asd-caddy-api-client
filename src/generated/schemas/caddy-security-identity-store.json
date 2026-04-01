@@ -10,123 +10,100 @@
         {
           "type": "object",
           "properties": {
-            "driver": {
+            "name": {
+              "type": "string"
+            },
+            "kind": {
               "type": "string",
               "const": "local"
             },
-            "realm": {
-              "type": "string"
-            },
-            "path": {
-              "type": "string"
+            "params": {
+              "type": "object",
+              "properties": {
+                "realm": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": ["path"],
+              "additionalProperties": false
             }
           },
-          "required": ["driver", "path"],
+          "required": ["name", "kind", "params"],
           "additionalProperties": false
         },
         {
           "type": "object",
           "properties": {
-            "driver": {
+            "name": {
+              "type": "string"
+            },
+            "kind": {
               "type": "string",
               "const": "ldap"
             },
-            "realm": {
-              "type": "string"
-            },
-            "servers": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "address": {
-                    "type": "string"
-                  },
-                  "port": {
-                    "type": "integer",
-                    "exclusiveMinimum": 0,
-                    "maximum": 65535
+            "params": {
+              "type": "object",
+              "properties": {
+                "realm": {
+                  "type": "string"
+                },
+                "servers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string"
+                      },
+                      "port": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 65535
+                      }
+                    },
+                    "required": ["address"],
+                    "additionalProperties": false
                   }
                 },
-                "required": ["address"],
-                "additionalProperties": false
-              }
-            },
-            "bind_dn": {
-              "type": "string"
-            },
-            "bind_password": {
-              "type": "string"
-            },
-            "search_base_dn": {
-              "type": "string"
-            },
-            "search_filter": {
-              "type": "string"
+                "bind_username": {
+                  "type": "string"
+                },
+                "bind_password": {
+                  "type": "string"
+                },
+                "search_base_dn": {
+                  "type": "string"
+                },
+                "search_user_filter": {
+                  "type": "string"
+                },
+                "groups": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "dn": {
+                        "type": "string"
+                      },
+                      "roles": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["dn"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": true
             }
           },
-          "required": ["driver"],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "driver": {
-              "type": "string",
-              "const": "oauth2"
-            },
-            "realm": {
-              "type": "string"
-            },
-            "provider": {
-              "type": "string"
-            },
-            "client_id": {
-              "type": "string"
-            },
-            "client_secret": {
-              "type": "string"
-            },
-            "scopes": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "required": ["driver"],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "driver": {
-              "type": "string",
-              "const": "oidc"
-            },
-            "realm": {
-              "type": "string"
-            },
-            "provider": {
-              "type": "string"
-            },
-            "client_id": {
-              "type": "string"
-            },
-            "client_secret": {
-              "type": "string"
-            },
-            "discovery_url": {
-              "type": "string"
-            },
-            "scopes": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "required": ["driver"],
+          "required": ["name", "kind", "params"],
           "additionalProperties": false
         }
       ]

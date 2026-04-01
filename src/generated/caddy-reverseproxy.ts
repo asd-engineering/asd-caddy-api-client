@@ -760,6 +760,12 @@ export type HealthCheckSchemeOverriderTransport = any;
  * that needs to buffer requests and/or responses.
  */
 export type BufferedTransport = any;
+/**
+ * RequestHeaderOpsTransport may be implemented by a transport to provide
+ * header operations to apply to requests immediately before the RoundTrip.
+ * For example, overriding the default Host when TLS is enabled.
+ */
+export type RequestHeaderOpsTransport = any;
 
 //////////
 // source: selectionpolicies.go
@@ -942,6 +948,12 @@ export interface SRVUpstreams {
    * A negative value disables this.
    */
   dial_fallback_delay?: Duration;
+  /**
+   * Specific network to dial when connecting to the upstream(s)
+   * provided by SRV records upstream. See Go's net package for
+   * accepted values. For example, to restrict to IPv4, use "tcp4".
+   */
+  dial_network?: string;
 }
 export interface IPVersions {
   ipv4?: boolean;

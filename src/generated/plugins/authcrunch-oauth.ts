@@ -6,6 +6,9 @@ import type { LoginIcon } from "./authcrunch-icons";
 // source: browser.go
 
 //////////
+// source: claim_parser.go
+
+//////////
 // source: config.go
 
 /**
@@ -22,7 +25,6 @@ export interface Config {
   server_name?: string;
   app_secret?: string;
   tenant_id?: string;
-  identity_token_name?: string;
   /**
    * AWS Cognito User Pool ID
    */
@@ -78,6 +80,11 @@ export interface Config {
    * If enabled, portal redirects to identity provider logout URL. This would end the session with the provider.
    */
   logout_enabled?: boolean;
+  /**
+   * The URL to redirect to upon logout. If set, logout is assumed enabled and the user
+   * gets redirected to this URL regardless of any provider-specific configuration.
+   */
+  logout_url?: string;
   response_type?: string[];
   authorization_url?: string;
   token_url?: string;
@@ -102,10 +109,26 @@ export interface Config {
    */
   identity_token_cookie_name?: string;
   /**
+   * The field name to id_token from OAuth provider.
+   */
+  identity_token_field_name?: string;
+  /**
    * Enables the storing of id_token from OAuth provider in a HTTP cookie.
    */
   identity_token_cookie_enabled?: boolean;
 }
+
+//////////
+// source: github_email.go
+
+/**
+ * EmailClaimKey is the email claim field
+ */
+export const EmailClaimKey = "email";
+/**
+ * EmailVerifiedClaimKey is the claim key used to store the email verification status.
+ */
+export const EmailVerifiedClaimKey = "email_verified";
 
 //////////
 // source: jwks.go
@@ -142,6 +165,11 @@ export interface IdentityProvider {}
 
 //////////
 // source: user.go
+
+/**
+ * GithubEmailURLStr is the GitHub API endpoint for user emails
+ */
+export const GithubEmailURLStr = "https://api.github.com/user/emails";
 
 //////////
 // source: user_groups.go

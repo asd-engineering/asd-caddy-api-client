@@ -7,21 +7,30 @@
  * Config represents a collection of various credentials.
  */
 export interface Config {
-  generic?: (Generic | undefined)[];
+  raw_credential_configs?: string[][];
+  generic?: (GenericCredential | undefined)[];
 }
+
+//////////
+// source: credential.go
+
 /**
  * Credential is an interface to work with credentials.
  */
 export type Credential = any;
 
 //////////
-// source: generic.go
+// source: generic_credential.go
 
 /**
- * Generic represents username and password credentials, with optional
+ * GenericCredentialKindLabel is the label for GenericCredential type.
+ */
+export const GenericCredentialKindLabel = "generic";
+/**
+ * GenericCredential represents username and password credentials, with optional
  * domain name field.
  */
-export interface Generic {
+export interface GenericCredential {
   name?: string;
   username?: string;
   password?: string;

@@ -17,6 +17,7 @@ import type { ConnectionPolicies } from "./caddy-tls";
  * Placeholder | Description
  * ------------|---------------
  * `{http.request.body}` | The request body (⚠️ inefficient; use only for debugging)
+ * `{http.request.body_base64}` | The request body, base64-encoded (⚠️ for debugging)
  * `{http.request.cookie.*}` | HTTP request cookie
  * `{http.request.duration}` | Time up to now spent handling the request (after decoding headers from client)
  * `{http.request.duration_ms}` | Same as 'duration', but in milliseconds.
@@ -48,6 +49,7 @@ import type { ConnectionPolicies } from "./caddy-tls";
  * `{http.request.tls.proto}` | The negotiated next protocol
  * `{http.request.tls.proto_mutual}` | The negotiated next protocol was advertised by the server
  * `{http.request.tls.server_name}` | The server name requested by the client, if any
+ * `{http.request.tls.ech}` | Whether ECH was offered by the client and accepted by the server
  * `{http.request.tls.client.fingerprint}` | The SHA256 checksum of the client certificate
  * `{http.request.tls.client.public_key}` | The public key of the client certificate.
  * `{http.request.tls.client.public_key_sha256}` | The SHA256 checksum of the client's public key.
@@ -772,7 +774,7 @@ export const MatcherErrorVarKey = "matchers.error";
  * 			"http": {
  * 				"metrics": {
  * 					"per_host": true,
- * 					"allow_catch_all_hosts": false
+ * 					"observe_catchall_hosts": false
  * 				},
  * 				"servers": {
  * 					"srv0": {
@@ -812,7 +814,7 @@ export interface Metrics {
    * Set to true to allow all hosts to get individual metrics (NOT RECOMMENDED
    * for production environments exposed to the internet).
    */
-  allow_catch_all_hosts?: boolean;
+  observe_catchall_hosts?: boolean;
 }
 
 //////////
@@ -978,6 +980,11 @@ export interface Server {
    * of the base listener. They are applied in the given order.
    */
   listener_wrappers?: unknown[];
+  /**
+   * A list of packet conn wrapper modules, which can modify the behavior
+   * of the base packet conn. They are applied in the given order.
+   */
+  packet_conn_wrappers?: unknown[];
   /**
    * How long to allow a read from a client's upload. Setting this
    * to a short, non-zero value can mitigate slowloris attacks, but
@@ -1177,6 +1184,16 @@ export interface Server {
    * A nil value or element indicates that Protocols will be used instead.
    */
   listen_protocols?: string[][];
+  /**
+   * If set, overrides whether QUIC listeners allow 0-RTT (early data).
+   * If nil, the default behavior is used (currently allowed).
+   * One reason to disable 0-RTT is if a remote IP matcher is used,
+   * which introduces a dependency on the remote address being verified
+   * if routing happens before the TLS handshake completes. An HTTP 425
+   * response is written in that case, but some clients misbehave and
+   * don't perform a retry, so disabling 0-RTT can smooth it out.
+   */
+  allow_0rtt?: boolean;
   /**
    * If set, metrics observations will be enabled.
    * This setting is EXPERIMENTAL and subject to change.

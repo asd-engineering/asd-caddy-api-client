@@ -2,12 +2,12 @@
 
 import type { Config as CredentialsConfig } from "./authcrunch-credentials";
 import type { Config as MessagingConfig } from "./authcrunch-messaging";
+import type { Config as RegistryConfig } from "./authcrunch-registry";
 import type { PortalConfig } from "./authcrunch-authn";
 import type { PolicyConfig } from "./authcrunch-authz";
 import type { IdentityStoreConfig } from "./authcrunch-ids";
 import type { IdentityProviderConfig } from "./authcrunch-idp";
 import type { SingleSignOnProviderConfig } from "./authcrunch-sso";
-import type { UserRegistryConfig } from "./authcrunch-registry";
 
 //////////
 // source: config.go
@@ -18,12 +18,12 @@ import type { UserRegistryConfig } from "./authcrunch-registry";
 export interface Config {
   credentials?: CredentialsConfig;
   messaging?: MessagingConfig;
+  user_registration?: RegistryConfig;
   authentication_portals?: (PortalConfig | undefined)[];
   authorization_policies?: (PolicyConfig | undefined)[];
   identity_stores?: (IdentityStoreConfig | undefined)[];
   identity_providers?: (IdentityProviderConfig | undefined)[];
   sso_providers?: (SingleSignOnProviderConfig | undefined)[];
-  user_registries?: (UserRegistryConfig | undefined)[];
 }
 
 //////////

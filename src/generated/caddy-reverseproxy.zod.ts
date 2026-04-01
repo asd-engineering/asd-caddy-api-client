@@ -49,6 +49,8 @@ export const healthCheckSchemeOverriderTransportSchema = z.any();
 
 export const bufferedTransportSchema = z.any();
 
+export const requestHeaderOpsTransportSchema = z.any();
+
 export const randomSelectionSchema = z.object({});
 
 export const weightedRoundRobinSelectionSchema = z.object({
@@ -79,6 +81,11 @@ export const queryHashSelectionSchema = z.object({
 export const headerHashSelectionSchema = z.object({
   field: z.string().optional(),
   fallback: z.unknown().optional(),
+});
+
+export const cookieHashSelectionSchema = z.object({
+  name: z.string().optional(),
+  secret: z.string().optional(),
 });
 
 export const ipVersionsSchema = z.object({
@@ -168,13 +175,6 @@ export const healthChecksSchema = z.object({
   passive: passiveHealthChecksSchema.optional(),
 });
 
-export const cookieHashSelectionSchema = z.object({
-  name: z.string().optional(),
-  secret: z.string().optional(),
-  max_age: durationSchema.optional(),
-  fallback: z.unknown().optional(),
-});
-
 export const srvUpstreamsSchema = z.object({
   service: z.string().optional(),
   proto: z.string().optional(),
@@ -184,6 +184,7 @@ export const srvUpstreamsSchema = z.object({
   resolver: upstreamResolverSchema.optional(),
   dial_timeout: durationSchema.optional(),
   dial_fallback_delay: durationSchema.optional(),
+  dial_network: z.string().optional(),
 });
 
 export const aUpstreamsSchema = z.object({

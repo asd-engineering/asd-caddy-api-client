@@ -3,4 +3,5 @@ import { z } from "zod";
 
 export const tracingSchema = z.object({
   span: z.string(),
+  span_attributes: z.record(z.string(), z.string()).optional(),
 });

@@ -11,10 +11,14 @@ export interface TokenValidatorOptions {
   validate_bearer_header?: boolean;
   validate_method_path?: boolean;
   validate_access_list_path_claim?: boolean;
+  authorization_cookie_names?: string[];
+  authorization_header_names?: string[];
+  authorization_query_param_names?: string[];
 }
 /**
  * TokenGrantorOptions provides options for TokenGrantor.
  */
 export interface TokenGrantorOptions {
   enable_source_address?: boolean;
+  access_token_cookie_name?: string;
 }

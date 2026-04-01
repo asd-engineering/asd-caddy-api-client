@@ -3,7 +3,7 @@ import { z } from "zod";
 
 export const metricsSchema = z.object({
   per_host: z.boolean().optional(),
-  allow_catch_all_hosts: z.boolean().optional(),
+  observe_catchall_hosts: z.boolean().optional(),
 });
 
 export const autoHttpsConfigSchema = z.object({
@@ -186,6 +186,7 @@ export const subrouteSchema = z.object({
 export const serverSchema = z.object({
   listen: z.array(z.string()).optional(),
   listener_wrappers: z.array(z.unknown()).optional(),
+  packet_conn_wrappers: z.array(z.unknown()).optional(),
   read_timeout: durationSchema.optional(),
   read_header_timeout: durationSchema.optional(),
   write_timeout: durationSchema.optional(),
@@ -208,6 +209,7 @@ export const serverSchema = z.object({
   logs: serverLogConfigSchema.optional(),
   protocols: z.array(z.string()).optional(),
   listen_protocols: z.array(z.array(z.string())).optional(),
+  allow_0rtt: z.boolean().optional(),
   metrics: metricsSchema.optional(),
 });
 

@@ -2,11 +2,22 @@
 
 This file tracks the upstream versions used to generate types and schemas.
 
+## Version Compatibility Matrix
+
+Which npm package version supports which Caddy and plugin versions:
+
+| npm Package | Caddy    | caddy-security | go-authcrunch | Notes                              |
+| ----------- | -------- | -------------- | ------------- | ---------------------------------- |
+| 0.6.0       | v2.11.2  | v1.1.59        | v1.1.35       | Current — latest upstream versions |
+| 0.4.0–0.5.2 | v2.10.2  | v1.1.31        | v1.1.7        | First plugin framework release     |
+| 0.3.0       | v2.10.2  | —              | —             | Self-contained type generation     |
+| 0.1.0–0.2.2 | external | —              | —             | Used caddy-json-types package      |
+
 ## Core Caddy
 
 | Component | Version | Commit   | Updated    |
 | --------- | ------- | -------- | ---------- |
-| Caddy     | v2.10.2 | a6da1acd | 2026-01-11 |
+| Caddy     | v2.11.2 | ffb6ab06 | 2026-04-01 |
 
 **Source:** `local/caddy` (git repository)
 **Generated files:** `src/generated/caddy-*.ts`, `src/generated/caddy-*.zod.ts`
@@ -15,7 +26,8 @@ This file tracks the upstream versions used to generate types and schemas.
 
 | Plugin         | Version | Source               | Updated    |
 | -------------- | ------- | -------------------- | ---------- |
-| caddy-security | v1.1.31 | local/caddy-security | 2026-01-11 |
+| caddy-security | v1.1.59 | local/caddy-security | 2026-04-01 |
+| go-authcrunch  | v1.1.35 | local/go-authcrunch  | 2026-04-01 |
 
 **Source:** `local/caddy-security` (git repository)
 **Generated files:** `src/generated/plugins/caddy-security.ts`, `src/generated/plugins/caddy-security.zod.ts`
