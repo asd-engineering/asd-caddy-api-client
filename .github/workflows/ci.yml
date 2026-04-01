@@ -200,10 +200,10 @@ jobs:
           echo "Final connectivity check with curl..."
           curl -sf http://127.0.0.1:2020/config/ | head -c 100 && echo ""
 
-          # Test with raw Node.js fetch
+          # Test with raw Node.js fetch (Origin header required for Caddy v2.11+ admin API)
           echo "Testing with Node.js fetch..."
           node -e "
-            fetch('http://127.0.0.1:2020/config/')
+            fetch('http://127.0.0.1:2020/config/', { headers: { Origin: 'http://127.0.0.1:2020' } })
               .then(r => r.json())
               .then(d => console.log('Node fetch OK:', JSON.stringify(d).slice(0, 100)))
               .catch(e => { console.error('Node fetch FAILED:', e.message); process.exit(1); });
@@ -221,6 +221,8 @@ jobs:
           CADDY_SECURITY_TEST: "true"
           CADDY_ADMIN_URL: "http://127.0.0.1:2020"
           KEYCLOAK_URL: "http://localhost:8081"
+          LDAP_HOST: "openldap-test"
+          LDAP_PORT: "389"
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
@@ -231,6 +233,16 @@ jobs:
           name: caddy-security-tests
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Dump Docker logs on failure
+        if: failure()
+        run: |
+          echo "=== caddy-security container logs ==="
+          docker logs caddy-security-test 2>&1 | tail -100 || true
+          echo "=== Docker network info ==="
+          docker network ls || true
+          docker inspect caddy-security-test --format '{{json .NetworkSettings.Networks}}' 2>/dev/null | head -5 || true
+          docker inspect openldap-test --format '{{json .NetworkSettings.Networks}}' 2>/dev/null | head -5 || true
 
       - name: Cleanup Docker services
         if: always()

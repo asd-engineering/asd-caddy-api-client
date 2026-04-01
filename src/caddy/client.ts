@@ -22,7 +22,10 @@ import { validateOrThrow } from "../utils/validation.js";
 // Create passthrough versions of schemas to preserve unknown fields from API responses
 // This ensures we don't accidentally strip fields that Caddy returns but aren't in our schema
 // Important: Caddy routes can have @id fields and other custom properties
-const configResponseSchema = configSchema.passthrough();
+// Note: configSchema.logging uses strict typing for Go embedded structs (e.g. BaseLog)
+// which don't match Caddy's actual JSON where embedded fields are flattened. Use z.any()
+// for logging to avoid validation failures against real Caddy responses.
+const configResponseSchema = configSchema.extend({ logging: z.any().optional() }).passthrough();
 const serverResponseSchema = serverSchema.passthrough();
 const serversResponseSchema = z.record(z.string(), serverResponseSchema);
 
@@ -50,10 +53,15 @@ export class CaddyClient {
    * @param options - Client configuration options
    * @throws {ValidationError} If options are invalid (e.g., invalid URL or timeout)
    */
+  private readonly origin: string;
+
   constructor(options: CaddyClientOptions = {}) {
     const validated = validateOrThrow(CaddyClientOptionsSchema, options, "client options");
     this.adminUrl = validated.adminUrl;
     this.timeout = validated.timeout;
+    // Derive origin from admin URL for Caddy v2.11+ admin API origin enforcement
+    const parsed = new URL(this.adminUrl);
+    this.origin = parsed.origin;
   }
 
   /**
@@ -75,6 +83,7 @@ export class CaddyClient {
         signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
+          Origin: this.origin,
           ...options.headers,
         },
       });

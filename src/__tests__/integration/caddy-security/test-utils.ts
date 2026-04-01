@@ -81,8 +81,13 @@ export async function addIdentityStores(
         body: JSON.stringify(store),
       });
     } catch (error) {
-      // Log but continue - store might already exist
-      console.warn(`Failed to add identity store ${store.name}:`, error);
+      // Log with response body for debugging
+      const body = (error as { responseBody?: string }).responseBody ?? "";
+      console.warn(
+        `Failed to add identity store ${store.name}:`,
+        error,
+        body ? `\nResponse: ${body}` : ""
+      );
     }
   }
 }

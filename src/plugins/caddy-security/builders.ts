@@ -210,7 +210,13 @@ export function buildLdapIdentityStore(options: BuildLdapIdentityStoreOptions): 
       bind_username: options.bindUsername,
       bind_password: options.bindPassword,
       search_base_dn: options.searchBaseDn,
-      search_user_filter: options.searchUserFilter ?? "(uid={username})",
+      // Convert Caddyfile-style {username} placeholder to %s for the JSON admin API.
+      // Caddy's provisioner runs FindReplace() with caddy.Replacer which treats {username}
+      // as a Caddy placeholder and fails. The Go code uses strings.ReplaceAll(%s, username).
+      search_user_filter: (options.searchUserFilter ?? "(uid={username})").replace(
+        /\{username\}/g,
+        "%s"
+      ),
       // Groups field is required by authcrunch, must have at least one group
       // If no groups provided, create a default catch-all group
       // Each group requires dn field (use search_base_dn as default catch-all)
