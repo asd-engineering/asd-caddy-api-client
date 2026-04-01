@@ -17,6 +17,9 @@ All notable changes to this project will be documented in this file. See [standa
 ### Fixed
 
 - **tygo generation artifacts** — fixed 3 instances where Go-to-TypeScript conversion produced broken inline comments that caused TypeScript compilation errors (caddy-auth.ts, caddy-reverseproxy.ts, caddy-tls.ts).
+- **Caddy v2.11+ admin API origin enforcement** — CaddyClient now sends an explicit `Origin` header derived from the admin URL, preventing 403 Forbidden errors caused by CVE-2026-27589 origin checking.
+- **LDAP search filter placeholder** — `buildLdapIdentityStore()` now auto-converts Caddyfile-style `{username}` to `%s` in `search_user_filter`, fixing 500 errors when adding LDAP stores via the admin API.
+- **Config response logging validation** — `getConfig()` no longer fails on Caddy's logging config where Go embedded structs are flattened in JSON.
 
 ## [0.5.2](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.5.1...v0.5.2) (2026-03-14)
 
