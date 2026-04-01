@@ -29,6 +29,7 @@ export interface AuthenticationPortal {
 export interface AuthorizationPolicy {
   name: string;
   access_lists?: unknown[];
+  access_list_rules?: unknown[];
   [key: string]: unknown;
 }
 

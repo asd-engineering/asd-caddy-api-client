@@ -16,7 +16,7 @@ services:
       retries: 5
 
   caddy-security:
-    image: androw/caddy-security:2.10.2_1.1.31
+    image: androw/caddy-security:2.11.2_1.1.59
     container_name: caddy-security-test
     ports:
       - "8443:443"
