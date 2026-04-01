@@ -98,7 +98,7 @@ describe.skipIf(skipIfNoSecurityStack)(
             bind_username: LDAP_BIND_DN,
             bind_password: LDAP_BIND_PASSWORD,
             search_base_dn: LDAP_SEARCH_BASE_DN,
-            search_user_filter: LDAP_SEARCH_FILTER,
+            search_user_filter: "(uid=%s)", // Builder auto-converts {username} to %s for admin API
             groups: [{ dn: LDAP_SEARCH_BASE_DN, roles: ["authp/user"] }], // Default group uses searchBaseDn
           },
         });

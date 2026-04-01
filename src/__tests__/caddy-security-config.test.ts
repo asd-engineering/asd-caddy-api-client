@@ -143,7 +143,7 @@ describe("Phase 1: caddy-security Config Generation", () => {
           bind_username: "cn=admin,dc=example,dc=com",
           bind_password: "secret",
           search_base_dn: "ou=users,dc=example,dc=com",
-          search_user_filter: "(uid={username})",
+          search_user_filter: "(uid=%s)",
           // Default group assigns user role to all LDAP users (uses searchBaseDn as dn)
           groups: [{ dn: "ou=users,dc=example,dc=com", roles: ["authp/user"] }],
         },
@@ -160,7 +160,7 @@ describe("Phase 1: caddy-security Config Generation", () => {
 
       expect(store.name).toBe("ldapdb");
       expect(store.params.realm).toBe("ldap");
-      expect(store.params.search_user_filter).toBe("(uid={username})");
+      expect(store.params.search_user_filter).toBe("(uid=%s)");
     });
 
     test("buildLdapIdentityStore with multiple servers", () => {
