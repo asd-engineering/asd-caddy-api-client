@@ -2,7 +2,9 @@
 # Tests the authentication portal with LDAP identity store
 
 {
-    admin :2019
+    admin :2019 {
+        origins 127.0.0.1:2021 localhost:2021 127.0.0.1:2019 localhost:2019
+    }
     debug
 
     security {
