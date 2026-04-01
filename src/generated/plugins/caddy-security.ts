@@ -27,9 +27,6 @@ export interface App {
 // source: caddyfile_identity.go
 
 //////////
-// source: caddyfile_messaging.go
-
-//////////
 // source: caddyfile_secrets.go
 
 //////////

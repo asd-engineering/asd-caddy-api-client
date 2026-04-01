@@ -793,6 +793,12 @@
             "span": {
               "type": "string"
             },
+            "span_attributes": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
             "handler": {
               "type": "string",
               "const": "tracing"
@@ -809,6 +815,9 @@
             },
             "value": {
               "type": "string"
+            },
+            "early": {
+              "type": "boolean"
             },
             "handler": {
               "type": "string",

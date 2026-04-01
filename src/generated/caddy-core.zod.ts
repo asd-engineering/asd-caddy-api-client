@@ -58,6 +58,8 @@ export const listenerFuncSchema = z.any();
 
 export const listenerWrapperSchema = z.any();
 
+export const packetConnWrapperSchema = z.any();
+
 export const writerOpenerSchema = z.unknown();
 
 export const logSamplingSchema = z.object({
@@ -78,7 +80,7 @@ export const baseLogSchema = z.object({
 });
 
 export const customLogSchema = z.object({
-  BaseLog: baseLogSchema.optional(),
+  BaseLog: baseLogSchema,
   include: z.array(z.string()).optional(),
   exclude: z.array(z.string()).optional(),
 });

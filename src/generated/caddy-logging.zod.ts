@@ -4,4 +4,5 @@ import { z } from "zod";
 export const logAppendSchema = z.object({
   key: z.string().optional(),
   value: z.string().optional(),
+  early: z.boolean().optional(),
 });

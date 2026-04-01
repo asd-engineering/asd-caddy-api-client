@@ -21,15 +21,6 @@ export interface Link {
 // source: params.go
 
 /**
- * NavigationItem represents side navigation menu item.
- */
-export interface NavigationItem {
-  name?: string;
-  path?: string;
-  active?: boolean;
-  icon_name?: string;
-}
-/**
  * Parameters represent a common set of configuration settings
  * for HTML UI.
  */
@@ -43,16 +34,15 @@ export interface Parameters {
   meta_title?: string;
   meta_description?: string;
   meta_author?: string;
-  private_links?: Link[];
+  private_links?: (Link | undefined)[];
   auto_redirect_url?: string;
-  realms?: UserRealm[];
+  realms?: (UserRealm | undefined)[];
   password_recovery_enabled?: boolean;
   custom_css_path?: string;
   custom_js_path?: string;
   custom_html_header_path?: string;
-  static_assets?: StaticAsset[];
+  static_assets?: (StaticAsset | undefined)[];
   language?: string;
-  disabled_pages?: { [key: string]: boolean };
 }
 
 //////////
@@ -96,17 +86,18 @@ export interface Factory {
   /**
    * The links visible to anonymous user
    */
-  public_links?: Link[];
+  public_links?: (Link | undefined)[];
   /**
    * The links visible to authenticated user
    */
-  private_links?: Link[];
+  private_links?: (Link | undefined)[];
   /**
    * The authentication realms/domains
    */
-  realms?: UserRealm[];
+  realms?: (UserRealm | undefined)[];
   custom_css_path?: string;
   custom_js_path?: string;
+  language?: any /* translate.LangID */;
 }
 /**
  * Template represents a user interface instance, e.g. a single
@@ -132,7 +123,6 @@ export interface UserRealm {
  */
 export interface Args {
   page_title?: string;
-  nav_items?: (NavigationItem | undefined)[];
   logo_url?: string;
   logo_description?: string;
   meta_title?: string;
@@ -141,9 +131,9 @@ export interface Args {
   action_endpoint?: string;
   message?: string;
   message_type?: string;
-  public_links?: Link[];
-  private_links?: Link[];
-  realms?: UserRealm[];
+  public_links?: (Link | undefined)[];
+  private_links?: (Link | undefined)[];
+  realms?: (UserRealm | undefined)[];
   authenticated?: boolean;
   data?: { [key: string]: any };
   registration_enabled?: boolean;

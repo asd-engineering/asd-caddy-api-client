@@ -391,6 +391,18 @@ export type ListenerFunc = any;
  * appropriate.
  */
 export type ListenerWrapper = any;
+/**
+ * PacketConnWrapper is a type that wraps a packet conn
+ * so it can modify the input packet conn methods.
+ * Modules that implement this interface are found
+ * in the caddy.packetconns namespace. Usually, to
+ * wrap a packet conn, you will define your own struct
+ * type that embeds the input packet conn, then
+ * implement your own methods that you want to wrap,
+ * calling the underlying packet conn methods where
+ * appropriate.
+ */
+export type PacketConnWrapper = any;
 
 //////////
 // source: logging.go
@@ -507,7 +519,7 @@ export interface SinkLog {
  * are populated, all logs are emitted.
  */
 export interface CustomLog {
-  BaseLog?: BaseLog;
+  BaseLog: BaseLog;
   /**
    * Include defines the names of loggers to emit in this
    * log. For example, to include only logs emitted by the

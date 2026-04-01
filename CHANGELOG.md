@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.6.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.5.2...v0.6.0) (2026-04-01)
+
+### Changed
+
+- **Caddy upgraded from v2.10.2 to v2.11.2** — regenerated all core types and Zod schemas from latest Caddy source. Includes security fixes (forward_auth header stripping GHSA-7r4p-vjf4-gxv4), reverse proxy improvements (dynamic upstream tracking, passive healthchecking, proxy protocol fixes), and encode/streaming fixes.
+- **caddy-security upgraded from v1.1.31 to v1.1.59** — regenerated plugin types. Authorization policies now use `access_list_rules` with conditions-based syntax instead of the previous `access_lists` with claim/values format.
+- **go-authcrunch upgraded from v1.1.7 to v1.1.35** — regenerated authcrunch types.
+
+### Added
+
+- **Version compatibility matrix** in DEPENDENCIES.md and README — users can now see which npm package version corresponds to which Caddy and plugin versions.
+
+### Fixed
+
+- **tygo generation artifacts** — fixed 3 instances where Go-to-TypeScript conversion produced broken inline comments that caused TypeScript compilation errors (caddy-auth.ts, caddy-reverseproxy.ts, caddy-tls.ts).
+
 ## [0.5.2](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.5.1...v0.5.2) (2026-03-14)
 
 ### Added

@@ -16,6 +16,10 @@ export interface Tracing {
    * https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md#span
    */
   span: string;
+  /**
+   * SpanAttributes are custom key-value pairs to be added to spans
+   */
+  span_attributes?: { [key: string]: string };
 }
 
 //////////

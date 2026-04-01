@@ -8,18 +8,28 @@
     "caddy-security-local-store": {
       "type": "object",
       "properties": {
-        "driver": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
           "type": "string",
           "const": "local"
         },
-        "realm": {
-          "type": "string"
-        },
-        "path": {
-          "type": "string"
+        "params": {
+          "type": "object",
+          "properties": {
+            "realm": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": ["path"],
+          "additionalProperties": false
         }
       },
-      "required": ["driver", "path"],
+      "required": ["name", "kind", "params"],
       "additionalProperties": false
     }
   }

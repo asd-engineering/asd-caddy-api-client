@@ -12,27 +12,33 @@ export type Authenticator = any;
 // source: config.go
 
 /**
- * BasicAuthConfig is a config for basic authentication.
- */
-export interface BasicAuthConfig {
-  enabled?: boolean;
-  realms?: { [key: string]: any };
-}
-/**
- * APIKeyAuthConfig is a config for API key-based authentication.
- */
-export interface APIKeyAuthConfig {
-  enabled?: boolean;
-  realms?: { [key: string]: any };
-}
-/**
  * Config is a config for an identity provider.
  */
 export interface Config {
-  portal_name?: string;
-  basic_auth?: BasicAuthConfig;
-  api_key_auth?: APIKeyAuthConfig;
+  realms?: { [key: string]: RealmAuthProxyConfig | undefined };
 }
+
+//////////
+// source: realm_config.go
+
+/**
+ * RealmAuthProxyConfig is auth proxy config for a realm.
+ */
+export interface RealmAuthProxyConfig {
+  portal_name?: string;
+  basic_auth_enabled?: boolean;
+  api_key_auth_enabled?: boolean;
+  is_remote?: boolean;
+  remote_addr?: string;
+}
+
+//////////
+// source: remote_authenticator.go
+
+/**
+ * RemoteAuthenticator holds connection to remote identity store.
+ */
+export interface RemoteAuthenticator {}
 
 //////////
 // source: request.go
@@ -43,6 +49,7 @@ export interface Config {
 export interface Response {
   name?: string;
   payload?: string;
+  is_plain_payload?: boolean;
 }
 /**
  * Request is a request to an identity store via Authenticator.

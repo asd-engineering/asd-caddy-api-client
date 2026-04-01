@@ -15,17 +15,48 @@ export interface RegistrationCache {
 }
 
 //////////
-// source: user_config.go
+// source: config.go
 
 /**
- * UserRegistryConfig represents a common set of configuration settings for user registration
+ * Config represents a collection of user registration providers.
  */
-export interface UserRegistryConfig {
+export interface Config {
+  raw_configs?: string[][];
+  local_providers?: (LocalUserRegistryProvider | undefined)[];
+}
+
+//////////
+// source: domain_restriction_rule.go
+
+/**
+ * DomainRestrictionRule holds the configuration for a domain restriction.
+ */
+export interface DomainRestrictionRule {
+  domain_match_type?: string;
+  domain?: string;
+  action_type?: string;
+}
+
+//////////
+// source: domain_restriction_ruleset.go
+
+/**
+ * DomainRestrictionRuleset holds the rules associated with domain restrictions.
+ */
+export interface DomainRestrictionRuleset {}
+
+//////////
+// source: local_user_registry.go
+
+/**
+ * LocalUserRegistryProviderKindLabel is the label for local user registry provider type.
+ */
+export const LocalUserRegistryProviderKindLabel = "local";
+/**
+ * LocalUserRegistryProvider represents local user registry provider.
+ */
+export interface LocalUserRegistryProvider {
   name?: string;
-  /**
-   * The switch determining whether the registration is enabled/disabled.
-   */
-  disabled?: boolean;
   /**
    * The title of the registration page
    */
@@ -59,7 +90,7 @@ export interface UserRegistryConfig {
   /**
    * The email provider used for the notifications.
    */
-  email_provider?: string;
+  email_provider_name?: string;
   /**
    * The email address(es) of portal administrators.
    */
@@ -67,17 +98,25 @@ export interface UserRegistryConfig {
   /**
    * The name of the identity store associated with the Config.
    */
-  identity_store?: string;
+  identity_store_name?: string;
+  /**
+   * The name of the authentication realm of identity store associated with the Config.
+   */
+  realm_name?: string;
+  /**
+   * DomainRestrictions holds the allow and deny rules for domains in email addresses.
+   */
+  domain_restrictions?: string[];
 }
 
 //////////
-// source: user_registry.go
+// source: provider.go
 
 /**
- * LocaUserRegistry is a local registry.
+ * UnknownUserRegistryProviderKindLabel is the label for unknown user registration provider type.
  */
-export interface LocaUserRegistry {}
+export const UnknownUserRegistryProviderKindLabel = "unknown";
 /**
- * UserRegistry represents user registry.
+ * Provider is an interface to work with user registration providers.
  */
-export type UserRegistry = any;
+export type Provider = any;

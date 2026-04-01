@@ -6,8 +6,8 @@
  * Run: npm run generate:extension
  *
  * @generated
- * @version 0.4.0
- * @generatedAt 2026-01-13T15:46:05.640Z
+ * @version 0.5.2
+ * @generatedAt 2026-04-01T16:38:14.519Z
  */
 
 // ============================================================================
@@ -54,12 +54,12 @@ export interface HandlerMetadata {
 /**
  * Library version this metadata was generated from
  */
-export const METADATA_VERSION = "0.4.0";
+export const METADATA_VERSION = "0.5.2";
 
 /**
  * Timestamp when this metadata was generated
  */
-export const GENERATED_AT = "2026-01-13T15:46:05.640Z";
+export const GENERATED_AT = "2026-04-01T16:38:14.519Z";
 
 /**
  * Builder function metadata extracted from JSDoc and type definitions
@@ -73,8 +73,15 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
   buildLocalIdentityStore: {
     name: "buildLocalIdentityStore",
     description:
-      "Build a local identity store configuration\n\nCreates a local JSON file-based identity store for user credentials.",
+      "Build a local identity store configuration\n\nCreates a local JSON file-based identity store for user credentials.\nUses the authcrunch wrapper structure: name, kind, params",
     params: [
+      {
+        name: "name",
+        type: "string",
+        required: false,
+        description: "Name of the identity store (used to reference it in portals)",
+        default: "local",
+      },
       {
         name: "path",
         type: "string",
@@ -91,13 +98,14 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     ],
     returnType: "LocalIdentityStore",
     example:
-      'import { buildLocalIdentityStore } from "@.../caddy-api-client/plugins/caddy-security";\n\nconst store = buildLocalIdentityStore({\n  path: "/etc/caddy/users.json",\n  realm: "local",\n});',
+      'import { buildLocalIdentityStore } from "@.../caddy-api-client/plugins/caddy-security";\n\nconst store = buildLocalIdentityStore({\n  name: "localdb",\n  path: "/etc/caddy/users.json",\n  realm: "local",\n});',
     snippet: {
       prefix: "caddy-local-identity-store",
       body: [
         "buildLocalIdentityStore({",
-        "  path: ${1:/etc/caddy/config.json},",
-        "  // realm: ${2:local}",
+        "  // name: ${1:local},",
+        "  path: ${2:/etc/caddy/config.json},",
+        "  // realm: ${3:local}",
         "})",
       ],
       description: "Build Local Identity Store",
@@ -106,8 +114,15 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
   buildLdapIdentityStore: {
     name: "buildLdapIdentityStore",
     description:
-      "Build an LDAP identity store configuration\n\nCreates an LDAP-based identity store for user authentication.",
+      "Build an LDAP identity store configuration\n\nCreates an LDAP-based identity store for user authentication.\nUses the authcrunch wrapper structure: name, kind, params",
     params: [
+      {
+        name: "name",
+        type: "string",
+        required: false,
+        description: "Name of the identity store (used to reference it in portals)",
+        default: "ldapdb",
+      },
       {
         name: "realm",
         type: "string",
@@ -122,10 +137,10 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         description: "LDAP server(s) to connect to",
       },
       {
-        name: "bindDn",
+        name: "bindUsername",
         type: "string",
         required: true,
-        description: "Bind DN for LDAP queries",
+        description: "Bind username for LDAP queries (full DN)",
         example: "cn=admin,dc=example,dc=com",
       },
       {
@@ -142,26 +157,35 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         example: "ou=users,dc=example,dc=com",
       },
       {
-        name: "searchFilter",
+        name: "searchUserFilter",
         type: "string",
         required: false,
-        description: "LDAP search filter template",
+        description: "LDAP search filter template for users",
         default: "(uid={username})",
+      },
+      {
+        name: "groups",
+        type: "LdapGroupConfig[]",
+        required: false,
+        description: "Group to role mappings",
+        default: "[]",
       },
     ],
     returnType: "LdapIdentityStore",
     example:
-      'import { buildLdapIdentityStore } from "@.../caddy-api-client/plugins/caddy-security";\n\nconst store = buildLdapIdentityStore({\n  servers: [{ address: "ldap.example.com", port: 389 }],\n  bindDn: "cn=admin,dc=example,dc=com",\n  bindPassword: "secret",\n  searchBaseDn: "ou=users,dc=example,dc=com",\n  searchFilter: "(uid={username})",\n});',
+      'import { buildLdapIdentityStore } from "@.../caddy-api-client/plugins/caddy-security";\n\nconst store = buildLdapIdentityStore({\n  name: "ldapdb",\n  servers: [{ address: "ldap.example.com", port: 389 }],\n  bindUsername: "cn=admin,dc=example,dc=com",\n  bindPassword: "secret",\n  searchBaseDn: "ou=users,dc=example,dc=com",\n  searchUserFilter: "(uid={username})",\n});',
     snippet: {
       prefix: "caddy-ldap-identity-store",
       body: [
         "buildLdapIdentityStore({",
-        "  // realm: ${1:ldap},",
-        '  servers: ${2:""},',
-        '  bindDn: ${3:""},',
-        '  bindPassword: ${4:""},',
-        '  searchBaseDn: ${5:""},',
-        "  // searchFilter: ${6:(uid={username})}",
+        "  // name: ${1:ldapdb},",
+        "  // realm: ${2:ldap},",
+        '  servers: ${3:""},',
+        "  bindUsername: ${4:my-name},",
+        '  bindPassword: ${5:""},',
+        '  searchBaseDn: ${6:""},',
+        "  // searchUserFilter: ${7:(uid={username})},",
+        "  // groups: ${8:[]}",
         "})",
       ],
       description: "Build LDAP Identity Store",
@@ -169,8 +193,15 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
   },
   buildOAuth2Provider: {
     name: "buildOAuth2Provider",
-    description: "Build an OAuth2 identity provider configuration",
+    description:
+      "Build an OAuth2 identity provider configuration\n\nUses the authcrunch wrapper structure: name, kind, params",
     params: [
+      {
+        name: "name",
+        type: "string",
+        required: false,
+        description: "Name of the identity provider (used to reference it in portals)",
+      },
       {
         name: "realm",
         type: "string",
@@ -181,7 +212,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         name: "provider",
         type: "string",
         required: true,
-        description: "Provider name (github, google, facebook, etc.)",
+        description: "Provider name/driver (github, google, facebook, etc.)",
       },
       {
         name: "clientId",
@@ -202,10 +233,22 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         description: "OAuth scopes to request",
         default: '["openid", "email", "profile"]',
       },
+      {
+        name: "authorizationUrl",
+        type: "string",
+        required: false,
+        description: "Authorization URL (for non-standard providers)",
+      },
+      {
+        name: "tokenUrl",
+        type: "string",
+        required: false,
+        description: "Token URL (for non-standard providers)",
+      },
     ],
     returnType: "OAuth2IdentityProvider",
     example:
-      'import { buildOAuth2Provider } from "@.../caddy-api-client/plugins/caddy-security";\n\nconst provider = buildOAuth2Provider({\n  provider: "github",\n  clientId: "your-client-id",\n  clientSecret: "your-client-secret",\n  scopes: ["user:email", "read:user"],\n});',
+      'import { buildOAuth2Provider } from "@.../caddy-api-client/plugins/caddy-security";\n\nconst provider = buildOAuth2Provider({\n  name: "github",\n  provider: "github",\n  clientId: "your-client-id",\n  clientSecret: "your-client-secret",\n  scopes: ["user:email", "read:user"],\n});',
     snippet: {
       prefix: "caddy-oauth2-provider",
       body: [
@@ -221,8 +264,15 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
   },
   buildOidcProvider: {
     name: "buildOidcProvider",
-    description: "Build an OIDC identity provider configuration",
+    description:
+      "Build an OIDC identity provider configuration\n\nUses the authcrunch wrapper structure: name, kind, params",
     params: [
+      {
+        name: "name",
+        type: "string",
+        required: false,
+        description: "Name of the identity provider (used to reference it in portals)",
+      },
       {
         name: "realm",
         type: "string",
@@ -248,10 +298,10 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         description: "Client secret",
       },
       {
-        name: "discoveryUrl",
+        name: "metadataUrl",
         type: "string",
         required: true,
-        description: "OIDC discovery URL (.well-known/openid-configuration)",
+        description: "OIDC metadata/discovery URL (.well-known/openid-configuration)",
         example: "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",
       },
       {
@@ -264,7 +314,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
     ],
     returnType: "OidcIdentityProvider",
     example:
-      'import { buildOidcProvider } from "@.../caddy-api-client/plugins/caddy-security";\n\nconst provider = buildOidcProvider({\n  provider: "keycloak",\n  clientId: "my-app",\n  clientSecret: "secret",\n  discoveryUrl: "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",\n});',
+      'import { buildOidcProvider } from "@.../caddy-api-client/plugins/caddy-security";\n\nconst provider = buildOidcProvider({\n  name: "keycloak",\n  provider: "keycloak",\n  clientId: "my-app",\n  clientSecret: "secret",\n  metadataUrl: "https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration",\n});',
     snippet: {
       prefix: "caddy-oidc-provider",
       body: [
@@ -272,7 +322,7 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         '  provider: ${1:""},',
         "  clientId: ${2:your-client-id},",
         "  clientSecret: ${3:your-client-secret},",
-        "  discoveryUrl: ${4:https://idp.example.com/.well-known/openid-configuration},",
+        '  metadataUrl: ${4:""},',
         '  // scopes: ${5:["openid", "email", "profile"]},',
         "})",
       ],
@@ -503,13 +553,6 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         required: false,
         description: "Route ID for tracking",
       },
-      {
-        name: "priority",
-        type: "number",
-        required: false,
-        description: "Route priority (lower = higher priority)",
-        default: "10 (AUTH_DOMAIN priority)",
-      },
     ],
     returnType: "CaddyRoute",
     example:
@@ -520,7 +563,6 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         "buildAuthenticatorRoute({",
         "  hosts: ${1:example.com},",
         '  portalName: ${2:""},',
-        "  // priority: ${3:10 (AUTH_DOMAIN priority)},",
         "})",
       ],
       description: "Build Authenticator Route",
@@ -561,13 +603,6 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         required: false,
         description: "Route ID for tracking",
       },
-      {
-        name: "priority",
-        type: "number",
-        required: false,
-        description: "Route priority (lower = higher priority)",
-        default: "50 (SERVICE priority)",
-      },
     ],
     returnType: "CaddyRoute",
     example:
@@ -579,7 +614,6 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
         "  hosts: ${1:example.com},",
         '  gatekeeperName: ${2:""},',
         "  dial: ${3:localhost:3000},",
-        "  // priority: ${4:50 (SERVICE priority)},",
         "})",
       ],
       description: "Build Protected Route",
@@ -688,6 +722,18 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
       description: "Build Rewrite Handler",
     },
   },
+  buildServiceMetadataHeadersHandler: {
+    name: "buildServiceMetadataHeadersHandler",
+    description:
+      "Build a service metadata headers handler\nSets X-ASD-Service-ID and X-ASD-Service-Type headers",
+    params: [],
+    returnType: "CaddyRouteHandler | null",
+    snippet: {
+      prefix: "caddy-service-metadata-headers-handler",
+      body: ["buildServiceMetadataHeadersHandler({", "})"],
+      description: "Build Service Metadata Headers Handler",
+    },
+  },
   buildIngressTagHeadersHandler: {
     name: "buildIngressTagHeadersHandler",
     description: "Build an ingress tag header handler",
@@ -697,6 +743,17 @@ export const BUILDER_METADATA: Record<string, BuilderMetadata> = {
       prefix: "caddy-ingress-tag-headers-handler",
       body: ["buildIngressTagHeadersHandler({", "})"],
       description: "Build Ingress Tag Headers Handler",
+    },
+  },
+  buildProjectIdHeadersHandler: {
+    name: "buildProjectIdHeadersHandler",
+    description: "Build a project identity header handler",
+    params: [],
+    returnType: "CaddyRouteHandler",
+    snippet: {
+      prefix: "caddy-project-id-headers-handler",
+      body: ["buildProjectIdHeadersHandler({", "})"],
+      description: "Build Project Id Headers Handler",
     },
   },
   buildIframeHeadersHandler: {

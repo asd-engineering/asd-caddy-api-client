@@ -17,6 +17,17 @@ Package pages:
 - ✅ **MITMweb integration** - Traffic inspection for tunnels
 - ✅ **Minimal dependencies** - Only peer dependency: `zod` for runtime validation
 
+## Caddy Version Compatibility
+
+| npm Package | Caddy   | caddy-security | Notes                              |
+| ----------- | ------- | -------------- | ---------------------------------- |
+| 0.6.x       | v2.11.2 | v1.1.59        | Current — latest upstream versions |
+| 0.4.x–0.5.x | v2.10.2 | v1.1.31        | First plugin framework release     |
+| 0.3.x       | v2.10.2 | —              | Self-contained type generation     |
+| 0.1.x–0.2.x | —       | —              | Used external caddy-json-types     |
+
+See [DEPENDENCIES.md](./DEPENDENCIES.md) for full version details including commit hashes.
+
 ## Live Demo
 
 Experience the library in action with our interactive demo showing dynamic MITMproxy traffic inspection via Caddy Admin API.

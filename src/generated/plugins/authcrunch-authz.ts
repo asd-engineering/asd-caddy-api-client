@@ -3,12 +3,20 @@
 import type { Config } from "./authcrunch-bypass";
 import type { Config as InjectorConfig } from "./authcrunch-injector";
 import type { RuleConfiguration } from "./authcrunch-acl";
-import type { CryptoKeyConfig } from "./authcrunch-kms";
+import type { CryptoKeyStoreConfig } from "./authcrunch-kms";
 import type { Config as AuthproxyConfig } from "./authcrunch-authproxy";
 
 //////////
 // source: config.go
 
+/**
+ * DefaultAPIKeyHeaderName is the default header used to search for API keys.
+ */
+export const DefaultAPIKeyHeaderName = "X-Api-Key";
+/**
+ * DefaultAuthRealmHeaderName is the default header used to search for authentication realm.
+ */
+export const DefaultAuthRealmHeaderName = "X-Auth-Realm";
 /**
  * PolicyConfig is Gatekeeper configuration.
  */
@@ -35,11 +43,14 @@ export interface PolicyConfig {
    */
   header_injection_configs?: (InjectorConfig | undefined)[];
   access_list_rules?: (RuleConfiguration | undefined)[];
-  crypto_key_configs?: (CryptoKeyConfig | undefined)[];
+  /**
+   * Holds raw crypto configuration.
+   */
+  raw_crypto_key_store_config?: string[];
   /**
    * CryptoKeyStoreConfig hold the default configuration for the keys, e.g. token name and lifetime.
    */
-  crypto_key_store_config?: { [key: string]: any };
+  crypto_key_store_config?: CryptoKeyStoreConfig;
   auth_proxy_config?: AuthproxyConfig;
   allowed_token_sources?: string[];
   strip_token_enabled?: boolean;
@@ -73,6 +84,23 @@ export interface PolicyConfig {
    * Allow to append scopes that come from the query parameter 'additionalScopes'
    */
   additional_scopes?: boolean;
+  /**
+   * Holds raw identity provider configuration.
+   */
+  auth_proxy_raw_config?: string[];
+  /**
+   * APIKeyHeaderName holds custom API key header name.
+   */
+  api_key_header_name?: string;
+  /**
+   * AuthRealmHeaderName holds custom authentication realm header name.
+   */
+  auth_realm_header_name?: string;
+  /**
+   * SessionIDCookieName holds custom session cookie name.
+   */
+  session_id_cookie_name?: string;
+  access_token_cookie_names?: string[];
 }
 
 //////////

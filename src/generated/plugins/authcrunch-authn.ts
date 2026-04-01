@@ -5,7 +5,7 @@ import type { Config } from "./authcrunch-transformer";
 import type { Config as CookieConfig } from "./authcrunch-cookie";
 import type { RuleConfiguration } from "./authcrunch-acl";
 import type { TokenGrantorOptions, TokenValidatorOptions } from "./authcrunch-options";
-import type { CryptoKeyConfig } from "./authcrunch-kms";
+import type { CryptoKeyStoreConfig } from "./authcrunch-kms";
 import type { RedirectURIMatchConfig } from "./authcrunch-redirects";
 import type { IdentityStore } from "./authcrunch-ids";
 import type { IdentityProvider } from "./authcrunch-idp";
@@ -67,17 +67,21 @@ export interface PortalConfig {
    */
   token_validator_options?: TokenValidatorOptions;
   /**
-   * CryptoKeyConfigs hold the configurations for the keys used to issue and validate user tokens.
+   * Holds raw crypto configuration.
    */
-  crypto_key_configs?: (CryptoKeyConfig | undefined)[];
+  raw_crypto_key_store_config?: string[];
   /**
    * CryptoKeyStoreConfig hold the default configuration for the keys, e.g. token name and lifetime.
    */
-  crypto_key_store_config?: { [key: string]: any };
+  crypto_key_store_config?: CryptoKeyStoreConfig;
   /**
    * TokenGrantorOptions holds the configuration for the tokens issues by Authenticator.
    */
   token_grantor_options?: TokenGrantorOptions;
+  /**
+   * TrustedLoginRedirectURIConfigs holds the configuration of trusted login redirect URIs.
+   */
+  trusted_login_redirect_uri_configs?: (RedirectURIMatchConfig | undefined)[];
   /**
    * TrustedLogoutRedirectURIConfigs holds the configuration of trusted logout redirect URIs.
    */
@@ -113,26 +117,22 @@ export interface PortalConfig {
 }
 
 //////////
-// source: handle_http_apps_sso.go
+// source: handle_api_crud_user.go
 
 //////////
-// source: handle_json_login.go
+// source: handle_api_list_realms.go
 
-/**
- * AuthRequest is authentication request.
- */
-export interface AuthRequest {
-  username?: string;
-  password?: string;
-  realm?: string;
-}
-/**
- * AuthResponse is the response to authentication request.
- */
-export interface AuthResponse {
-  token?: string;
-  token_name?: string;
-}
+//////////
+// source: handle_api_list_users.go
+
+//////////
+// source: handle_api_realm_info.go
+
+//////////
+// source: handle_api_reload_realm.go
+
+//////////
+// source: handle_http_apps_sso.go
 
 //////////
 // source: handle_register.go
