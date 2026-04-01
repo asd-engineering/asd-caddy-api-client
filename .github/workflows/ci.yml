@@ -234,6 +234,16 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+      - name: Dump Docker logs on failure
+        if: failure()
+        run: |
+          echo "=== caddy-security container logs ==="
+          docker logs caddy-security-test 2>&1 | tail -100 || true
+          echo "=== Docker network info ==="
+          docker network ls || true
+          docker inspect caddy-security-test --format '{{json .NetworkSettings.Networks}}' 2>/dev/null | head -5 || true
+          docker inspect openldap-test --format '{{json .NetworkSettings.Networks}}' 2>/dev/null | head -5 || true
+
       - name: Cleanup Docker services
         if: always()
         run: |
