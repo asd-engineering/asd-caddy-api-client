@@ -323,8 +323,18 @@ vscode-build:
     cd vscode-extension && npm run package
 
 # VSCode Extension: install in local VSCode
-vscode-install:
-    cd vscode-extension && code --install-extension vscode-caddy-tools-*.vsix --force
+vscode-install: vscode-build
+    #!/usr/bin/env bash
+    set -e
+    VSIX=$(ls -t vscode-extension/vscode-caddy-tools-*.vsix | head -1)
+    echo "📦 Installing ASD Caddy Configuration Tools extension..."
+    echo "   Publisher: asd-host (Accelerated Software Development B.V.)"
+    echo "   Package:   $VSIX"
+    echo ""
+    code --install-extension "$VSIX" --force
+    echo ""
+    echo "✅ Extension installed! Restart VS Code or reload window to activate."
+    echo "   Open any .caddy.json file to see IntelliSense, validation, and snippets."
 
 # MITMproxy demo: just demo start|stop|url
 [no-cd]
