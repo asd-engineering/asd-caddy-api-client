@@ -92,6 +92,7 @@
     "verify:pack": "npm pack --dry-run",
     "verify:publish": "npm publish --dry-run",
     "prepare": "husky",
+    "prepack": "bun run build",
     "prepublishOnly": "bun run build && bun run test && bun run typecheck && bun run lint",
     "generate:types": "npx tsx scripts/generate-caddy-types.ts",
     "generate:plugin-types": "npx tsx scripts/generate-plugin-types.ts",
