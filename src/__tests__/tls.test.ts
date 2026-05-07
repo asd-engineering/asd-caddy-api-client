@@ -6,6 +6,9 @@ import {
   buildTlsConnectionPolicy,
   buildModernTlsPolicy,
   buildCompatibleTlsPolicy,
+  buildAutomationPoliciesWithInternalFallback,
+  collectExternalHostsFromRoutes,
+  buildAutomaticHttpsConfig,
   TLS_1_3_CIPHER_SUITES,
   TLS_1_2_CIPHER_SUITES,
   MODERN_CIPHER_SUITES,
@@ -324,5 +327,195 @@ describe("buildCompatibleTlsPolicy", () => {
 
     expect(policy.protocol_min).toBe("tls1.2");
     expect(policy.protocol_max).toBeUndefined();
+  });
+});
+
+describe("buildAutomationPoliciesWithInternalFallback", () => {
+  test("emits localhost policy + catch-all by default", () => {
+    const { policies } = buildAutomationPoliciesWithInternalFallback();
+
+    expect(policies).toHaveLength(2);
+    expect(policies[0]?.subjects).toEqual(["*.localhost", "localhost"]);
+    expect(policies[0]?.issuers?.[0]).toEqual({ module: "internal" });
+    // Catch-all has NO `subjects` field — that's what makes it match anything.
+    expect(policies[1]?.subjects).toBeUndefined();
+    expect(policies[1]?.issuers?.[0]).toEqual({ module: "internal" });
+  });
+
+  test("catch-all is always last (so earlier policies win)", () => {
+    const { policies } = buildAutomationPoliciesWithInternalFallback();
+    const last = policies[policies.length - 1];
+
+    expect(last?.subjects).toBeUndefined();
+  });
+
+  test("catch-all only — when localhost policy is suppressed", () => {
+    const { policies } = buildAutomationPoliciesWithInternalFallback({
+      includeLocalhostPolicy: false,
+    });
+
+    expect(policies).toHaveLength(1);
+    expect(policies[0]?.subjects).toBeUndefined();
+    expect(policies[0]?.issuers?.[0]).toEqual({ module: "internal" });
+  });
+
+  test("propagates internal-issuer overrides (custom CA, lifetime)", () => {
+    const { policies } = buildAutomationPoliciesWithInternalFallback({
+      internalIssuer: { ca: "my-ca", lifetime: "8760h" },
+    });
+
+    for (const p of policies) {
+      const issuer = p.issuers?.[0] as { module: string; ca?: string; lifetime?: string };
+      expect(issuer.module).toBe("internal");
+      expect(issuer.ca).toBe("my-ca");
+      expect(issuer.lifetime).toBe("8760h");
+    }
+  });
+
+  test("does not share issuer object across policies (mutation safety)", () => {
+    const { policies } = buildAutomationPoliciesWithInternalFallback();
+    const a = policies[0]?.issuers?.[0] as Record<string, unknown>;
+    const b = policies[1]?.issuers?.[0] as Record<string, unknown>;
+
+    expect(a).not.toBe(b);
+  });
+});
+
+describe("collectExternalHostsFromRoutes", () => {
+  test("returns empty for empty/undefined input", () => {
+    expect(collectExternalHostsFromRoutes(undefined)).toEqual([]);
+    expect(collectExternalHostsFromRoutes(null)).toEqual([]);
+    expect(collectExternalHostsFromRoutes([])).toEqual([]);
+  });
+
+  test("extracts top-level hosts from match[].host[]", () => {
+    const routes = [
+      { match: [{ host: ["api.example.com", "example.com"] }], handle: [] },
+      { match: [{ host: ["app.example.com"] }], handle: [] },
+    ];
+
+    expect(collectExternalHostsFromRoutes(routes)).toEqual([
+      "api.example.com",
+      "app.example.com",
+      "example.com",
+    ]);
+  });
+
+  test("filters out localhost variants and literal IPs", () => {
+    const routes = [
+      {
+        match: [
+          {
+            host: [
+              "localhost",
+              "*.localhost",
+              "asd.localhost",
+              "deep.nested.localhost",
+              "127.0.0.1",
+              "127.0.0.1:8080",
+              "[::1]",
+              "real.example.com",
+            ],
+          },
+        ],
+      },
+    ];
+
+    expect(collectExternalHostsFromRoutes(routes)).toEqual(["real.example.com"]);
+  });
+
+  test("recurses into Caddy subroute handler", () => {
+    const routes = [
+      {
+        match: [{ host: ["outer.example.com"] }],
+        handle: [
+          {
+            handler: "subroute",
+            routes: [{ match: [{ host: ["inner.example.com"] }], handle: [] }],
+          },
+        ],
+      },
+    ];
+
+    expect(collectExternalHostsFromRoutes(routes)).toEqual([
+      "inner.example.com",
+      "outer.example.com",
+    ]);
+  });
+
+  test("de-duplicates across multiple matchers + routes", () => {
+    const routes = [
+      { match: [{ host: ["a.example.com"] }, { host: ["a.example.com"] }] },
+      { match: [{ host: ["a.example.com"] }] },
+    ];
+
+    expect(collectExternalHostsFromRoutes(routes)).toEqual(["a.example.com"]);
+  });
+
+  test("ignores matchers without a `host` field or non-string entries", () => {
+    const routes = [
+      { match: [{ path: ["/api/*"] }] },
+      { match: [{ host: [42, null, undefined, "good.example.com"] }] },
+    ];
+
+    expect(collectExternalHostsFromRoutes(routes)).toEqual(["good.example.com"]);
+  });
+});
+
+describe("buildAutomaticHttpsConfig", () => {
+  test("returns undefined when no field would be set", () => {
+    expect(buildAutomaticHttpsConfig()).toBeUndefined();
+    expect(buildAutomaticHttpsConfig({})).toBeUndefined();
+    expect(buildAutomaticHttpsConfig({ skip: [] })).toBeUndefined();
+    expect(buildAutomaticHttpsConfig({ skip: ["localhost"] })).toBeUndefined();
+  });
+
+  test("emits boolean flags when set", () => {
+    expect(buildAutomaticHttpsConfig({ disable: true })).toEqual({ disable: true });
+    expect(buildAutomaticHttpsConfig({ disableRedirects: true })).toEqual({
+      disable_redirects: true,
+    });
+    expect(buildAutomaticHttpsConfig({ disableCertificates: true })).toEqual({
+      disable_certificates: true,
+    });
+    expect(buildAutomaticHttpsConfig({ ignoreLoadedCertificates: true })).toEqual({
+      ignore_loaded_certificates: true,
+    });
+  });
+
+  test("filters internal hosts from skip + skipCerts and de-duplicates", () => {
+    const out = buildAutomaticHttpsConfig({
+      skip: ["a.example.com", "localhost", "*.localhost", "127.0.0.1", "a.example.com"],
+      skipCerts: ["b.example.com", "asd.localhost"],
+    });
+
+    expect(out?.skip).toEqual(["a.example.com"]);
+    expect(out?.skip_certificates).toEqual(["b.example.com"]);
+  });
+
+  test("flags + skip lists coexist", () => {
+    const out = buildAutomaticHttpsConfig({
+      disableRedirects: true,
+      skip: ["x.example.com"],
+    });
+
+    expect(out).toEqual({
+      disable_redirects: true,
+      skip: ["x.example.com"],
+    });
+  });
+
+  test("integrates with collectExternalHostsFromRoutes", () => {
+    const routes = [
+      { match: [{ host: ["asd.localhost", "tunnel.example.com"] }] },
+      { match: [{ host: ["other.example.com"] }] },
+    ];
+    const hosts = collectExternalHostsFromRoutes(routes);
+    const out = buildAutomaticHttpsConfig({ skip: hosts, disableRedirects: true });
+
+    expect(out).toEqual({
+      disable_redirects: true,
+      skip: ["other.example.com", "tunnel.example.com"],
+    });
   });
 });
