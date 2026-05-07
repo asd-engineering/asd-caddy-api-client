@@ -281,6 +281,82 @@ describe("CaddyClient", () => {
     });
   });
 
+  describe("removeHostFromRoutes (array-aware)", () => {
+    test("strips host from multi-host arrays in place, drops standalone routes", async () => {
+      const mockRoutes: CaddyRoute[] = [
+        // Multi-host route — host should be stripped, route kept
+        {
+          match: [{ host: ["hub.localhost", "stale.example.com", "asd.localhost"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:3000" }] }],
+          terminal: true,
+        },
+        // Standalone host route — entire route dropped
+        {
+          match: [{ host: ["stale.example.com"] }],
+          handle: [{ handler: "static_response", status_code: 200 }],
+          terminal: true,
+        },
+        // Unrelated route — untouched
+        {
+          match: [{ host: ["other.localhost"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:4000" }] }],
+          terminal: true,
+        },
+        // Mixed-match route: one match group has the host, another doesn't
+        {
+          match: [
+            { host: ["stale.example.com"] }, // dropped
+            { host: ["keepme.localhost"], path: ["/api/*"] }, // kept
+          ],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:5000" }] }],
+          terminal: true,
+        },
+      ];
+
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => mockRoutes } as Response);
+      mockFetch.mockResolvedValueOnce({ ok: true, text: async () => "" } as Response);
+
+      const client = new CaddyClient();
+      const result = await client.removeHostFromRoutes("stale.example.com", "https_server");
+
+      // Two routes had something stripped (multi-host route + mixed-match route)
+      // One route had no remaining match groups → dropped
+      expect(result).toEqual({ stripped: 2, dropped: 1 });
+
+      // Inspect the PATCH body
+      const patchCall = mockFetch.mock.calls[1];
+      const body = JSON.parse(patchCall[1].body as string);
+      expect(body).toHaveLength(3);
+      expect(body[0].match[0].host).toEqual(["hub.localhost", "asd.localhost"]);
+      expect(body[1].match[0].host).toEqual(["other.localhost"]);
+      expect(body[2].match).toHaveLength(1);
+      expect(body[2].match[0].host).toEqual(["keepme.localhost"]);
+    });
+
+    test("returns zero counts and skips PATCH when host absent", async () => {
+      const mockRoutes: CaddyRoute[] = [
+        {
+          match: [{ host: ["example.com"] }],
+          handle: [{ handler: "reverse_proxy", upstreams: [{ dial: "127.0.0.1:3000" }] }],
+          terminal: true,
+        },
+      ];
+
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => mockRoutes } as Response);
+
+      const client = new CaddyClient();
+      const result = await client.removeHostFromRoutes("absent.example.com", "https_server");
+
+      expect(result).toEqual({ stripped: 0, dropped: 0 });
+      expect(mockFetch).toHaveBeenCalledTimes(1); // GET only, no PATCH
+    });
+
+    test("rejects empty hostname", async () => {
+      const client = new CaddyClient();
+      await expect(client.removeHostFromRoutes("", "https_server")).rejects.toThrow();
+    });
+  });
+
   describe("patchRoutes", () => {
     test("replaces all routes for a server", async () => {
       const routes: CaddyRoute[] = [

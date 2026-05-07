@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [0.7.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.6.0...v0.7.0) (2026-05-07)
+## [0.7.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.6.1...v0.7.0) (2026-05-07)
 
 ### Added
 
@@ -13,6 +13,26 @@ All notable changes to this project will be documented in this file. See [standa
 ### Notes
 
 - The new builders deliberately do **not** expose any ACME-DNS / xcaddy-plugin schema. Plugin-specific config (e.g. `caddy-dns/cloudflare` provider blocks) belongs in `src/plugins/`, where the type/schema generation pipeline gives a validated representation.
+
+## [0.6.1](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.6.0...v0.6.1) (2026-04-28)
+
+### Added
+
+- **`removeHostFromRoutes(hostname, server)`** — array-aware hostname removal.
+  Walks **every** match group on **every** route and strips the target hostname
+  from multi-host arrays. Match groups whose `host` array becomes empty are
+  dropped; routes whose match arrays become empty are dropped. Returns
+  `{ stripped, dropped }` so callers know how many routes were patched in
+  place vs. fully removed.
+
+  Use this when retiring a hostname from routes that share match arrays
+  across multiple hostnames (e.g. `["hub.localhost", "asd.localhost",
+"<tunnel-fqdn>"]`). The existing `removeRoutesByHost()` only matches
+  routes whose host array is _exactly_ `[hostname]`, so it returns 0 for
+  the multi-host case — leaving stale entries behind.
+
+  Backwards compatible: `removeRoutesByHost()` is unchanged and remains
+  the cheap exact-match path.
 
 ## [0.6.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.5.2...v0.6.0) (2026-04-01)
 
