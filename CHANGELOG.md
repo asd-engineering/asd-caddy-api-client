@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.7.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.6.1...v0.7.0) (2026-05-07)
+
+### Added
+
+- **`buildAutomationPoliciesWithInternalFallback()`** — emits a TLS `automation.policies` array terminated by an unscoped (catch-all) policy that uses Caddy's `internal` issuer. Without this terminal policy, any host not matched by a more-specific policy falls through to Caddy's default behavior — public ACME via Let's Encrypt — which always fails for tunnel/edge-fronted instances and floods the log with `obtaining certificate: ... context canceled` and `no solvers available for remaining challenges`. Exports `InternalIssuerJson` (Caddy core's `InternalIssuer` + the `module: "internal"` discriminator) and `InternalFallbackPoliciesOptions`.
+- **`collectExternalHostsFromRoutes()`** — walks a Caddy `routes[]` tree (recursing into `subroute` handlers) and returns the sorted, de-duplicated set of non-internal hostnames in `match[].host[]`. Hostnames Caddy already treats as internal (`localhost`, `*.localhost`, `.localhost` suffixes, literal IPv4/IPv6) are filtered out.
+- **`buildAutomaticHttpsConfig()`** — builds a Caddy `automatic_https` block (typed against the generated `AutoHTTPSConfig`) from a higher-level options object. Symmetric to `collectExternalHostsFromRoutes`: pass its output as `skip` to derive the skip list dynamically from the live route topology. Returns `undefined` when no field would be set, so callers can conditionally assign without empty objects.
+
+### Notes
+
+- The new builders deliberately do **not** expose any ACME-DNS / xcaddy-plugin schema. Plugin-specific config (e.g. `caddy-dns/cloudflare` provider blocks) belongs in `src/plugins/`, where the type/schema generation pipeline gives a validated representation.
+
 ## [0.6.1](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.6.0...v0.6.1) (2026-04-28)
 
 ### Added
