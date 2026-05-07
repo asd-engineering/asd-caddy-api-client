@@ -60,13 +60,19 @@ jobs:
       # Trusted publishing uses OIDC - no NPM_TOKEN needed
       # Configure at: npmjs.com → Package Settings → Trusted Publishers
       #
-      # Pin npm to a known-good version: hosted-runner Node 22.22.2 ships
-      # a corrupt pre-installed npm (`@npmcli/arborist` missing
-      # `promise-retry`), which crashes any plain `npm install -g npm@*`
-      # before it can reify. `--force` skips the broken local install
-      # script. Trusted publishing via OIDC requires npm >= 11.5.1.
+      # The hosted-runner Node 22.22.2 image ships a corrupt pre-installed
+      # npm: its bundled `@npmcli/arborist` is missing `promise-retry`,
+      # which makes ANY `npm install -g ...` (even `--force`) crash inside
+      # arborist before it can reify. Using corepack bypasses the broken
+      # in-place npm entirely — it downloads a clean npm tarball directly
+      # from the registry and activates it on PATH. Trusted publishing via
+      # OIDC requires npm >= 11.5.1; corepack `prepare ... --activate`
+      # gives us a known-good binary independent of the runner image.
       - name: Update npm for trusted publishing
-        run: npm install -g --force npm@11
+        run: |
+          corepack enable
+          corepack prepare npm@11.6.0 --activate
+          npm --version
 
       - name: Publish to npm (Trusted Publishing via OIDC)
         run: npm publish --provenance --access public
