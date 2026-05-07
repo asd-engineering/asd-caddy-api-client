@@ -91,7 +91,7 @@
     "prerelease": "bun run build && bun run test && bun run typecheck && bun run lint",
     "verify:pack": "npm pack --dry-run",
     "verify:publish": "npm publish --dry-run",
-    "prepare": "husky || true",
+    "prepare": "husky",
     "prepack": "bun run build",
     "prepublishOnly": "bun run build && bun run test && bun run typecheck && bun run lint",
     "generate:types": "npx tsx scripts/generate-caddy-types.ts",
