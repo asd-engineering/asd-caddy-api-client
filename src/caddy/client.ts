@@ -355,6 +355,89 @@ export class CaddyClient {
   }
 
   /**
+   * Strip a hostname from every route on the server (array-aware).
+   *
+   * Unlike {@link removeRoutesByHost}, this walks **every** match group on
+   * **every** route. For each match group whose `host` array contains the
+   * target hostname:
+   *   - if other hosts remain → the host is filtered out, the match group is kept
+   *   - if no other hosts remain → the match group is dropped
+   * If a route ends up with zero match groups, the whole route is dropped.
+   *
+   * Use this when routes share match arrays across multiple hostnames
+   * (e.g. `["hub.localhost", "asd.localhost", "<tunnel-fqdn>"]`) and you want
+   * to retire one host without losing the rest. `removeRoutesByHost` only
+   * removes routes whose host array is exactly `[hostname]`, so it returns 0
+   * for the multi-host case.
+   *
+   * @param hostname - Hostname to strip
+   * @param server - Server name (default: https_server)
+   * @returns Object with stripped (host removed, route kept) and dropped (route deleted) counts
+   */
+  async removeHostFromRoutes(
+    hostname: string,
+    server = "https_server"
+  ): Promise<{ stripped: number; dropped: number }> {
+    if (!hostname || typeof hostname !== "string") {
+      throw new CaddyApiClientError("hostname is required and must be a string");
+    }
+
+    let existingRoutes: CaddyRoute[];
+    try {
+      existingRoutes = await this.getRoutes(server);
+    } catch {
+      return { stripped: 0, dropped: 0 };
+    }
+
+    let stripped = 0;
+    let dropped = 0;
+    let mutated = false;
+    const next: CaddyRoute[] = [];
+
+    for (const route of existingRoutes) {
+      let routeMutated = false;
+      const newMatch: NonNullable<CaddyRoute["match"]> = [];
+
+      for (const m of route.match ?? []) {
+        if (Array.isArray(m.host) && m.host.includes(hostname)) {
+          const filteredHosts = m.host.filter((h) => h !== hostname);
+          routeMutated = true;
+          if (filteredHosts.length === 0) {
+            // Drop this match group entirely
+            continue;
+          }
+          newMatch.push({ ...m, host: filteredHosts });
+        } else {
+          newMatch.push(m);
+        }
+      }
+
+      if (routeMutated) {
+        mutated = true;
+        if (newMatch.length === 0) {
+          // No match groups left — drop the whole route
+          dropped++;
+          continue;
+        }
+        next.push({ ...route, match: newMatch });
+        stripped++;
+      } else {
+        next.push(route);
+      }
+    }
+
+    if (mutated) {
+      try {
+        await this.patchRoutes(server, next);
+      } catch {
+        return { stripped: 0, dropped: 0 };
+      }
+    }
+
+    return { stripped, dropped };
+  }
+
+  /**
    * Get information about all servers
    * @returns Server configurations, validated against Caddy schema
    * @throws {CaddyApiError} If Caddy API returns an error response
