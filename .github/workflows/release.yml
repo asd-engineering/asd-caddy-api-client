@@ -51,28 +51,22 @@ jobs:
       - name: Verify package contents
         run: npm pack --dry-run
 
+      # Pinned to Node 20 LTS to avoid Node 22.22.2 hosted-runner image,
+      # whose pre-installed npm ships a corrupt `@npmcli/arborist` (missing
+      # `promise-retry`) that crashes any `npm install -g`. Node 20 ships
+      # with a working npm we can upgrade in place to >= 11.5.1 (required
+      # for OIDC trusted publishing).
       - name: Setup Node.js for npm publishing
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
-      # Trusted publishing uses OIDC - no NPM_TOKEN needed
+      # Trusted publishing uses OIDC - no NPM_TOKEN needed.
       # Configure at: npmjs.com → Package Settings → Trusted Publishers
-      #
-      # The hosted-runner Node 22.22.2 image ships a corrupt pre-installed
-      # npm: its bundled `@npmcli/arborist` is missing `promise-retry`,
-      # which makes ANY `npm install -g ...` (even `--force`) crash inside
-      # arborist before it can reify. Using corepack bypasses the broken
-      # in-place npm entirely — it downloads a clean npm tarball directly
-      # from the registry and activates it on PATH. Trusted publishing via
-      # OIDC requires npm >= 11.5.1; corepack `prepare ... --activate`
-      # gives us a known-good binary independent of the runner image.
       - name: Update npm for trusted publishing
-        run: |
-          corepack enable
-          corepack prepare npm@11.6.0 --activate
-          npm --version
+        run: npm install -g npm@11
+
 
       - name: Publish to npm (Trusted Publishing via OIDC)
         run: npm publish --provenance --access public
