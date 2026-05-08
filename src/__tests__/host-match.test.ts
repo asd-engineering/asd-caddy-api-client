@@ -31,4 +31,17 @@ describe("hostMatchesPattern", () => {
     expect(hostMatchesPattern("aXb", "a.b")).toBe(false);
     expect(hostMatchesPattern("a.b", "a.b")).toBe(true);
   });
+
+  // Reviewer-pinned regression cases — patterns that LOOK like the
+  // single-label-leading-wildcard form but whose tail itself contains a
+  // glob. The single-label branch must NOT swallow these; they belong on
+  // the generic-glob path.
+  test("`*.api-*.example.com` is a generic glob, not single-label", () => {
+    expect(
+      hostMatchesPattern("foo.api-prod.example.com", "*.api-*.example.com"),
+    ).toBe(true);
+    expect(
+      hostMatchesPattern("api-prod.example.com", "*.api-*.example.com"),
+    ).toBe(false);
+  });
 });

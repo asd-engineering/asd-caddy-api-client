@@ -25,9 +25,19 @@ describe("resolveAcmeDnsProviderModule", () => {
     expect(resolveAcmeDnsProviderModule("porkbun")).toBe("porkbun");
   });
 
-  test("unknown name passes through unchanged", () => {
+  test("unknown name passes through normalised", () => {
     expect(resolveAcmeDnsProviderModule("hetzner")).toBe("hetzner");
     expect(resolveAcmeDnsProviderModule("custom-plugin-name")).toBe("custom-plugin-name");
+  });
+
+  test("input is trimmed of surrounding whitespace", () => {
+    expect(resolveAcmeDnsProviderModule(" cloudflare ")).toBe("cloudflare");
+    expect(resolveAcmeDnsProviderModule("\thetzner\n")).toBe("hetzner");
+  });
+
+  test("input is lowercased — Caddy module identifiers are lowercase", () => {
+    expect(resolveAcmeDnsProviderModule("Cloudflare")).toBe("cloudflare");
+    expect(resolveAcmeDnsProviderModule("PORKBUN")).toBe("porkbun");
   });
 });
 
@@ -89,8 +99,42 @@ describe("buildAcmeDnsPolicy", () => {
     );
   });
 
+  test("rejects subjects entries that are empty / whitespace-only", () => {
+    expect(() => buildAcmeDnsPolicy({ subjects: [""], dnsProvider: "cloudflare" })).toThrow(
+      /subjects/,
+    );
+    expect(() => buildAcmeDnsPolicy({ subjects: ["   "], dnsProvider: "cloudflare" })).toThrow(
+      /subjects/,
+    );
+    expect(() =>
+      buildAcmeDnsPolicy({ subjects: ["valid.com", ""], dnsProvider: "cloudflare" }),
+    ).toThrow(/subjects/);
+  });
+
   test("rejects missing dnsProvider", () => {
     expect(() => buildAcmeDnsPolicy({ subjects: ["x"], dnsProvider: "" })).toThrow(/dnsProvider/);
+    expect(() => buildAcmeDnsPolicy({ subjects: ["x"], dnsProvider: "   " })).toThrow(
+      /dnsProvider/,
+    );
+  });
+
+  test("dnsProvider is normalised before resolution", () => {
+    const p1 = buildAcmeDnsPolicy({ subjects: ["x.com"], dnsProvider: " Cloudflare " });
+    const provider1 = ((p1.issuers![0] as Record<string, unknown>).challenges as Record<
+      string,
+      unknown
+    >).dns as Record<string, unknown>;
+    expect((provider1.provider as Record<string, unknown>).name).toBe("cloudflare");
+  });
+
+  test("rejects providerConfig.name — discriminator is owned by `dnsProvider`", () => {
+    expect(() =>
+      buildAcmeDnsPolicy({
+        subjects: ["x.com"],
+        dnsProvider: "cloudflare",
+        providerConfig: { name: "wrong" },
+      }),
+    ).toThrow(/providerConfig\.name/);
   });
 
   test("subjects array is copied (not aliased to caller)", () => {

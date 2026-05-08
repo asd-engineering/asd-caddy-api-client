@@ -31,8 +31,11 @@
 export function hostMatchesPattern(host: string, pattern: string): boolean {
   if (pattern === host) return true;
   if (!pattern.includes("*")) return false;
-  // `*.example.com` matches `foo.example.com` but not `example.com` and not `a.b.example.com`
-  if (pattern.startsWith("*.")) {
+  // Single-label leading wildcard: pattern starts `*.` AND the tail is a
+  // literal (no further `*`). Patterns like `*.api-*.example.com` fall
+  // through to the generic glob branch — single-label semantics don't
+  // apply when the tail itself is a glob.
+  if (pattern.startsWith("*.") && !pattern.slice(2).includes("*")) {
     const tail = pattern.slice(2);
     if (!host.endsWith("." + tail)) return false;
     const head = host.slice(0, host.length - tail.length - 1);

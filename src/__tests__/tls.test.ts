@@ -523,9 +523,13 @@ describe("buildAutomaticHttpsConfig", () => {
 });
 
 describe("filterAcmeManagedFromSkip", () => {
-  test("empty acme set: candidates pass through unchanged (referential identity preserved)", () => {
+  test("empty acme set: candidates pass through unchanged (returns a copy)", () => {
+    // No referential-identity assertion — the function returns a fresh
+    // array even on the empty-acme fast path so callers can mutate the
+    // result without aliasing the input.
     const candidates = ["a.example.com", "*.example.com"];
-    expect(filterAcmeManagedFromSkip(candidates, new Set())).toBe(candidates);
+    const out = filterAcmeManagedFromSkip(candidates, new Set());
+    expect(out).toEqual(candidates);
   });
 
   // Core contract — case (1): exact match
@@ -567,6 +571,19 @@ describe("filterAcmeManagedFromSkip", () => {
   test("non-overlapping ACME entries don't strip anything", () => {
     const candidates = ["a.local", "b.local"];
     expect(filterAcmeManagedFromSkip(candidates, new Set(["c.example.com"]))).toEqual(candidates);
+  });
+
+  // Reviewer-pinned regression: a `*.api-*.example.com` skip candidate
+  // covers `foo.api-prod.example.com` via generic glob (NOT the
+  // single-label leading-wildcard branch). When that ACME host exists,
+  // the candidate must be dropped.
+  test("compound-wildcard candidate is evaluated as a generic glob", () => {
+    expect(
+      filterAcmeManagedFromSkip(
+        ["*.api-*.example.com"],
+        new Set(["foo.api-prod.example.com"]),
+      ),
+    ).toEqual([]);
   });
 });
 
@@ -619,13 +636,41 @@ describe("applyLocalCaInstallTrust", () => {
     expect(apps.http).toBeDefined();
   });
 
-  test("noop on non-object config", () => {
-    // Should not throw on edge inputs.
+  test("throws on non-object config (likely caller bug, surface it)", () => {
     expect(() =>
-      applyLocalCaInstallTrust(null as unknown as Record<string, unknown>, false)
-    ).not.toThrow();
+      applyLocalCaInstallTrust(null as unknown as Record<string, unknown>, false),
+    ).toThrow(/config/);
     expect(() =>
-      applyLocalCaInstallTrust(undefined as unknown as Record<string, unknown>, false)
-    ).not.toThrow();
+      applyLocalCaInstallTrust(undefined as unknown as Record<string, unknown>, false),
+    ).toThrow(/config/);
+  });
+
+  test("throws when an intermediate node exists but is the wrong shape", () => {
+    // Permissive replacement (silently overwrite) was rejected — see the
+    // helper docblock. These cases catch typos / config corruption rather
+    // than mask them.
+    expect(() =>
+      applyLocalCaInstallTrust({ apps: "bad" as unknown as Record<string, unknown> }, false),
+    ).toThrow(/config\.apps/);
+    expect(() =>
+      applyLocalCaInstallTrust(
+        { apps: { pki: ["array-instead-of-object"] as unknown as Record<string, unknown> } },
+        false,
+      ),
+    ).toThrow(/config\.apps\.pki/);
+    expect(() =>
+      applyLocalCaInstallTrust(
+        {
+          apps: {
+            pki: {
+              certificate_authorities: {
+                local: 42 as unknown as Record<string, unknown>,
+              },
+            },
+          },
+        },
+        false,
+      ),
+    ).toThrow(/local/);
   });
 });

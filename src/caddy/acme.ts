@@ -1,36 +1,21 @@
 /**
- * ACME-DNS automation policy builder.
+ * ACME-DNS automation policy builder. Emits the wrapper-level shape:
+ *   { subjects, issuers: [{ module: "acme", challenges: { dns: { provider: { name } } }, … }] }
  *
- * SCOPE: this module emits the wrapper-level shape Caddy expects for an
- * ACME issuer with a DNS-01 challenge:
- *
- *   {
- *     subjects: [...],
- *     issuers: [{
- *       module: "acme",
- *       email?, ca?,
- *       challenges: { dns: { provider: { name } } }
- *     }]
- *   }
- *
- * It does NOT model provider-specific config (Cloudflare API tokens,
- * Porkbun secret keys, Route53 access keys, etc.). Caddy reads those
- * from environment variables at runtime (`CLOUDFLARE_API_TOKEN`,
- * `PORKBUN_API_KEY`, …), so the wrapper-level shape is enough for the
- * automation table. When a future xcaddy plugin in `src/plugins/caddy-dns/`
- * brings typed provider configs, this builder accepts an opaque
- * `provider` object passthrough so callers can migrate without breaking.
+ * Provider credentials (Cloudflare API tokens, Porkbun secret keys, …) are
+ * not modelled here — Caddy reads them from env vars (`CLOUDFLARE_API_TOKEN`,
+ * `PORKBUN_API_KEY`, …). When a typed `caddy-dns/*` integration lands under
+ * `src/plugins/caddy-dns/`, callers layer it via `providerConfig` (opaque
+ * passthrough; non-breaking).
  */
 
 import type { AutomationPolicy } from "../generated/caddy-tls.js";
 
 /**
- * Map a friendly DNS provider name to its Caddy module name. Most of the
- * common providers use the same name in both worlds; this exists so callers
- * can pass `"cloudflare"` (asd-yaml friendly) and the builder emits the
- * exact module identifier Caddy resolves at runtime. Unknown names pass
- * through unchanged so a caller can supply any plugin name from the
- * `caddy-dns/*` namespace.
+ * Friendly DNS provider name → Caddy module name. The common case is
+ * identical-on-both-sides; the table lets callers pass asd-yaml friendly
+ * names without leaking the module-name detail. Unknown names pass through
+ * so any `caddy-dns/*` plugin works without a code change here.
  */
 export const ACME_DNS_PROVIDER_MODULE_MAP: Readonly<Record<string, string>> = Object.freeze({
   porkbun: "porkbun",
@@ -38,82 +23,88 @@ export const ACME_DNS_PROVIDER_MODULE_MAP: Readonly<Record<string, string>> = Ob
   route53: "route53",
   digitalocean: "digitalocean",
   godaddy: "godaddy",
-  // Future entries added here are non-breaking additions.
 });
 
 /**
- * Resolve a provider name to its Caddy module name. Falls through with
- * the input unchanged so unknown / not-yet-mapped providers still work.
+ * Resolve a provider name to its Caddy module name. Trims surrounding
+ * whitespace and lowercases — Caddy module identifiers are lowercase, so
+ * `"Cloudflare"` and `" cloudflare "` both resolve to `cloudflare`. Returns
+ * the normalised name unchanged when no shortcut matches.
  */
 export function resolveAcmeDnsProviderModule(name: string): string {
-  return ACME_DNS_PROVIDER_MODULE_MAP[name] ?? name;
+  const normalised = name.trim().toLowerCase();
+  return ACME_DNS_PROVIDER_MODULE_MAP[normalised] ?? normalised;
 }
 
 /**
  * Options for {@link buildAcmeDnsPolicy}.
  */
 export interface AcmeDnsPolicyOptions {
-  /**
-   * Hostnames the policy applies to (e.g. `["example.com", "www.example.com"]`).
-   * Required and non-empty — Caddy rejects empty subjects on a non-catch-all
-   * automation policy.
-   */
+  /** Hostnames the policy applies to. Required and non-empty. */
   subjects: string[];
   /**
    * Caddy DNS provider name. Common shortcuts (`cloudflare`, `porkbun`,
-   * `route53`, `digitalocean`, `godaddy`) are mapped to their module
-   * names; anything else passes through unchanged.
+   * `route53`, `digitalocean`, `godaddy`) map to module names; anything
+   * else passes through. Whitespace + case are normalised.
    */
   dnsProvider: string;
-  /**
-   * Optional override for the ACME directory URL (`ca` field). Defaults
-   * to Caddy's default (Let's Encrypt production) when omitted.
-   */
+  /** Override the ACME directory URL (`ca`). Defaults to Caddy's default. */
   ca?: string;
-  /**
-   * Optional account email registered with the ACME server.
-   */
+  /** Account email registered with the ACME server. */
   email?: string;
   /**
-   * Opaque provider-config passthrough. When the caller has the typed
-   * shape for a specific `caddy-dns/*` plugin (from a future
-   * `src/plugins/caddy-dns/` integration), pass it here. Otherwise
-   * Caddy reads provider credentials from env vars (e.g.
-   * `CLOUDFLARE_API_TOKEN`).
+   * Opaque provider-config passthrough merged INTO the provider object
+   * alongside `name`. Use it for typed `caddy-dns/*` plugin shapes when
+   * those land. Must NOT contain `name` — see the runtime guard in
+   * {@link buildAcmeDnsPolicy} for the rationale.
    */
   providerConfig?: Record<string, unknown>;
 }
 
 /**
- * Build a single Caddy automation policy that obtains certificates via
- * ACME with a DNS-01 challenge. Use this together with
- * {@link buildAutomationPoliciesWithInternalFallback} (the catch-all)
- * by prepending this policy to the resulting array — Caddy walks the
- * policy table top-down on every host and short-circuits on the first
- * subject match.
+ * Build a single Caddy automation policy that obtains certificates via ACME
+ * with a DNS-01 challenge. Use together with
+ * {@link buildAutomationPoliciesWithInternalFallback} by prepending this
+ * policy to the resulting array — Caddy walks policies top-down per host.
+ *
+ * The `provider.name` discriminator (NOT `provider.module`) is what Caddy
+ * core expects: see `caddytls/automation.go` —
+ *   `ProviderRaw json.RawMessage \`json:"provider,omitempty"
+ *    caddy:"namespace=dns.providers inline_key=name"\``
+ * The `inline_key=name` directive is the authoritative source for this
+ * choice. (`module` is the discriminator at the issuer level — `module:
+ * "acme"` — but provider sub-modules use `name`.)
  *
  * @example
- * ```typescript
- * const acme = buildAcmeDnsPolicy({
- *   subjects: ["example.com", "www.example.com"],
- *   dnsProvider: "cloudflare",
- *   email: "ops@example.com",
- * })
- * const { policies } = buildAutomationPoliciesWithInternalFallback()
- * resolvedConfig.apps.tls.automation = { policies: [acme, ...policies] }
+ * ```ts
+ * const acme = buildAcmeDnsPolicy({ subjects: ["example.com"], dnsProvider: "cloudflare" })
  * ```
  */
 export function buildAcmeDnsPolicy(options: AcmeDnsPolicyOptions): AutomationPolicy {
   if (!Array.isArray(options.subjects) || options.subjects.length === 0) {
     throw new Error("buildAcmeDnsPolicy: `subjects` must be a non-empty array");
   }
-  if (!options.dnsProvider?.trim()) {
+  for (const s of options.subjects) {
+    if (typeof s !== "string" || !s.trim()) {
+      throw new Error("buildAcmeDnsPolicy: `subjects` entries must be non-empty strings");
+    }
+  }
+  if (typeof options.dnsProvider !== "string" || !options.dnsProvider.trim()) {
     throw new Error("buildAcmeDnsPolicy: `dnsProvider` is required");
+  }
+  // Reject providerConfig overriding the discriminator — silent overwrite
+  // would defeat the contractual value of `dnsProvider` and produce a
+  // policy that resolves at runtime to a different module than the
+  // caller asked for.
+  if (options.providerConfig && Object.prototype.hasOwnProperty.call(options.providerConfig, "name")) {
+    throw new Error(
+      "buildAcmeDnsPolicy: `providerConfig.name` is reserved — set the provider via `dnsProvider`",
+    );
   }
   const providerName = resolveAcmeDnsProviderModule(options.dnsProvider);
   const provider: Record<string, unknown> = {
-    name: providerName,
     ...(options.providerConfig ?? {}),
+    name: providerName,
   };
   const issuer: Record<string, unknown> = {
     module: "acme",

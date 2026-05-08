@@ -492,28 +492,14 @@ export function buildAutomaticHttpsConfig(
 
 /**
  * Remove host entries from an `automatic_https.skip` candidate list that
- * would shadow an external-ACME automation policy.
+ * would shadow an external-ACME automation policy. Caddy evaluates skip
+ * entries via the same host-matcher as routes, so a skip entry covering
+ * an ACME-managed host blocks cert acquisition + HTTP→HTTPS redirect.
  *
- * **Why this matters.** Caddy evaluates `automatic_https.skip` entries via
- * the same host-matcher as routes — the entries are patterns, not literals.
- * Putting a host in `skip` disables BOTH cert acquisition AND the HTTP→HTTPS
- * redirect for any request whose `Host` matches the pattern. So:
- *
- *   - A skip entry equal to an ACME-managed host blocks that host's certs.
- *   - A wildcard skip entry (e.g. `*.pro.com`) blocks every host it
- *     covers — including `app.pro.com` even when only `app.pro.com` is
- *     in the ACME automation policy.
- *   - Conversely, when the ACME policy itself uses a wildcard subject
- *     (e.g. `*.pro.com`), a literal skip candidate (`app.pro.com`) is
- *     covered by the ACME wildcard — putting it in skip would still
- *     shadow the policy.
- *
- * This filter drops a candidate when ANY of these hold:
+ * Drops a candidate when ANY of:
  *   1. lower-case exact match against an ACME-managed host
- *   2. the candidate is a wildcard that matches any ACME-managed host
- *   3. an ACME-managed host is itself a wildcard that matches the candidate
- *
- * Match is case-insensitive on both sides.
+ *   2. candidate is a wildcard that matches any ACME-managed host
+ *   3. an ACME-managed host is itself a wildcard covering the candidate
  *
  * @example
  * ```typescript
@@ -526,22 +512,27 @@ export function filterAcmeManagedFromSkip(
   candidates: string[],
   acmeManagedHosts: Set<string>
 ): string[] {
-  if (acmeManagedHosts.size === 0) return candidates;
-  const acmeLower: string[] = [];
-  for (const a of acmeManagedHosts) acmeLower.push(a.toLowerCase());
+  if (acmeManagedHosts.size === 0) return [...candidates];
+  // Build lowercased lookups once. Exact-match uses a Set (O(1) lookup);
+  // the wildcard-bearing subset is iterated directly because the matcher
+  // call has to run per-pair anyway.
+  const acmeExact = new Set<string>();
+  const acmeWildcards: string[] = [];
+  for (const a of acmeManagedHosts) {
+    const lower = a.toLowerCase();
+    acmeExact.add(lower);
+    if (lower.includes("*")) acmeWildcards.push(lower);
+  }
   return candidates.filter((h: string): boolean => {
     const lower = h.toLowerCase();
-    // 1. exact match
-    if (acmeLower.includes(lower)) return false;
-    // 2. candidate is a wildcard shadowing an ACME-managed host
+    if (acmeExact.has(lower)) return false;
     if (lower.includes("*")) {
-      for (const a of acmeLower) {
+      for (const a of acmeExact) {
         if (hostMatchesPattern(a, lower)) return false;
       }
     }
-    // 3. an ACME-managed host is a wildcard covering the candidate
-    for (const a of acmeLower) {
-      if (a.includes("*") && hostMatchesPattern(lower, a)) return false;
+    for (const a of acmeWildcards) {
+      if (hostMatchesPattern(lower, a)) return false;
     }
     return true;
   });
@@ -552,21 +543,21 @@ export function filterAcmeManagedFromSkip(
 // ──────────────────────────────────────────────────────────────────────────
 
 /**
- * Set `apps.pki.certificate_authorities.local.install_trust` on a
- * resolved Caddy config object.
+ * Set `apps.pki.certificate_authorities.local.install_trust` on a resolved
+ * Caddy config. Motivating case: Caddy's local CA installs its root cert
+ * into the OS trust store on first issuance; on Windows that triggers a
+ * UAC prompt + a `certutil` invocation that easily takes 5–30 s, blocking
+ * the admin API. Setting `install_trust = false` keeps the local CA
+ * active for `*.localhost` etc. but skips the trust-store install.
  *
- * **Why a helper at all.** Caddy's local CA module installs its root
- * cert into the OS trust store the first time it issues a cert. On
- * Windows that triggers a UAC prompt + a `certutil` invocation that
- * easily takes 5–30 s, and the admin API stays unbound until the install
- * finishes. Setting `install_trust = false` keeps the local CA active
- * (still issues self-signed certs for `*.localhost` etc.) but skips the
- * trust-store install — users who want browser-trusted self-signed run
- * `caddy trust` once manually.
+ * Idempotent. Mutates in place.
  *
- * Idempotent and structure-preserving: walks `apps.pki.certificate_authorities.local`,
- * creating intermediate objects only as needed, and leaves any existing
- * fields under `local` untouched. Mutates the passed config in place.
+ * Throws when an intermediate node (`apps`, `apps.pki`,
+ * `apps.pki.certificate_authorities`, `…local`) exists but is not an
+ * object — overwriting a non-object node would mask a likely caller bug,
+ * and silently re-typing it would corrupt unrelated state. Callers
+ * holding a config they don't trust should validate the shape before
+ * calling.
  *
  * @example
  * ```typescript
@@ -578,12 +569,45 @@ export function applyLocalCaInstallTrust(
   config: Record<string, unknown>,
   installTrust: boolean
 ): void {
-  if (!config || typeof config !== "object") return;
-  const apps = (config.apps ??= {}) as Record<string, unknown>;
-  const pki = (apps.pki ??= {}) as {
-    certificate_authorities?: Record<string, Record<string, unknown>>;
-  };
-  pki.certificate_authorities ??= {};
-  pki.certificate_authorities.local ??= {};
-  pki.certificate_authorities.local.install_trust = installTrust;
+  if (!config || typeof config !== "object") {
+    throw new Error("applyLocalCaInstallTrust: `config` must be an object");
+  }
+  const apps = ensureObject(config, "apps", "config.apps");
+  const pki = ensureObject(apps, "pki", "config.apps.pki");
+  const cas = ensureObject(
+    pki,
+    "certificate_authorities",
+    "config.apps.pki.certificate_authorities",
+  );
+  const local = ensureObject(cas, "local", "config.apps.pki.certificate_authorities.local");
+  local.install_trust = installTrust;
+}
+
+/**
+ * Walk one step of a config tree: when the key is missing or `undefined`,
+ * create a fresh object; when present and a plain object, return it;
+ * when present and NOT a plain object, throw with a path the caller can
+ * locate. Permissive replacement (silently overwrite non-object nodes)
+ * was rejected — it would corrupt unrelated config state. See
+ * {@link applyLocalCaInstallTrust} for the design rationale.
+ */
+function ensureObject(
+  parent: Record<string, unknown>,
+  key: string,
+  path: string,
+): Record<string, unknown> {
+  const current = parent[key];
+  if (current === undefined || current === null) {
+    const fresh: Record<string, unknown> = {};
+    parent[key] = fresh;
+    return fresh;
+  }
+  if (typeof current !== "object" || Array.isArray(current)) {
+    throw new Error(
+      `applyLocalCaInstallTrust: ${path} exists but is not a plain object (got ${
+        Array.isArray(current) ? "array" : typeof current
+      })`,
+    );
+  }
+  return current as Record<string, unknown>;
 }
