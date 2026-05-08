@@ -82,7 +82,7 @@ describe("buildAcmeDnsPolicy", () => {
     expect(providerObj.api_token).toBe("{env.CLOUDFLARE_API_TOKEN}");
   });
 
-  test("unknown provider names pass through to module name", () => {
+  test("unknown provider names pass through normalised", () => {
     const p = buildAcmeDnsPolicy({
       subjects: ["example.com"],
       dnsProvider: "hetzner",

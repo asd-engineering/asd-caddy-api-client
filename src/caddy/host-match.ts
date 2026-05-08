@@ -18,7 +18,7 @@
  * @example
  * hostMatchesPattern("foo.example.com", "*.example.com")     // true
  * hostMatchesPattern("a.b.example.com", "*.example.com")     // false
- * hostMatchesPattern("api-a.b.example.com", "api-*.tld")     // true (glob crosses dots)
+ * hostMatchesPattern("api-a.b.example.com", "api-*.example.com") // true (glob crosses dots)
  */
 export function hostMatchesPattern(host: string, pattern: string): boolean {
   if (pattern === host) return true;
