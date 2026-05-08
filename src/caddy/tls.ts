@@ -491,31 +491,22 @@ export function buildAutomaticHttpsConfig(
 // ──────────────────────────────────────────────────────────────────────────
 
 /**
- * Remove host entries from an `automatic_https.skip` candidate list that
- * would shadow an external-ACME automation policy. Caddy evaluates skip
- * entries via the same host-matcher as routes, so a skip entry covering
- * an ACME-managed host blocks cert acquisition + HTTP→HTTPS redirect.
- *
- * Drops a candidate when ANY of:
- *   1. lower-case exact match against an ACME-managed host
- *   2. candidate is a wildcard that matches any ACME-managed host
- *   3. an ACME-managed host is itself a wildcard covering the candidate
+ * Drop `automatic_https.skip` entries that would shadow an external-
+ * ACME policy (Caddy evaluates skip via the same host-matcher as
+ * routes). Three-way check, case-insensitive: exact match; candidate-
+ * wildcard covers ACME host; ACME-host wildcard covers candidate.
+ * Always returns a fresh array.
  *
  * @example
- * ```typescript
- * filterAcmeManagedFromSkip(["*.pro.com"], new Set(["app.pro.com"]))    // []
- * filterAcmeManagedFromSkip(["app.pro.com"], new Set(["*.pro.com"]))    // []
- * filterAcmeManagedFromSkip(["*.pro.com"], new Set(["api.other.com"]))  // ["*.pro.com"]
- * ```
+ * filterAcmeManagedFromSkip(["*.pro.com"], new Set(["app.pro.com"]))   // []
+ * filterAcmeManagedFromSkip(["app.pro.com"], new Set(["*.pro.com"]))   // []
+ * filterAcmeManagedFromSkip(["*.pro.com"], new Set(["api.other.com"])) // ["*.pro.com"]
  */
 export function filterAcmeManagedFromSkip(
   candidates: string[],
   acmeManagedHosts: Set<string>
 ): string[] {
   if (acmeManagedHosts.size === 0) return [...candidates];
-  // Build lowercased lookups once. Exact-match uses a Set (O(1) lookup);
-  // the wildcard-bearing subset is iterated directly because the matcher
-  // call has to run per-pair anyway.
   const acmeExact = new Set<string>();
   const acmeWildcards: string[] = [];
   for (const a of acmeManagedHosts) {
@@ -543,27 +534,16 @@ export function filterAcmeManagedFromSkip(
 // ──────────────────────────────────────────────────────────────────────────
 
 /**
- * Set `apps.pki.certificate_authorities.local.install_trust` on a resolved
- * Caddy config. Motivating case: Caddy's local CA installs its root cert
- * into the OS trust store on first issuance; on Windows that triggers a
- * UAC prompt + a `certutil` invocation that easily takes 5–30 s, blocking
- * the admin API. Setting `install_trust = false` keeps the local CA
- * active for `*.localhost` etc. but skips the trust-store install.
+ * Set `apps.pki.certificate_authorities.local.install_trust`.
+ * Idempotent. Mutates in place. Throws when an intermediate node
+ * exists but isn't an object — silent retyping would corrupt unrelated
+ * state.
  *
- * Idempotent. Mutates in place.
- *
- * Throws when an intermediate node (`apps`, `apps.pki`,
- * `apps.pki.certificate_authorities`, `…local`) exists but is not an
- * object — overwriting a non-object node would mask a likely caller bug,
- * and silently re-typing it would corrupt unrelated state. Callers
- * holding a config they don't trust should validate the shape before
- * calling.
+ * Motivating case: on Windows the local CA's first issuance triggers
+ * UAC + `certutil` (5–30 s), blocking the admin API.
  *
  * @example
- * ```typescript
- * applyLocalCaInstallTrust(resolvedConfig, false) // skip trust install
- * applyLocalCaInstallTrust(resolvedConfig, true)  // restore default
- * ```
+ * applyLocalCaInstallTrust(cfg, false) // skip trust install
  */
 export function applyLocalCaInstallTrust(
   config: Record<string, unknown>,
@@ -584,12 +564,9 @@ export function applyLocalCaInstallTrust(
 }
 
 /**
- * Walk one step of a config tree: when the key is missing or `undefined`,
- * create a fresh object; when present and a plain object, return it;
- * when present and NOT a plain object, throw with a path the caller can
- * locate. Permissive replacement (silently overwrite non-object nodes)
- * was rejected — it would corrupt unrelated config state. See
- * {@link applyLocalCaInstallTrust} for the design rationale.
+ * Walk a step of the config tree: missing → create; non-array object →
+ * return; otherwise → throw with path. Intentionally lax `typeof` check
+ * (Caddy configs round-trip through JSON).
  */
 function ensureObject(
   parent: Record<string, unknown>,
@@ -604,7 +581,7 @@ function ensureObject(
   }
   if (typeof current !== "object" || Array.isArray(current)) {
     throw new Error(
-      `applyLocalCaInstallTrust: ${path} exists but is not a plain object (got ${
+      `applyLocalCaInstallTrust: ${path} exists but is not an object (got ${
         Array.isArray(current) ? "array" : typeof current
       })`,
     );

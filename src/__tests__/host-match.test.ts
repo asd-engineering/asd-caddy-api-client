@@ -44,4 +44,13 @@ describe("hostMatchesPattern", () => {
       hostMatchesPattern("api-prod.example.com", "*.api-*.example.com"),
     ).toBe(false);
   });
+
+  // Generic-glob `*` is intentionally cross-dot — the `*` is converted
+  // to `.*` regex, not `[^.]*`. Only the *.literal-tail branch enforces
+  // single-label semantics. This pins the choice so a future "tighten
+  // glob to single-label" refactor has to confront the contract first.
+  test("generic glob `*` matches across dot-separated labels", () => {
+    expect(hostMatchesPattern("api-a.b.example.com", "api-*.example.com")).toBe(true);
+    expect(hostMatchesPattern("a.b.example.com", "*.example.com")).toBe(false); // single-label still strict
+  });
 });

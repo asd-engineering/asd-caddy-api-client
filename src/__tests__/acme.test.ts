@@ -137,6 +137,24 @@ describe("buildAcmeDnsPolicy", () => {
     ).toThrow(/providerConfig\.name/);
   });
 
+  test("rejects providerConfig.module — `module` is the issuer-level discriminator", () => {
+    expect(() =>
+      buildAcmeDnsPolicy({
+        subjects: ["x.com"],
+        dnsProvider: "cloudflare",
+        providerConfig: { module: "wrong" },
+      }),
+    ).toThrow(/providerConfig\.module/);
+  });
+
+  test("subjects are trimmed before landing in the policy", () => {
+    const p = buildAcmeDnsPolicy({
+      subjects: [" example.com ", "\twww.example.com\n"],
+      dnsProvider: "cloudflare",
+    });
+    expect(p.subjects).toEqual(["example.com", "www.example.com"]);
+  });
+
   test("subjects array is copied (not aliased to caller)", () => {
     const subjects = ["a.com"];
     const p = buildAcmeDnsPolicy({ subjects, dnsProvider: "cloudflare" });
