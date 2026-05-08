@@ -4,6 +4,7 @@
 import type { TlsConnectionPolicy } from "../types.js";
 import type { AutomationPolicy, InternalIssuer } from "../generated/caddy-tls.js";
 import type { AutoHTTPSConfig } from "../generated/caddy-http.js";
+import { hostMatchesPattern } from "./host-match.js";
 
 /**
  * Common TLS 1.3 cipher suites (recommended)
@@ -483,4 +484,107 @@ export function buildAutomaticHttpsConfig(
   if (skipCerts.length > 0) out.skip_certificates = skipCerts;
 
   return Object.keys(out).length > 0 ? out : undefined;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  ACME-managed skip filtering
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Drop `automatic_https.skip` entries that would shadow an external-
+ * ACME policy (Caddy evaluates skip via the same host-matcher as
+ * routes). Three-way check, case-insensitive: exact match; candidate-
+ * wildcard covers ACME host; ACME-host wildcard covers candidate.
+ * Always returns a fresh array.
+ *
+ * @example
+ * filterAcmeManagedFromSkip(["*.pro.com"], new Set(["app.pro.com"]))   // []
+ * filterAcmeManagedFromSkip(["app.pro.com"], new Set(["*.pro.com"]))   // []
+ * filterAcmeManagedFromSkip(["*.pro.com"], new Set(["api.other.com"])) // ["*.pro.com"]
+ */
+export function filterAcmeManagedFromSkip(
+  candidates: string[],
+  acmeManagedHosts: Set<string>
+): string[] {
+  if (acmeManagedHosts.size === 0) return [...candidates];
+  const acmeExact = new Set<string>();
+  const acmeWildcards: string[] = [];
+  for (const a of acmeManagedHosts) {
+    const lower = a.toLowerCase();
+    acmeExact.add(lower);
+    if (lower.includes("*")) acmeWildcards.push(lower);
+  }
+  return candidates.filter((h: string): boolean => {
+    const lower = h.toLowerCase();
+    if (acmeExact.has(lower)) return false;
+    if (lower.includes("*")) {
+      for (const a of acmeExact) {
+        if (hostMatchesPattern(a, lower)) return false;
+      }
+    }
+    for (const a of acmeWildcards) {
+      if (hostMatchesPattern(lower, a)) return false;
+    }
+    return true;
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  Local CA trust-store install knob (PKI app)
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Set `apps.pki.certificate_authorities.local.install_trust`.
+ * Idempotent. Mutates in place. Throws when an intermediate node
+ * exists but isn't an object — silent retyping would corrupt unrelated
+ * state.
+ *
+ * Motivating case: on Windows the local CA's first issuance triggers
+ * UAC + `certutil` (5–30 s), blocking the admin API.
+ *
+ * @example
+ * applyLocalCaInstallTrust(cfg, false) // skip trust install
+ */
+export function applyLocalCaInstallTrust(
+  config: Record<string, unknown>,
+  installTrust: boolean
+): void {
+  if (!config || typeof config !== "object") {
+    throw new Error("applyLocalCaInstallTrust: `config` must be an object");
+  }
+  const apps = ensureObject(config, "apps", "config.apps");
+  const pki = ensureObject(apps, "pki", "config.apps.pki");
+  const cas = ensureObject(
+    pki,
+    "certificate_authorities",
+    "config.apps.pki.certificate_authorities",
+  );
+  const local = ensureObject(cas, "local", "config.apps.pki.certificate_authorities.local");
+  local.install_trust = installTrust;
+}
+
+/**
+ * Walk a step of the config tree: missing → create; non-array object →
+ * return; otherwise → throw with path. Intentionally lax `typeof` check
+ * (Caddy configs round-trip through JSON).
+ */
+function ensureObject(
+  parent: Record<string, unknown>,
+  key: string,
+  path: string,
+): Record<string, unknown> {
+  const current = parent[key];
+  if (current === undefined || current === null) {
+    const fresh: Record<string, unknown> = {};
+    parent[key] = fresh;
+    return fresh;
+  }
+  if (typeof current !== "object" || Array.isArray(current)) {
+    throw new Error(
+      `applyLocalCaInstallTrust: ${path} exists but is not an object (got ${
+        Array.isArray(current) ? "array" : typeof current
+      })`,
+    );
+  }
+  return current as Record<string, unknown>;
 }

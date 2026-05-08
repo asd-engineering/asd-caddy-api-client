@@ -9,6 +9,8 @@ import {
   buildAutomationPoliciesWithInternalFallback,
   collectExternalHostsFromRoutes,
   buildAutomaticHttpsConfig,
+  filterAcmeManagedFromSkip,
+  applyLocalCaInstallTrust,
   TLS_1_3_CIPHER_SUITES,
   TLS_1_2_CIPHER_SUITES,
   MODERN_CIPHER_SUITES,
@@ -517,5 +519,158 @@ describe("buildAutomaticHttpsConfig", () => {
       disable_redirects: true,
       skip: ["other.example.com", "tunnel.example.com"],
     });
+  });
+});
+
+describe("filterAcmeManagedFromSkip", () => {
+  test("empty acme set: candidates pass through unchanged (returns a copy)", () => {
+    // No referential-identity assertion — the function returns a fresh
+    // array even on the empty-acme fast path so callers can mutate the
+    // result without aliasing the input.
+    const candidates = ["a.example.com", "*.example.com"];
+    const out = filterAcmeManagedFromSkip(candidates, new Set());
+    expect(out).toEqual(candidates);
+  });
+
+  // Core contract — case (1): exact match
+  test("exact-match candidate is dropped (case-insensitive)", () => {
+    expect(filterAcmeManagedFromSkip(["app.pro.com"], new Set(["app.pro.com"]))).toEqual([]);
+    expect(filterAcmeManagedFromSkip(["App.Pro.Com"], new Set(["app.pro.com"]))).toEqual([]);
+    expect(filterAcmeManagedFromSkip(["app.pro.com"], new Set(["APP.PRO.COM"]))).toEqual([]);
+  });
+
+  // Core contract — case (2): candidate is wildcard, ACME host is literal
+  test("wildcard candidate that matches an ACME host is dropped", () => {
+    expect(filterAcmeManagedFromSkip(["*.pro.com"], new Set(["app.pro.com"]))).toEqual([]);
+  });
+
+  test("wildcard candidate that matches no ACME host is kept", () => {
+    expect(filterAcmeManagedFromSkip(["*.pro.com"], new Set(["api.other.com"]))).toEqual([
+      "*.pro.com",
+    ]);
+  });
+
+  // Core contract — case (3): ACME host is wildcard, candidate is literal.
+  // This is the symmetric case the asd-side implementation missed before.
+  test("literal candidate covered by an ACME wildcard is dropped", () => {
+    expect(filterAcmeManagedFromSkip(["app.pro.com"], new Set(["*.pro.com"]))).toEqual([]);
+  });
+
+  test("literal candidate NOT covered by any ACME wildcard is kept", () => {
+    expect(filterAcmeManagedFromSkip(["app.other.com"], new Set(["*.pro.com"]))).toEqual([
+      "app.other.com",
+    ]);
+  });
+
+  test("multi-ACME, multi-candidate", () => {
+    expect(
+      filterAcmeManagedFromSkip(["*.pro.com", "tunnel"], new Set(["app.pro.com", "tunnel.example"]))
+    ).toEqual(["tunnel"]);
+  });
+
+  test("non-overlapping ACME entries don't strip anything", () => {
+    const candidates = ["a.local", "b.local"];
+    expect(filterAcmeManagedFromSkip(candidates, new Set(["c.example.com"]))).toEqual(candidates);
+  });
+
+  // Reviewer-pinned regression: a `*.api-*.example.com` skip candidate
+  // covers `foo.api-prod.example.com` via generic glob (NOT the
+  // single-label leading-wildcard branch). When that ACME host exists,
+  // the candidate must be dropped.
+  test("compound-wildcard candidate is evaluated as a generic glob", () => {
+    expect(
+      filterAcmeManagedFromSkip(
+        ["*.api-*.example.com"],
+        new Set(["foo.api-prod.example.com"]),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("applyLocalCaInstallTrust", () => {
+  test("creates the apps.pki.certificate_authorities.local path when missing", () => {
+    const cfg: Record<string, unknown> = {};
+    applyLocalCaInstallTrust(cfg, false);
+    const apps = cfg.apps as Record<string, unknown>;
+    const pki = apps.pki as { certificate_authorities: Record<string, Record<string, unknown>> };
+    expect(pki.certificate_authorities.local.install_trust).toBe(false);
+  });
+
+  test("preserves existing fields under apps.pki.certificate_authorities.local", () => {
+    const cfg: Record<string, unknown> = {
+      apps: {
+        pki: {
+          certificate_authorities: {
+            local: { name: "asd-dev", root: { lifetime: "8760h" } },
+          },
+        },
+      },
+    };
+    applyLocalCaInstallTrust(cfg, false);
+    const local = (cfg.apps as Record<string, unknown>).pki as {
+      certificate_authorities: { local: Record<string, unknown> };
+    };
+    expect(local.certificate_authorities.local.name).toBe("asd-dev");
+    expect((local.certificate_authorities.local.root as Record<string, unknown>).lifetime).toBe(
+      "8760h"
+    );
+    expect(local.certificate_authorities.local.install_trust).toBe(false);
+  });
+
+  test("idempotent: repeated calls converge", () => {
+    const cfg: Record<string, unknown> = {};
+    applyLocalCaInstallTrust(cfg, false);
+    applyLocalCaInstallTrust(cfg, false);
+    applyLocalCaInstallTrust(cfg, true);
+    const apps = cfg.apps as Record<string, unknown>;
+    const pki = apps.pki as { certificate_authorities: Record<string, Record<string, unknown>> };
+    expect(pki.certificate_authorities.local.install_trust).toBe(true);
+  });
+
+  test("preserves unrelated apps", () => {
+    const cfg: Record<string, unknown> = {
+      apps: { http: { servers: { foo: { listen: [":80"] } } } },
+    };
+    applyLocalCaInstallTrust(cfg, false);
+    const apps = cfg.apps as Record<string, unknown>;
+    expect(apps.http).toBeDefined();
+  });
+
+  test("throws on non-object config (likely caller bug, surface it)", () => {
+    expect(() =>
+      applyLocalCaInstallTrust(null as unknown as Record<string, unknown>, false),
+    ).toThrow(/config/);
+    expect(() =>
+      applyLocalCaInstallTrust(undefined as unknown as Record<string, unknown>, false),
+    ).toThrow(/config/);
+  });
+
+  test("throws when an intermediate node exists but is the wrong shape", () => {
+    // Permissive replacement (silently overwrite) was rejected — see the
+    // helper docblock. These cases catch typos / config corruption rather
+    // than mask them.
+    expect(() =>
+      applyLocalCaInstallTrust({ apps: "bad" as unknown as Record<string, unknown> }, false),
+    ).toThrow(/config\.apps/);
+    expect(() =>
+      applyLocalCaInstallTrust(
+        { apps: { pki: ["array-instead-of-object"] as unknown as Record<string, unknown> } },
+        false,
+      ),
+    ).toThrow(/config\.apps\.pki/);
+    expect(() =>
+      applyLocalCaInstallTrust(
+        {
+          apps: {
+            pki: {
+              certificate_authorities: {
+                local: 42 as unknown as Record<string, unknown>,
+              },
+            },
+          },
+        },
+        false,
+      ),
+    ).toThrow(/local/);
   });
 });

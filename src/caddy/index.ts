@@ -20,6 +20,8 @@ export {
   removeOldCertificates,
 } from "./domains.js";
 export * from "./tls.js";
+export * from "./host-match.js";
+export * from "./acme.js";
 
 // Export route ordering utilities
 export {
