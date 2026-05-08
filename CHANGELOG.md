@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.7.1](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.7.0...v0.7.1) (2026-05-08)
+
+### Added
+
+- **`hostMatchesPattern(host, pattern)`** — Caddy host-pattern matcher: exact, single-label leading wildcard (`*.example.com` matches `foo.example.com` but not `example.com` or `a.b.example.com`), generic glob (`api-*.example.com`, `*-prod`). Lives in a new `host-match.ts` module so it can be reused by both core builders and consumer-side code without dragging the rest of `tls.ts` along.
+- **`buildAcmeDnsPolicy({ subjects, dnsProvider, ca?, email?, providerConfig? })`** — emits the wrapper-level shape Caddy expects for an ACME issuer with a DNS-01 challenge: `{ subjects, issuers: [{ module: "acme", challenges: { dns: { provider: { name } } }, … }] }`. Common provider shortcuts (`cloudflare`, `porkbun`, `route53`, `digitalocean`, `godaddy`) are mapped to their Caddy module names; unknown names pass through. `providerConfig` is an opaque passthrough so callers with a typed `caddy-dns/*` plugin shape (from a future `src/plugins/caddy-dns/` integration) can layer it in without breaking changes.
+- **`ACME_DNS_PROVIDER_MODULE_MAP`** + **`resolveAcmeDnsProviderModule(name)`** — the lookup that backs `buildAcmeDnsPolicy`, exported separately for callers that build their own policy shape. The map is frozen so additions are deliberate.
+- **`filterAcmeManagedFromSkip(candidates, acmeManagedHosts)`** — drops entries from an `automatic_https.skip` candidate list that would shadow an external-ACME automation policy. Three-way check: (1) lower-case exact match, (2) candidate is a wildcard that matches any ACME-managed host, (3) an ACME-managed host is a wildcard covering the candidate. The third case is the symmetric one missed by naive exact-match implementations: when an ACME policy declares `*.pro.com` and skip contains `app.pro.com`, the literal candidate is still covered by the ACME wildcard and must be removed.
+- **`applyLocalCaInstallTrust(config, value)`** — sets `apps.pki.certificate_authorities.local.install_trust` on a resolved Caddy config. Idempotent; preserves existing fields under `local`. The motivating case is the Windows readiness hang: Caddy's local CA tries to install its root cert into the OS trust store on first issuance, which triggers a UAC prompt + a `certutil` invocation that easily takes 5–30 s and blocks the admin API; setting `install_trust = false` keeps the local CA active for `*.localhost` etc. but skips the trust-store install.
+
+### Notes
+
+- These helpers were previously inline in `asd`'s `modules/caddy/scripts/api.ts`. Moving them here closes the obvious split: pure Caddy domain logic belongs in the client; asd's role is config readers + parameter passing. `filterAcmeManagedFromSkip` and `hostMatchesPattern` had asd-side test coverage; the same matrix now ships with the client. `buildAcmeDnsPolicy` and `applyLocalCaInstallTrust` had no tests — they do now.
+- Scope tension: `buildAcmeDnsPolicy` constructs only the _wrapper_ shape (provider name + challenges plumbing). Provider-specific config (Cloudflare API tokens, Porkbun secret keys, …) remains caller-supplied via env-var references or the `providerConfig` passthrough. A typed `src/plugins/caddy-dns/` integration is the right long-term home for full provider configs; this release keeps the builder permissive so callers don't block on that work.
+
 ## [0.7.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.6.1...v0.7.0) (2026-05-07)
 
 ### Added

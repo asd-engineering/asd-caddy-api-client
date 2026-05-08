@@ -1,0 +1,34 @@
+import { describe, test, expect } from "vitest";
+import { hostMatchesPattern } from "../caddy/host-match.js";
+
+describe("hostMatchesPattern", () => {
+  test("exact match", () => {
+    expect(hostMatchesPattern("api.example.com", "api.example.com")).toBe(true);
+  });
+
+  test("no wildcards: any non-equal pattern fails", () => {
+    expect(hostMatchesPattern("api.example.com", "other.example.com")).toBe(false);
+  });
+
+  test("`*.example.com` matches one-label sub-domain only", () => {
+    expect(hostMatchesPattern("api.example.com", "*.example.com")).toBe(true);
+    expect(hostMatchesPattern("a.b.example.com", "*.example.com")).toBe(false);
+    expect(hostMatchesPattern("example.com", "*.example.com")).toBe(false);
+  });
+
+  test("generic glob: `api-*.example.com` matches by prefix", () => {
+    expect(hostMatchesPattern("api-prod.example.com", "api-*.example.com")).toBe(true);
+    expect(hostMatchesPattern("api.example.com", "api-*.example.com")).toBe(false);
+  });
+
+  test("trailing-glob: `*-prod` matches", () => {
+    expect(hostMatchesPattern("foo-prod", "*-prod")).toBe(true);
+    expect(hostMatchesPattern("foo-staging", "*-prod")).toBe(false);
+  });
+
+  test("regex meta-chars in pattern are escaped", () => {
+    // A literal `.` is escaped — `a.b` does not match `aXb`.
+    expect(hostMatchesPattern("aXb", "a.b")).toBe(false);
+    expect(hostMatchesPattern("a.b", "a.b")).toBe(true);
+  });
+});

@@ -4,6 +4,7 @@
 import type { TlsConnectionPolicy } from "../types.js";
 import type { AutomationPolicy, InternalIssuer } from "../generated/caddy-tls.js";
 import type { AutoHTTPSConfig } from "../generated/caddy-http.js";
+import { hostMatchesPattern } from "./host-match.js";
 
 /**
  * Common TLS 1.3 cipher suites (recommended)
@@ -483,4 +484,106 @@ export function buildAutomaticHttpsConfig(
   if (skipCerts.length > 0) out.skip_certificates = skipCerts;
 
   return Object.keys(out).length > 0 ? out : undefined;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  ACME-managed skip filtering
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Remove host entries from an `automatic_https.skip` candidate list that
+ * would shadow an external-ACME automation policy.
+ *
+ * **Why this matters.** Caddy evaluates `automatic_https.skip` entries via
+ * the same host-matcher as routes — the entries are patterns, not literals.
+ * Putting a host in `skip` disables BOTH cert acquisition AND the HTTP→HTTPS
+ * redirect for any request whose `Host` matches the pattern. So:
+ *
+ *   - A skip entry equal to an ACME-managed host blocks that host's certs.
+ *   - A wildcard skip entry (e.g. `*.pro.com`) blocks every host it
+ *     covers — including `app.pro.com` even when only `app.pro.com` is
+ *     in the ACME automation policy.
+ *   - Conversely, when the ACME policy itself uses a wildcard subject
+ *     (e.g. `*.pro.com`), a literal skip candidate (`app.pro.com`) is
+ *     covered by the ACME wildcard — putting it in skip would still
+ *     shadow the policy.
+ *
+ * This filter drops a candidate when ANY of these hold:
+ *   1. lower-case exact match against an ACME-managed host
+ *   2. the candidate is a wildcard that matches any ACME-managed host
+ *   3. an ACME-managed host is itself a wildcard that matches the candidate
+ *
+ * Match is case-insensitive on both sides.
+ *
+ * @example
+ * ```typescript
+ * filterAcmeManagedFromSkip(["*.pro.com"], new Set(["app.pro.com"]))    // []
+ * filterAcmeManagedFromSkip(["app.pro.com"], new Set(["*.pro.com"]))    // []
+ * filterAcmeManagedFromSkip(["*.pro.com"], new Set(["api.other.com"]))  // ["*.pro.com"]
+ * ```
+ */
+export function filterAcmeManagedFromSkip(
+  candidates: string[],
+  acmeManagedHosts: Set<string>
+): string[] {
+  if (acmeManagedHosts.size === 0) return candidates;
+  const acmeLower: string[] = [];
+  for (const a of acmeManagedHosts) acmeLower.push(a.toLowerCase());
+  return candidates.filter((h: string): boolean => {
+    const lower = h.toLowerCase();
+    // 1. exact match
+    if (acmeLower.includes(lower)) return false;
+    // 2. candidate is a wildcard shadowing an ACME-managed host
+    if (lower.includes("*")) {
+      for (const a of acmeLower) {
+        if (hostMatchesPattern(a, lower)) return false;
+      }
+    }
+    // 3. an ACME-managed host is a wildcard covering the candidate
+    for (const a of acmeLower) {
+      if (a.includes("*") && hostMatchesPattern(lower, a)) return false;
+    }
+    return true;
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  Local CA trust-store install knob (PKI app)
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Set `apps.pki.certificate_authorities.local.install_trust` on a
+ * resolved Caddy config object.
+ *
+ * **Why a helper at all.** Caddy's local CA module installs its root
+ * cert into the OS trust store the first time it issues a cert. On
+ * Windows that triggers a UAC prompt + a `certutil` invocation that
+ * easily takes 5–30 s, and the admin API stays unbound until the install
+ * finishes. Setting `install_trust = false` keeps the local CA active
+ * (still issues self-signed certs for `*.localhost` etc.) but skips the
+ * trust-store install — users who want browser-trusted self-signed run
+ * `caddy trust` once manually.
+ *
+ * Idempotent and structure-preserving: walks `apps.pki.certificate_authorities.local`,
+ * creating intermediate objects only as needed, and leaves any existing
+ * fields under `local` untouched. Mutates the passed config in place.
+ *
+ * @example
+ * ```typescript
+ * applyLocalCaInstallTrust(resolvedConfig, false) // skip trust install
+ * applyLocalCaInstallTrust(resolvedConfig, true)  // restore default
+ * ```
+ */
+export function applyLocalCaInstallTrust(
+  config: Record<string, unknown>,
+  installTrust: boolean
+): void {
+  if (!config || typeof config !== "object") return;
+  const apps = (config.apps ??= {}) as Record<string, unknown>;
+  const pki = (apps.pki ??= {}) as {
+    certificate_authorities?: Record<string, Record<string, unknown>>;
+  };
+  pki.certificate_authorities ??= {};
+  pki.certificate_authorities.local ??= {};
+  pki.certificate_authorities.local.install_trust = installTrust;
 }
