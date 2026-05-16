@@ -158,7 +158,7 @@
     "@types/node": "^20.10.0",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^2.22.0",
-    "esbuild": "^0.19.0",
+    "esbuild": "^0.25.0",
     "shx": "^0.4.0",
     "typescript": "^5.3.3"
   },
