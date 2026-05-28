@@ -11,10 +11,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# artifact-nas credentials (org-level secrets)
+env:
+  RCLONE_CONF_B64: ${{ secrets.RCLONE_CONF_B64 }}
+  NAS_DEST: ${{ secrets.NAS_DEST }}
+
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,7 +37,7 @@ jobs:
 
   typecheck:
     name: Type Check
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -50,7 +55,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -86,7 +91,16 @@ jobs:
 
   integration-tests:
     name: Integration Tests
-    runs-on: ubuntu-latest
+    # docker-compose bind-mounts `./test/Caddyfile:/etc/caddy/Caddyfile`,
+    # which fails on dind self-hosted runners (`vars.LINUX_RUNNER=dind`):
+    # the inner docker daemon resolves host paths against the dind container's
+    # filesystem, where the runner workdir isn't visible, so Docker creates
+    # an empty *directory* at the source path and trips
+    # `mount a directory onto a file (or vice-versa)`.
+    # Use `DOCKER_LINUX_RUNNER` (defaults to `ubuntu-latest`) for any job
+    # that bind-mounts repo files into containers; revisit if/when the dind
+    # pool exposes the runner workdir into the inner daemon.
+    runs-on: ${{ vars.DOCKER_LINUX_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
@@ -140,7 +154,11 @@ jobs:
 
   caddy-security-tests:
     name: Caddy Security Tests
-    runs-on: ubuntu-latest
+    # Same dind bind-mount limitation as `integration-tests` above — this
+    # job runs three docker-compose stacks (caddy-security, keycloak, ldap)
+    # each with repo-file bind mounts, so route it to the docker-friendly
+    # runner pool.
+    runs-on: ${{ vars.DOCKER_LINUX_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
@@ -253,7 +271,7 @@ jobs:
 
   vscode-extension-tests:
     name: VSCode Extension Tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     needs: [lint, typecheck]
 
     steps:
@@ -291,9 +309,10 @@ jobs:
           CI: true
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: asd-engineering/artifact-nas/upload@v1.4.4
         if: always()
         with:
+          mode: nas-first
           name: vscode-extension-test-results
           path: |
             vscode-extension/playwright-report/
@@ -302,7 +321,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     needs: [lint, typecheck, unit-tests]
     steps:
       - name: Checkout code
@@ -320,8 +339,9 @@ jobs:
         run: bun run build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: asd-engineering/artifact-nas/upload@v1.4.4
         with:
+          mode: nas-first
           name: dist
           path: dist/
           retention-days: 7

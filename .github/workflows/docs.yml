@@ -11,7 +11,7 @@ permissions:
 jobs:
   deploy-docs:
     name: Build and Deploy Documentation
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
