@@ -91,7 +91,16 @@ jobs:
 
   integration-tests:
     name: Integration Tests
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    # docker-compose bind-mounts `./test/Caddyfile:/etc/caddy/Caddyfile`,
+    # which fails on dind self-hosted runners (`vars.LINUX_RUNNER=dind`):
+    # the inner docker daemon resolves host paths against the dind container's
+    # filesystem, where the runner workdir isn't visible, so Docker creates
+    # an empty *directory* at the source path and trips
+    # `mount a directory onto a file (or vice-versa)`.
+    # Use `DOCKER_LINUX_RUNNER` (defaults to `ubuntu-latest`) for any job
+    # that bind-mounts repo files into containers; revisit if/when the dind
+    # pool exposes the runner workdir into the inner daemon.
+    runs-on: ${{ vars.DOCKER_LINUX_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
@@ -145,7 +154,11 @@ jobs:
 
   caddy-security-tests:
     name: Caddy Security Tests
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    # Same dind bind-mount limitation as `integration-tests` above — this
+    # job runs three docker-compose stacks (caddy-security, keycloak, ldap)
+    # each with repo-file bind mounts, so route it to the docker-friendly
+    # runner pool.
+    runs-on: ${{ vars.DOCKER_LINUX_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
