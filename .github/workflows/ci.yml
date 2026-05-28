@@ -11,6 +11,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# artifact-nas credentials (org-level secrets)
+env:
+  RCLONE_CONF_B64: ${{ secrets.RCLONE_CONF_B64 }}
+  NAS_DEST: ${{ secrets.NAS_DEST }}
+
 jobs:
   lint:
     name: Lint
@@ -291,9 +296,10 @@ jobs:
           CI: true
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: asd-engineering/artifact-nas/upload@v1.4.1
         if: always()
         with:
+          mode: fallback
           name: vscode-extension-test-results
           path: |
             vscode-extension/playwright-report/
@@ -320,8 +326,9 @@ jobs:
         run: bun run build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: asd-engineering/artifact-nas/upload@v1.4.1
         with:
+          mode: fallback
           name: dist
           path: dist/
           retention-days: 7
