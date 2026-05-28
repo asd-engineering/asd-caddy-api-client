@@ -309,7 +309,7 @@ jobs:
           CI: true
 
       - name: Upload test results
-        uses: asd-engineering/artifact-nas/upload@v1.4.3
+        uses: asd-engineering/artifact-nas/upload@v1.4.4
         if: always()
         with:
           mode: nas-first
@@ -339,7 +339,7 @@ jobs:
         run: bun run build
 
       - name: Upload build artifacts
-        uses: asd-engineering/artifact-nas/upload@v1.4.3
+        uses: asd-engineering/artifact-nas/upload@v1.4.4
         with:
           mode: nas-first
           name: dist
