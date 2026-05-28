@@ -12,7 +12,7 @@ permissions:
 jobs:
   release:
     name: Build, Test & Publish to npm
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
