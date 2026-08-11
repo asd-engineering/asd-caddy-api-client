@@ -1,6 +1,6 @@
 {
   "name": "@accelerated-software-development/caddy-api-client",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "TypeScript client for Caddy Admin API with MITMproxy integration",
   "type": "module",
   "main": "./dist/index.js",
@@ -30,6 +30,10 @@
     "./plugins/caddy-security": {
       "types": "./dist/plugins/caddy-security/index.d.ts",
       "import": "./dist/plugins/caddy-security/index.js"
+    },
+    "./plugins/caddy-dns": {
+      "types": "./dist/plugins/caddy-dns/index.d.ts",
+      "import": "./dist/plugins/caddy-dns/index.js"
     },
     "./extension-assets": {
       "types": "./dist/generated/extension-assets.d.ts",

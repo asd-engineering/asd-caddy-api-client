@@ -11,6 +11,7 @@
  * ## Supported Plugins
  *
  * - **caddy-security**: Authentication and authorization (JWT, OAuth, LDAP, etc.)
+ * - **caddy-dns**: Typed provider configs for ACME-DNS challenges (Cloudflare, Porkbun, Route53, DigitalOcean, GoDaddy)
  *
  * ## Usage
  *
@@ -46,5 +47,10 @@
 import * as caddySecurity from "./caddy-security/index.js";
 export { caddySecurity };
 
+// Re-export caddy-dns as a namespace
+import * as caddyDns from "./caddy-dns/index.js";
+export { caddyDns };
+
 // Also export individual items for direct imports
 export * from "./caddy-security/index.js";
+export * from "./caddy-dns/index.js";
