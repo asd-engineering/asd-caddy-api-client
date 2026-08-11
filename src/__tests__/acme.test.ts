@@ -101,29 +101,28 @@ describe("buildAcmeDnsPolicy", () => {
 
   test("rejects subjects entries that are empty / whitespace-only", () => {
     expect(() => buildAcmeDnsPolicy({ subjects: [""], dnsProvider: "cloudflare" })).toThrow(
-      /subjects/,
+      /subjects/
     );
     expect(() => buildAcmeDnsPolicy({ subjects: ["   "], dnsProvider: "cloudflare" })).toThrow(
-      /subjects/,
+      /subjects/
     );
     expect(() =>
-      buildAcmeDnsPolicy({ subjects: ["valid.com", ""], dnsProvider: "cloudflare" }),
+      buildAcmeDnsPolicy({ subjects: ["valid.com", ""], dnsProvider: "cloudflare" })
     ).toThrow(/subjects/);
   });
 
   test("rejects missing dnsProvider", () => {
     expect(() => buildAcmeDnsPolicy({ subjects: ["x"], dnsProvider: "" })).toThrow(/dnsProvider/);
     expect(() => buildAcmeDnsPolicy({ subjects: ["x"], dnsProvider: "   " })).toThrow(
-      /dnsProvider/,
+      /dnsProvider/
     );
   });
 
   test("dnsProvider is normalised before resolution", () => {
     const p1 = buildAcmeDnsPolicy({ subjects: ["x.com"], dnsProvider: " Cloudflare " });
-    const provider1 = ((p1.issuers![0] as Record<string, unknown>).challenges as Record<
-      string,
-      unknown
-    >).dns as Record<string, unknown>;
+    const provider1 = (
+      (p1.issuers![0] as Record<string, unknown>).challenges as Record<string, unknown>
+    ).dns as Record<string, unknown>;
     expect((provider1.provider as Record<string, unknown>).name).toBe("cloudflare");
   });
 
@@ -133,7 +132,7 @@ describe("buildAcmeDnsPolicy", () => {
         subjects: ["x.com"],
         dnsProvider: "cloudflare",
         providerConfig: { name: "wrong" },
-      }),
+      })
     ).toThrow(/providerConfig\.name/);
   });
 
@@ -143,7 +142,7 @@ describe("buildAcmeDnsPolicy", () => {
         subjects: ["x.com"],
         dnsProvider: "cloudflare",
         providerConfig: { module: "wrong" },
-      }),
+      })
     ).toThrow(/providerConfig\.module/);
   });
 

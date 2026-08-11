@@ -2,12 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.8.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.7.1...v0.8.0) (2026-08-11)
+
+### Added
+
+- **`src/plugins/caddy-dns/`** — typed `providerConfig` builders for the `caddy-dns/*` ACME-DNS challenge provider modules, layered on top of `buildAcmeDnsPolicy`'s `providerConfig` passthrough:
+  - **`buildPorkbunDnsConfig()`**, **`buildCloudflareDnsConfig()`**, **`buildRoute53DnsConfig()`**, **`buildDigitaloceanDnsConfig()`**, **`buildGodaddyDnsConfig()`** — each returns `{ providerConfig?, envVars }` for one provider. `route53` omits `providerConfig` entirely — `caddy-dns/route53` resolves credentials via the AWS Go SDK v2's own default credential chain (env vars, shared profile, or IAM role) rather than a JSON config block.
+  - **`buildAcmeDnsProviderConfig(provider)`** — dispatches to the matching builder above by name, reusing `resolveAcmeDnsProviderModule`'s trim/lower-case normalisation. Unknown provider names fall back to `{ envVars: [] }` rather than throwing, so callers can still supply their own `providerConfig` passthrough for providers without a typed builder yet.
+  - Field names (`api_key`/`api_secret_key` for Porkbun, `api_token` for Cloudflare/DigitalOcean/GoDaddy) were verified against each plugin's own README/source on 2026-08-11. GoDaddy's `api_token` must be its own combined `"<API_KEY>:<API_SECRET>"` format — documented loudly in `types.ts` since it's a common source of misconfiguration.
+  - See `docs/plugins/caddy-dns/README.md` for the full provider table and usage example.
+
+### Notes
+
+- Closes the "Scope tension" flagged in v0.7.1: `buildAcmeDnsPolicy` still only builds the wrapper shape, but provider-specific config now has a typed, tested home in `src/plugins/caddy-dns/` instead of staying purely caller-supplied.
+
 ## [0.7.1](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.7.0...v0.7.1) (2026-05-08)
 
 ### Added
 
 - **`hostMatchesPattern(host, pattern)`** — Caddy host-pattern matcher: exact, single-label leading wildcard (`*.example.com`), generic glob (`api-*.example.com`, `*-prod`, `*.api-*.example.com`). The single-label branch only fires when the tail after `*.` is a literal — compound patterns take the generic-glob path. Generic-glob `*` matches across dot-separated labels (it's `.*`, not `[^.]*`); only the single-label branch is strict.
-- **`buildAcmeDnsPolicy({ subjects, dnsProvider, ca?, email?, providerConfig? })`** — emits the wrapper shape Caddy expects: `{ subjects, issuers: [{ module: "acme", challenges: { dns: { provider: { name } } }, … }] }`. The discriminator at the provider level is `name`, not `module` (the docblock cites the Caddy source for this). Common shortcuts (`cloudflare`, `porkbun`, `route53`, `digitalocean`, `godaddy`) map to module names; unknown names pass through *normalised* (trim + lower-case). Subjects are also trimmed; empty/whitespace-only entries are rejected. `providerConfig` is an opaque passthrough — both `name` and `module` are reserved keys that throw if present.
+- **`buildAcmeDnsPolicy({ subjects, dnsProvider, ca?, email?, providerConfig? })`** — emits the wrapper shape Caddy expects: `{ subjects, issuers: [{ module: "acme", challenges: { dns: { provider: { name } } }, … }] }`. The discriminator at the provider level is `name`, not `module` (the docblock cites the Caddy source for this). Common shortcuts (`cloudflare`, `porkbun`, `route53`, `digitalocean`, `godaddy`) map to module names; unknown names pass through _normalised_ (trim + lower-case). Subjects are also trimmed; empty/whitespace-only entries are rejected. `providerConfig` is an opaque passthrough — both `name` and `module` are reserved keys that throw if present.
 - **`ACME_DNS_PROVIDER_MODULE_MAP`** + **`resolveAcmeDnsProviderModule(name)`** — frozen lookup that backs `buildAcmeDnsPolicy`. Resolver normalises input (trim + lower-case) before lookup; unknown names pass through normalised.
 - **`filterAcmeManagedFromSkip(candidates, acmeManagedHosts)`** — drops `automatic_https.skip` entries that would shadow an external-ACME policy. Three-way check: exact lower-case match; candidate-wildcard covers ACME host; ACME-host wildcard covers candidate. Returns a fresh array.
 - **`applyLocalCaInstallTrust(config, value)`** — sets `apps.pki.certificate_authorities.local.install_trust`. Idempotent. Throws when an intermediate node exists but is not an object — surfaces caller-side config corruption rather than silently retyping it. Motivating case: Windows readiness hang where Caddy's local CA triggers UAC + `certutil` on first issuance, blocking the admin API for 5–30 s.

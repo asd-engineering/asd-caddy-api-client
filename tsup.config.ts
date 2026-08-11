@@ -8,6 +8,7 @@ export default defineConfig({
     "caddy-types": "src/caddy-types.ts",
     "plugins/index": "src/plugins/index.ts",
     "plugins/caddy-security/index": "src/plugins/caddy-security/index.ts",
+    "plugins/caddy-dns/index": "src/plugins/caddy-dns/index.ts",
     "generated/extension-assets": "src/generated/extension-assets.ts",
   },
   format: ["esm"],
