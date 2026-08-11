@@ -95,12 +95,22 @@ export default async function globalSetup() {
   const codeServerDir = path.join(asdWorkspace, "code/code-server");
   const codeServerBin = path.join(codeServerDir, "bin/code-server");
   const extensionsDir = path.join(asdWorkspace, "code/data/extensions");
-  // Dynamically find the latest vsix file
-  const vsixFiles = fs.readdirSync(path.join(__dirname, "..")).filter((f) => f.endsWith(".vsix"));
-  const extensionVsix =
-    vsixFiles.length > 0
-      ? path.join(__dirname, "..", vsixFiles.sort().pop()!)
-      : path.join(__dirname, "../vscode-caddy-tools-0.1.5.vsix");
+  // Dynamically find the latest vsix file. Re-run after a build/rebuild --
+  // a fresh checkout has zero vsix files (they're gitignored build output),
+  // so the pre-build lookup can return null; re-scanning afterwards is what
+  // actually picks up the file `npm run package` just produced. A stale
+  // hardcoded fallback filename here (e.g. an old version string) will
+  // silently ENOENT once the real version moves past it -- code-server's
+  // --install-extension failure is swallowed by the catch below, so the
+  // extension never installs and every diagnostics-dependent test times out
+  // waiting for squiggles that can never appear.
+  const findLatestVsix = (): string | null => {
+    const dir = path.join(__dirname, "..");
+    const vsixFiles = fs.readdirSync(dir).filter((f) => f.endsWith(".vsix"));
+    return vsixFiles.length > 0 ? path.join(dir, vsixFiles.sort().pop()!) : null;
+  };
+
+  let extensionVsix = findLatestVsix();
 
   // Check if code-server is installed
   if (!fs.existsSync(codeServerBin)) {
@@ -110,7 +120,7 @@ export default async function globalSetup() {
 
   // Build and package extension if vsix doesn't exist or is older than 1 hour
   const shouldRebuild = (() => {
-    if (!fs.existsSync(extensionVsix)) return true;
+    if (!extensionVsix) return true;
     const vsixStat = fs.statSync(extensionVsix);
     const ageMs = Date.now() - vsixStat.mtimeMs;
     const oneHourMs = 60 * 60 * 1000;
@@ -123,8 +133,15 @@ export default async function globalSetup() {
       cwd: path.join(__dirname, ".."),
       stdio: "inherit",
     });
+    extensionVsix = findLatestVsix();
   } else {
     console.log("✅ Using cached extension vsix (less than 1 hour old)");
+  }
+
+  if (!extensionVsix) {
+    throw new Error(
+      "No .vsix file found after build -- `npm run package` did not produce one in vscode-extension/."
+    );
   }
 
   // Ensure extensions directory exists
