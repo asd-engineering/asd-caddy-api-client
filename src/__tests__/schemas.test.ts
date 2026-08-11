@@ -283,20 +283,59 @@ describe("CaddyDurationSchema", () => {
   test("validates integer nanoseconds", () => {
     expect(() => CaddyDurationSchema.parse(5000000000)).not.toThrow();
     expect(() => CaddyDurationSchema.parse(0)).not.toThrow();
+    expect(() => CaddyDurationSchema.parse(-1000)).not.toThrow(); // negative nanoseconds
   });
 
-  test("validates Go duration strings", () => {
+  test("validates single unit duration strings", () => {
     expect(() => CaddyDurationSchema.parse("10s")).not.toThrow();
     expect(() => CaddyDurationSchema.parse("1m")).not.toThrow();
     expect(() => CaddyDurationSchema.parse("2h")).not.toThrow();
     expect(() => CaddyDurationSchema.parse("500ms")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("100us")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("100µs")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("50ns")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1d")).not.toThrow();
+  });
+
+  test("validates combined unit duration strings", () => {
+    // From Caddy Go source tests
+    expect(() => CaddyDurationSchema.parse("1h30m")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1d30m")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1m2d")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1m2d30s")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1d2d")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("30s500ms")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("2h45m30s")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1h30m45s100ms")).not.toThrow();
+  });
+
+  test("validates decimal duration values", () => {
     expect(() => CaddyDurationSchema.parse("1.5s")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1.5d")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("4m1.25d")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("2.5h")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("100.25ms")).not.toThrow();
+  });
+
+  test("validates negative duration strings", () => {
+    expect(() => CaddyDurationSchema.parse("-30s")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("-1h30m")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("-1.25d12h")).not.toThrow();
+  });
+
+  test("validates zero duration (special case)", () => {
+    // "0" is valid in Go's time.ParseDuration without a unit
+    expect(() => CaddyDurationSchema.parse("0")).not.toThrow();
+    expect(CaddyDurationSchema.parse("0")).toBe("0");
   });
 
   test("rejects invalid duration strings", () => {
     expect(() => CaddyDurationSchema.parse("invalid")).toThrow();
-    expect(() => CaddyDurationSchema.parse("10")).toThrow();
-    expect(() => CaddyDurationSchema.parse("10x")).toThrow();
+    expect(() => CaddyDurationSchema.parse("10")).toThrow(); // missing unit
+    expect(() => CaddyDurationSchema.parse("10x")).toThrow(); // invalid unit
+    expect(() => CaddyDurationSchema.parse("")).toThrow(); // empty
+    expect(() => CaddyDurationSchema.parse("h30m")).toThrow(); // missing number
+    expect(() => CaddyDurationSchema.parse("1w")).toThrow(); // weeks not supported
   });
 });
 
@@ -477,6 +516,75 @@ describe("ExtendedRouteMatcherSchema", () => {
 
     expect(result.not).toHaveLength(1);
     expect(result.not?.[0].path).toEqual(["/health", "/metrics"]);
+  });
+
+  test("validates TLS matcher", () => {
+    // Match only completed TLS handshakes
+    const result = ExtendedRouteMatcherSchema.parse({
+      tls: { handshake_complete: true },
+    });
+    expect(result.tls?.handshake_complete).toBe(true);
+
+    // Match early data (0-RTT) requests
+    const earlyData = ExtendedRouteMatcherSchema.parse({
+      tls: { handshake_complete: false },
+    });
+    expect(earlyData.tls?.handshake_complete).toBe(false);
+
+    // Empty TLS matcher (matches any TLS request)
+    const anyTls = ExtendedRouteMatcherSchema.parse({
+      tls: {},
+    });
+    expect(anyTls.tls).toEqual({});
+  });
+
+  test("validates file matcher", () => {
+    // Basic try_files configuration
+    const result = ExtendedRouteMatcherSchema.parse({
+      file: {
+        root: "/var/www",
+        try_files: [
+          "{http.request.uri.path}",
+          "{http.request.uri.path}/index.html",
+          "/fallback.html",
+        ],
+      },
+    });
+    expect(result.file?.root).toBe("/var/www");
+    expect(result.file?.try_files).toHaveLength(3);
+
+    // PHP-style split path
+    const phpConfig = ExtendedRouteMatcherSchema.parse({
+      file: {
+        try_files: ["{http.request.uri.path}", "{http.request.uri.path}/index.php"],
+        split_path: [".php"],
+      },
+    });
+    expect(phpConfig.file?.split_path).toEqual([".php"]);
+
+    // All try_policy options
+    const policies = [
+      "first_exist",
+      "first_exist_fallback",
+      "smallest_size",
+      "largest_size",
+      "most_recently_modified",
+    ] as const;
+    for (const policy of policies) {
+      expect(() =>
+        ExtendedRouteMatcherSchema.parse({
+          file: { try_policy: policy },
+        })
+      ).not.toThrow();
+    }
+  });
+
+  test("rejects invalid file matcher try_policy", () => {
+    expect(() =>
+      ExtendedRouteMatcherSchema.parse({
+        file: { try_policy: "invalid_policy" },
+      })
+    ).toThrow();
   });
 });
 

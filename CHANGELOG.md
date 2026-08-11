@@ -9,6 +9,12 @@ All notable changes to this project will be documented in this file. See [standa
 - **Caddy upgraded from v2.11.2 to v2.11.4** — includes 2 upstream fixes: `GHSA-vcc4-2c75-vc9v` (templates XSS via `stripHTML`) and `GHSA-j8px-rmrx-76h9` (rewrite handler placeholder re-expansion disclosure). Both are logic-only fixes with no JSON schema impact.
 - **caddy-security upgraded from v1.1.59 to v1.1.64** (pulling in go-authcrunch v1.1.35 → v1.1.41) — caddy-security's own exported struct shape is unchanged (zero `json:"..."` tag diffs), but go-authcrunch's range is security-dense: OAuth JWT issuer/audience validation, signature verification before claim merge, constant-time nonce comparison, OAuth state-manager memory bounding, session-cache race fix, authz bypass/path hardening, cookie-domain fix, trusted-redirect hardening. Adds 3 new optional fields in `pkg/idp/oauth` (`issuer`, `pkce_disabled`, `access_token_audience`).
 
+### Fixed
+
+- **`CaddyRouteMatcherSchema` was silently dropping 8 real Caddy matchers** (`path_regexp`, `client_ip`, `remote_ip`, `protocol`, `tls`, `header_regexp`, `not`, `expression`) — Zod's default "strip" parsing behavior meant `.parse()` returned `success: true` while quietly deleting these fields from the output, rather than raising a validation error. Fixed by composing the schema from the already tygo-generated matcher schemas where correct, and hand-overriding the few with custom Go JSON marshaling tygo can't see (`not`, `expression`, `path_regexp`). Added `src/__tests__/matcher-schema-consistency.test.ts`, which reads the live generated Caddy source at test time so a future matcher addition fails loudly instead of silently dropping data again.
+- **`queryOpsSchema`** (`src/generated/caddy-rewrite.zod.ts`, the `rewrite` handler's `query` matcher) **accepted the wrong shape** — `set`/`add`/`replace`/`rename` were generated as maps, but real Caddy rejects that (`caddy validate` reveals the true Go types: `[]rewrite.queryOpsArguments` for set/add/rename, `[]*rewrite.queryOpsReplacement` for replace). Root cause: `queryOps` is an unexported Go type, so tygo can only approximate its shape from the outside, and the approximation was wrong. Hand-corrected with a regression test asserting the old map-based shape is rejected.
+- **`cookieHashSelectionSchema`** (reverse_proxy load balancing) **and `zeroSslIssuerSchema`** (TLS issuer) **were missing fields already present in the tygo-generated source** (`max_age`/`fallback`, and `validity_days`/`listen_host`/`alternate_http_port`/`cname_validation` respectively) — a stale `ts-to-zod` run had drifted out of sync with the already-correct `.ts` interfaces. Fixed by regenerating.
+
 ### Added
 
 - **`src/plugins/caddy-dns/` now sourced from real vendored Go source, not READMEs** — matching `caddy-security`'s own tygo pipeline. Added 6 new `local/` checkouts (`libdns-porkbun`, `libdns-cloudflare`, `libdns-route53`, `libdns-digitalocean`, `libdns-godaddy`, `caddy-dns-route53`) generating `src/generated/plugins/caddy-dns-*.ts`/`.zod.ts` — see `DEPENDENCIES.md`'s "DNS Provider Plugins" section for exact versions/commits and the "Adding a Provider" recipe.
@@ -250,9 +256,19 @@ All notable changes to this project will be documented in this file. See [standa
   - `src/__tests__/generated-schemas.test.ts` now validates all 20 generated JSON schemas
   - Tests ensure schemas stay in sync with Zod source definitions
 
-## [0.3.0] - 2026-01-09
+## [0.3.0] - 2026-01-11
 
 ### Added
+
+- **Go Source Conformance Testing** - Verified TypeScript schemas match Caddy Go source exactly
+  - Fixed critical `queryOps` schema mismatch in `caddy-rewrite.zod.ts`
+  - Query operations now correctly use arrays of `{key, val}` objects (matching Go's `[]queryOpsArguments`)
+  - Added `queryOpsArgumentsSchema` and `queryOpsReplacementSchema` for proper typing
+
+- **Comprehensive Test Coverage** - 648 tests, 90.61% coverage
+  - `src/__tests__/generated-schemas.test.ts` - 71 tests for all generated Zod schemas
+  - `src/__tests__/mitm-manager.test.ts` - 36 tests for MitmproxyManager class
+  - Tests cover caddy-auth, caddy-encode, caddy-headers, caddy-rewrite modules
 
 - **Config File Loading Utilities** (`src/caddy/config-loader.ts`)
   - `loadConfig(path, adapter?, options?)` - Load and adapt config files with auto-detection

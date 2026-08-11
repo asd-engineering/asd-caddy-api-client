@@ -52,6 +52,7 @@ import {
   httpMatchRemoteIpSchema as matchRemoteIpSchema,
   matchClientIpSchema,
   matchHeaderReSchema,
+  httpMatchTlsSchema as matchTlsSchema,
 } from "./caddy-types.js";
 
 // ============================================================================
@@ -176,12 +177,17 @@ export const MatchQuerySchema = z.record(z.string(), z.array(z.string()));
 export const MatchHeaderSchema = z.record(z.string(), z.array(z.string()));
 
 /**
- * Caddy route matcher schema — covers every `http.matchers.*` module.
+ * Caddy route matcher schema — covers every `http.matchers.*` module
+ * except `vars_regexp` (internal Caddy variable matching) and `file`
+ * (`http.matchers.file`, generated in `caddy-fileserver.ts` rather than
+ * `caddy-http.ts` — see `matcher-schema-consistency.test.ts`'s
+ * `NON_MATCHER_HELPER_TYPES`/scope note; not yet tracked by that test).
  *
- * `protocol`, `remote_ip`, `client_ip`, and `header_regexp` are the real,
- * correctly tygo-generated `matchProtocolSchema`/`matchRemoteIpSchema`/
- * `matchClientIpSchema`/`matchHeaderReSchema` from `caddy-http.zod.ts` —
- * composed here, not duplicated by hand.
+ * `protocol`, `remote_ip`, `client_ip`, `header_regexp`, and `tls` are the
+ * real, correctly tygo-generated `matchProtocolSchema`/
+ * `matchRemoteIpSchema`/`matchClientIpSchema`/`matchHeaderReSchema`/
+ * `matchTlsSchema` from `caddy-http.zod.ts` — composed here, not
+ * duplicated by hand.
  *
  * `not`, `expression`, and `path_regexp` are hand-overridden (not composed
  * from the generated `matchNotSchema`/`matchExpressionSchema`/
@@ -224,6 +230,7 @@ export const CaddyRouteMatcherSchema = z.object({
   client_ip: matchClientIpSchema.optional(),
   remote_ip: matchRemoteIpSchema.optional(),
   protocol: matchProtocolSchema.optional(),
+  tls: matchTlsSchema.optional(),
   not: z.array(z.record(z.string(), z.unknown())).optional(),
   expression: z.string().optional(),
 });
@@ -483,11 +490,33 @@ export const LoadBalancerRouteOptionsSchema = z.object({
 
 /**
  * Caddy duration schema - accepts integer (nanoseconds) or Go duration string
- * @example "10s", "1m30s", "2h45m", 5000000000
+ *
+ * Based on Go's time.Duration format with Caddy's "d" (day) extension.
+ * - Valid units: ns, us, µs, ms, s, m, h, d
+ * - Supports combined units: "1h30m", "1d2h30m", "30s500ms"
+ * - Supports decimals: "1.5d", "2.5h", "100.25ms"
+ * - Supports negative values: "-30s", "-1.5h"
+ *
+ * @example
+ * ```typescript
+ * CaddyDurationSchema.parse("30s");      // OK
+ * CaddyDurationSchema.parse("1h30m");    // OK - combined units
+ * CaddyDurationSchema.parse("1.5d");     // OK - decimal
+ * CaddyDurationSchema.parse("1d2h30m");  // OK - multiple units
+ * CaddyDurationSchema.parse("-30s");     // OK - negative
+ * CaddyDurationSchema.parse(5000000000); // OK - nanoseconds integer
+ * ```
  */
 export const CaddyDurationSchema = z.union([
   z.number().int(),
-  z.string().regex(/^\d+(\.\d+)?(ns|us|µs|ms|s|m|h|d)$/, "Invalid Go duration format"),
+  // "0" is special case - valid without unit in Go
+  z.literal("0"),
+  z
+    .string()
+    .regex(
+      /^-?(\d+(\.\d+)?(ns|us|µs|ms|s|m|h|d))+$/,
+      "Invalid Go duration format. Use units: ns, us, µs, ms, s, m, h, d (e.g., '30s', '1h30m', '1.5d')"
+    ),
 ]);
 
 /**
@@ -647,6 +676,44 @@ const BaseRouteMatcherSchema = z.object({
   protocol: z.enum(["http", "https", "grpc"]).optional(),
   /** CEL expression matcher */
   expression: z.string().optional(),
+  /** Match by TLS connection state */
+  tls: z
+    .object({
+      /**
+       * Matches if the TLS handshake has completed.
+       * QUIC 0-RTT early data may arrive before the handshake completes.
+       * It is conventional to respond with HTTP 425 Too Early if the request
+       * cannot risk being processed in this state.
+       */
+      handshake_complete: z.boolean().optional(),
+    })
+    .optional(),
+  /** Match by file existence on disk */
+  file: z
+    .object({
+      /** The file system implementation to use */
+      fs: z.string().optional(),
+      /** The root directory for file paths */
+      root: z.string().optional(),
+      /** List of files/directories to try (directories must end with /) */
+      try_files: z.array(z.string()).optional(),
+      /**
+       * Policy for selecting a file from try_files:
+       * first_exist, first_exist_fallback, smallest_size, largest_size, most_recently_modified
+       */
+      try_policy: z
+        .enum([
+          "first_exist",
+          "first_exist_fallback",
+          "smallest_size",
+          "largest_size",
+          "most_recently_modified",
+        ])
+        .optional(),
+      /** Delimiters to split the path when trying files (e.g., [".php"]) */
+      split_path: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -663,6 +730,8 @@ export const ExtendedRouteMatcherSchema: z.ZodType<
 
 /**
  * Reverse proxy handler schema with full options
+ *
+ * Based on local/caddy/modules/caddyhttp/reverseproxy/reverseproxy.go
  */
 export const ReverseProxyHandlerSchema = z.object({
   handler: z.literal("reverse_proxy"),
@@ -674,8 +743,30 @@ export const ReverseProxyHandlerSchema = z.object({
   health_checks: HealthChecksSchema.optional(),
   /** Transport configuration (http, fastcgi, etc.) */
   transport: z.object({ protocol: z.string() }).passthrough().optional(),
+  /**
+   * Circuit breaker configuration to temporarily mark backends as unhealthy
+   * based on error thresholds
+   */
+  circuit_breaker: z.object({ type: z.string() }).passthrough().optional(),
+  /**
+   * Dynamic upstream discovery (e.g., from SRV records, A records)
+   * Requires source module configuration
+   */
+  dynamic_upstreams: z.object({ source: z.string() }).passthrough().optional(),
   /** How often to flush response buffer */
   flush_interval: CaddyDurationSchema.optional(),
+  /**
+   * Timeout for streaming responses (WebSocket, SSE, etc.)
+   * 0 means no timeout
+   */
+  stream_timeout: CaddyDurationSchema.optional(),
+  /**
+   * Delay before closing client connection after upstream closes.
+   * Allows flushing remaining data.
+   */
+  stream_close_delay: CaddyDurationSchema.optional(),
+  /** List of trusted proxy IP ranges for X-Forwarded-* headers */
+  trusted_proxies: z.array(z.string()).optional(),
   /** Request buffer limit in bytes */
   request_buffers: z.number().int().nonnegative().optional(),
   /** Response buffer limit in bytes */
@@ -699,6 +790,40 @@ export const ReverseProxyHandlerSchema = z.object({
         .optional(),
     })
     .optional(),
+  /**
+   * Rewrite the request before proxying (URI, path, query)
+   */
+  rewrite: z
+    .object({
+      uri: z.string().optional(),
+      strip_path_prefix: z.string().optional(),
+      strip_path_suffix: z.string().optional(),
+    })
+    .passthrough()
+    .optional(),
+  /**
+   * Response handlers for intercepting and modifying upstream responses
+   * Commonly used for custom error pages or response transformation
+   */
+  handle_response: z
+    .array(
+      z
+        .object({
+          /** Match specific response status codes */
+          match: z
+            .object({
+              status_code: z.array(z.number().int()).optional(),
+            })
+            .passthrough()
+            .optional(),
+          /** Routes to handle matched responses */
+          routes: z.array(z.any()).optional(),
+        })
+        .passthrough()
+    )
+    .optional(),
+  /** Enable verbose debug logging for this handler */
+  verbose_logs: z.boolean().optional(),
 });
 
 /**
