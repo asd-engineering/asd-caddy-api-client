@@ -3,8 +3,9 @@
     "prefix": "caddy-local-identity-store",
     "body": [
       "buildLocalIdentityStore({",
-      "  path: ${1:/etc/caddy/config.json},",
-      "  // realm: ${2:local}",
+      "  // name: ${1:local},",
+      "  path: ${2:/etc/caddy/config.json},",
+      "  // realm: ${3:local}",
       "})"
     ],
     "description": "Build a local identity store configuration"
@@ -13,12 +14,14 @@
     "prefix": "caddy-ldap-identity-store",
     "body": [
       "buildLdapIdentityStore({",
-      "  // realm: ${1:ldap},",
-      "  servers: ${2:\"\"},",
-      "  bindDn: ${3:\"\"},",
-      "  bindPassword: ${4:\"\"},",
-      "  searchBaseDn: ${5:\"\"},",
-      "  // searchFilter: ${6:(uid={username})}",
+      "  // name: ${1:ldapdb},",
+      "  // realm: ${2:ldap},",
+      "  servers: ${3:\"\"},",
+      "  bindUsername: ${4:my-name},",
+      "  bindPassword: ${5:\"\"},",
+      "  searchBaseDn: ${6:\"\"},",
+      "  // searchUserFilter: ${7:(uid={username})},",
+      "  // groups: ${8:[]}",
       "})"
     ],
     "description": "Build an LDAP identity store configuration"
@@ -42,7 +45,7 @@
       "  provider: ${1:\"\"},",
       "  clientId: ${2:your-client-id},",
       "  clientSecret: ${3:your-client-secret},",
-      "  discoveryUrl: ${4:https://idp.example.com/.well-known/openid-configuration},",
+      "  metadataUrl: ${4:\"\"},",
       "  // scopes: ${5:[\"openid\", \"email\", \"profile\"]},",
       "})"
     ],
@@ -84,7 +87,6 @@
       "buildAuthenticatorRoute({",
       "  hosts: ${1:example.com},",
       "  portalName: ${2:\"\"},",
-      "  // priority: ${3:10 (AUTH_DOMAIN priority)},",
       "})"
     ],
     "description": "Build a complete authentication portal route"
@@ -96,7 +98,6 @@
       "  hosts: ${1:example.com},",
       "  gatekeeperName: ${2:\"\"},",
       "  dial: ${3:localhost:3000},",
-      "  // priority: ${4:50 (SERVICE priority)},",
       "})"
     ],
     "description": "Build a protected route with authorization"
@@ -146,10 +147,20 @@
     "body": ["buildRewriteHandler({", "})"],
     "description": "Build a rewrite handler (strip path prefix)"
   },
+  "Build Service Metadata Headers Handler": {
+    "prefix": "caddy-service-metadata-headers-handler",
+    "body": ["buildServiceMetadataHeadersHandler({", "})"],
+    "description": "Build a service metadata headers handler"
+  },
   "Build Ingress Tag Headers Handler": {
     "prefix": "caddy-ingress-tag-headers-handler",
     "body": ["buildIngressTagHeadersHandler({", "})"],
     "description": "Build an ingress tag header handler"
+  },
+  "Build Project Id Headers Handler": {
+    "prefix": "caddy-project-id-headers-handler",
+    "body": ["buildProjectIdHeadersHandler({", "})"],
+    "description": "Build a project identity header handler"
   },
   "Build Iframe Headers Handler": {
     "prefix": "caddy-iframe-headers-handler",
@@ -289,10 +300,10 @@
     "body": [
       "buildLdapIdentityStore({",
       "  servers: [{ address: \"${1:ldap.example.com}\", port: ${2:389} }],",
-      "  bindDn: \"${3:cn=admin,dc=example,dc=com}\",",
+      "  bindUsername: \"${3:cn=admin,dc=example,dc=com}\",",
       "  bindPassword: \"${4:secret}\",",
       "  searchBaseDn: \"${5:ou=users,dc=example,dc=com}\",",
-      "  searchFilter: \"${6:(uid={username})}\",",
+      "  searchUserFilter: \"${6:(uid={username})}\",",
       "})"
     ],
     "description": "LDAP/Active Directory authentication"
@@ -328,7 +339,7 @@
       "  provider: \"keycloak\",",
       "  clientId: \"${1:my-app}\",",
       "  clientSecret: \"${2:your-client-secret}\",",
-      "  discoveryUrl: \"${3:https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration}\",",
+      "  metadataUrl: \"${3:https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration}\",",
       "  scopes: [\"openid\", \"email\", \"profile\"],",
       "})"
     ],
@@ -341,7 +352,7 @@
       "  provider: \"okta\",",
       "  clientId: \"${1:your-client-id}\",",
       "  clientSecret: \"${2:your-client-secret}\",",
-      "  discoveryUrl: \"https://${3:your-domain.okta.com}/.well-known/openid-configuration\",",
+      "  metadataUrl: \"https://${3:your-domain.okta.com}/.well-known/openid-configuration\",",
       "})"
     ],
     "description": "Okta OpenID Connect authentication"
@@ -353,7 +364,7 @@
       "  provider: \"auth0\",",
       "  clientId: \"${1:your-client-id}\",",
       "  clientSecret: \"${2:your-client-secret}\",",
-      "  discoveryUrl: \"https://${3:your-tenant.auth0.com}/.well-known/openid-configuration\",",
+      "  metadataUrl: \"https://${3:your-tenant.auth0.com}/.well-known/openid-configuration\",",
       "})"
     ],
     "description": "Auth0 OpenID Connect authentication"
@@ -496,7 +507,7 @@
       "  provider: \"keycloak\",",
       "  clientId: \"${1:my-app}\",",
       "  clientSecret: \"${2:your-secret}\",",
-      "  discoveryUrl: \"${3:https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration}\",",
+      "  metadataUrl: \"${3:https://keycloak.example.com/realms/myrealm/.well-known/openid-configuration}\",",
       "});",
       "",
       "const portal = buildAuthenticationPortal({",

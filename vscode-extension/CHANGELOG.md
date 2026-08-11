@@ -5,6 +5,14 @@ All notable changes to the Caddy Configuration Tools extension will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-08-11
+
+### Added
+
+- **First published release** — this and all prior versions (`0.1.0`–`0.1.5`) were built and packaged locally only (`.vsix` files checked into this directory) and never actually published to the Visual Studio Marketplace or Open VSX. This release adds the publish pipeline (`.github/workflows/release-vscode.yml`) and is the first version publicly installable from either registry.
+
+No functional changes to the extension itself since `0.1.5` — see that entry below for the last feature set.
+
 ## [0.1.5] - 2025-01-21
 
 ### Added

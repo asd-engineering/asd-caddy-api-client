@@ -2,7 +2,7 @@
   "name": "vscode-caddy-tools",
   "displayName": "Caddy Configuration Tools",
   "description": "IntelliSense, snippets, and validation for Caddy and caddy-security configurations",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "publisher": "asd-host",
   "author": {
     "name": "Accelerated Software Development B.V.",
@@ -143,12 +143,14 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
-    "build": "npm run copy-schemas && npm run generate-snippets && esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
+    "build": "npm run copy-schemas && npm run copy-license && npm run generate-snippets && esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
     "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --watch",
     "copy-schemas": "shx mkdir -p schemas && shx cp ../src/generated/schemas/*.json ./schemas/",
+    "copy-license": "shx cp ../LICENSE ./LICENSE",
     "generate-snippets": "node scripts/generate-snippets.js",
     "package": "vsce package --no-dependencies",
-    "publish": "vsce publish",
+    "publish": "vsce publish --no-dependencies",
+    "publish:ovsx": "ovsx publish --packagePath *.vsix",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug"
@@ -159,6 +161,7 @@
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.28.1",
+    "ovsx": "^1.1.1",
     "shx": "^0.4.0",
     "typescript": "^5.3.3"
   },

@@ -8,45 +8,73 @@
     "caddy-security-ldap-store": {
       "type": "object",
       "properties": {
-        "driver": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
           "type": "string",
           "const": "ldap"
         },
-        "realm": {
-          "type": "string"
-        },
-        "servers": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "address": {
-                "type": "string"
-              },
-              "port": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 65535
+        "params": {
+          "type": "object",
+          "properties": {
+            "realm": {
+              "type": "string"
+            },
+            "servers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "string"
+                  },
+                  "port": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 65535
+                  }
+                },
+                "required": ["address"],
+                "additionalProperties": false
               }
             },
-            "required": ["address"],
-            "additionalProperties": false
-          }
-        },
-        "bind_dn": {
-          "type": "string"
-        },
-        "bind_password": {
-          "type": "string"
-        },
-        "search_base_dn": {
-          "type": "string"
-        },
-        "search_filter": {
-          "type": "string"
+            "bind_username": {
+              "type": "string"
+            },
+            "bind_password": {
+              "type": "string"
+            },
+            "search_base_dn": {
+              "type": "string"
+            },
+            "search_user_filter": {
+              "type": "string"
+            },
+            "groups": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "dn": {
+                    "type": "string"
+                  },
+                  "roles": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["dn"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": true
         }
       },
-      "required": ["driver"],
+      "required": ["name", "kind", "params"],
       "additionalProperties": false
     }
   }

@@ -1,0 +1,83 @@
+name: Release & Publish VS Code Extension
+
+on:
+  push:
+    tags:
+      - "vscode-v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, Test & Publish vscode-caddy-tools
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install root dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build main library
+        run: bun run build
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install extension dependencies
+        working-directory: vscode-extension
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: vscode-extension
+        run: npx playwright install chromium --with-deps
+
+      - name: Run extension tests
+        working-directory: vscode-extension
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm test
+        env:
+          CI: true
+
+      - name: Package extension (.vsix)
+        working-directory: vscode-extension
+        run: npm run package
+
+      # Requires the VSCE_PAT repo secret: an Azure DevOps Personal Access
+      # Token scoped to "Marketplace (Publish)" for the "asd-host" publisher.
+      # Create one at https://dev.azure.com under User Settings > Personal
+      # Access Tokens, then add it at Settings > Secrets and variables >
+      # Actions in this repo.
+      - name: Publish to Visual Studio Marketplace
+        working-directory: vscode-extension
+        run: npm run publish
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      # Optional: also publish to Open VSX (serves VSCodium and other
+      # non-Microsoft-branded editors). Requires the OVSX_PAT repo secret
+      # from https://open-vsx.org — skipped entirely if not configured.
+      - name: Publish to Open VSX
+        if: ${{ secrets.OVSX_PAT != '' }}
+        working-directory: vscode-extension
+        run: npm run publish:ovsx
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          artifacts: "vscode-extension/*.vsix"
+          generateReleaseNotes: true
+          allowUpdates: true

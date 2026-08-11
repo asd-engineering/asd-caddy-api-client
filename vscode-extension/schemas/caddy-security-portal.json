@@ -26,16 +26,37 @@
           },
           "additionalProperties": false
         },
-        "cookie": {
+        "cookie_config": {
           "type": "object",
           "properties": {
-            "domain": {
-              "type": "string"
+            "domains": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "lifetime": {
+                    "type": "number"
+                  },
+                  "insecure": {
+                    "type": "boolean"
+                  },
+                  "same_site": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
             },
             "path": {
               "type": "string"
             },
             "lifetime": {
+              "type": "number"
+            },
+            "insecure": {
+              "type": "boolean"
+            },
+            "same_site": {
               "type": "string"
             }
           },
@@ -53,9 +74,12 @@
             "type": "string"
           }
         },
-        "transform_user": {
-          "type": "object",
-          "additionalProperties": {}
+        "user_transformer_configs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
         }
       },
       "required": ["name"],
