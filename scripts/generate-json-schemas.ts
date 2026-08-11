@@ -87,12 +87,10 @@ const StrictRouteSchema = CaddyRouteSchema.extend({
 });
 
 const FullConfigServerSchema = serverSchema.omit({ routes: true, named_routes: true }).extend({
-  "@id": z.string().optional(),
   routes: z.array(StrictRouteSchema).optional(),
   named_routes: z.record(z.string(), StrictRouteSchema).optional(),
 });
 const FullConfigHttpAppSchema = HttpAppSchema.omit({ servers: true }).extend({
-  "@id": z.string().optional(),
   servers: z.record(z.string(), FullConfigServerSchema).optional(),
 });
 
@@ -242,12 +240,10 @@ const schemas: SchemaDefinition[] = [
     // `identity`, `remote`; the security portion used the pre-0.6.0
     // `access_lists`/flat-identity-store format).
     schema: z.object({
-      "@id": z.string().optional(),
       admin: adminConfigSchema.optional(),
       logging: loggingSchema.optional(),
       apps: z
         .object({
-          "@id": z.string().optional(),
           http: FullConfigHttpAppSchema.optional(),
           tls: TlsAppSchema.optional(),
           security: SecurityAppSchema.optional(),
@@ -263,12 +259,75 @@ const schemas: SchemaDefinition[] = [
 // Generation Logic
 // ============================================================================
 
+/**
+ * "@id" is a Caddy-wide admin-API object-addressing convention (stripped
+ * before Go struct decoding) that's valid on virtually ANY JSON object in a
+ * Caddy config -- not just module containers, but matcher objects, upstream
+ * entries, anywhere -- verified against real `caddy validate` (an object
+ * with "@id" on a matcher, a handler, and an upstream entry all validated
+ * successfully). It's therefore not a real Go struct field, so no
+ * tygo/zod-to-json-schema-generated schema ever includes it on its own.
+ *
+ * Hand-adding "@id" wherever we happen to notice it's missing is exactly
+ * how it went missing in the first place (see the 0.8.1 changelog entry
+ * for caddy-server.json). Instead, walk every generated schema after the
+ * fact and add it to every strict (additionalProperties:false) object node
+ * -- new schemas get this automatically, with nothing to remember.
+ */
+function injectUniversalId(node: unknown): void {
+  if (node === null || typeof node !== "object") {
+    return;
+  }
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      injectUniversalId(item);
+    }
+    return;
+  }
+
+  const obj = node as Record<string, unknown>;
+
+  if (
+    obj.type === "object" &&
+    obj.additionalProperties === false &&
+    typeof obj.properties === "object" &&
+    obj.properties !== null
+  ) {
+    const properties = obj.properties as Record<string, unknown>;
+    if (!("@id" in properties)) {
+      properties["@id"] = { type: "string" };
+    }
+  }
+
+  // Recurse into every place a subschema can live: object properties,
+  // array items, additionalProperties-as-schema (z.record()'s value type),
+  // and union branches (anyOf/oneOf/allOf, e.g. discriminated unions).
+  for (const key of ["properties", "definitions", "patternProperties"]) {
+    if (typeof obj[key] === "object" && obj[key] !== null) {
+      for (const value of Object.values(obj[key] as Record<string, unknown>)) {
+        injectUniversalId(value);
+      }
+    }
+  }
+  if (typeof obj.additionalProperties === "object") {
+    injectUniversalId(obj.additionalProperties);
+  }
+  injectUniversalId(obj.items);
+  for (const key of ["anyOf", "oneOf", "allOf"]) {
+    if (Array.isArray(obj[key])) {
+      injectUniversalId(obj[key]);
+    }
+  }
+}
+
 function generateJsonSchema(definition: SchemaDefinition): object {
   const jsonSchema = zodToJsonSchema(definition.schema as Parameters<typeof zodToJsonSchema>[0], {
     name: definition.name,
     $refStrategy: "none", // Inline all definitions for better VSCode support
     target: "jsonSchema7", // Use JSON Schema draft-07 for broad compatibility
   });
+
+  injectUniversalId(jsonSchema);
 
   // Enrich with metadata
   return {

@@ -28,6 +28,9 @@
               "action": {
                 "type": "string",
                 "enum": ["allow", "deny"]
+              },
+              "@id": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -42,6 +45,9 @@
                 "type": "string"
               },
               "source": {
+                "type": "string"
+              },
+              "@id": {
                 "type": "string"
               }
             },
@@ -58,11 +64,17 @@
               },
               "uri": {
                 "type": "string"
+              },
+              "@id": {
+                "type": "string"
               }
             },
             "required": ["match_type"],
             "additionalProperties": false
           }
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "required": ["name"],

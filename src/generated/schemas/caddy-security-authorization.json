@@ -23,13 +23,22 @@
                 },
                 "route_matcher": {
                   "type": "string"
+                },
+                "@id": {
+                  "type": "string"
                 }
               },
               "additionalProperties": false
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "required": ["authorizer"],
           "additionalProperties": false
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "required": ["handler", "providers"],

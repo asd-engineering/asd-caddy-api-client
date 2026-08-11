@@ -41,6 +41,9 @@
               "items": {
                 "type": "string"
               }
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "additionalProperties": false
@@ -71,9 +74,15 @@
               "items": {
                 "type": "string"
               }
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "additionalProperties": false
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "required": ["handler"],

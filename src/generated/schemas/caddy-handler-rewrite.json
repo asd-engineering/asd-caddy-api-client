@@ -34,11 +34,17 @@
               },
               "limit": {
                 "type": "integer"
+              },
+              "@id": {
+                "type": "string"
               }
             },
             "required": ["find", "replace"],
             "additionalProperties": false
           }
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "required": ["handler"],

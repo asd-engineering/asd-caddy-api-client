@@ -33,6 +33,9 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 65535
+                  },
+                  "@id": {
+                    "type": "string"
                   }
                 },
                 "required": ["address"],
@@ -64,6 +67,9 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "@id": {
+                    "type": "string"
                   }
                 },
                 "required": ["dn"],
@@ -72,6 +78,9 @@
             }
           },
           "additionalProperties": true
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "required": ["name", "kind", "params"],

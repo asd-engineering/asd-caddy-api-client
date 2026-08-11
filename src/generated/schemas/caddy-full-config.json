@@ -8,9 +8,6 @@
     "caddy-full-config": {
       "type": "object",
       "properties": {
-        "@id": {
-          "type": "string"
-        },
         "admin": {
           "type": "object",
           "properties": {
@@ -38,6 +35,9 @@
                 "load": {},
                 "load_delay": {
                   "type": ["number", "string"]
+                },
+                "@id": {
+                  "type": "string"
                 }
               },
               "additionalProperties": false
@@ -54,6 +54,9 @@
                 "issuers": {
                   "type": "array",
                   "items": {}
+                },
+                "@id": {
+                  "type": "string"
                 }
               },
               "additionalProperties": false
@@ -93,10 +96,16 @@
                                   "items": {
                                     "type": "string"
                                   }
+                                },
+                                "@id": {
+                                  "type": "string"
                                 }
                               },
                               "additionalProperties": false
                             }
+                          },
+                          "@id": {
+                            "type": "string"
                           }
                         },
                         "additionalProperties": false
@@ -106,9 +115,15 @@
                       }
                     ]
                   }
+                },
+                "@id": {
+                  "type": "string"
                 }
               },
               "additionalProperties": false
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "additionalProperties": false
@@ -139,6 +154,9 @@
                         },
                         "thereafter": {
                           "type": "number"
+                        },
+                        "@id": {
+                          "type": "string"
                         }
                       },
                       "additionalProperties": false
@@ -151,9 +169,15 @@
                     },
                     "with_stacktrace": {
                       "type": "string"
+                    },
+                    "@id": {
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
+                },
+                "@id": {
+                  "type": "string"
                 }
               },
               "required": ["BaseLog"],
@@ -186,6 +210,9 @@
                               },
                               "thereafter": {
                                 "type": "number"
+                              },
+                              "@id": {
+                                "type": "string"
                               }
                             },
                             "additionalProperties": false
@@ -197,6 +224,9 @@
                             "type": "number"
                           },
                           "with_stacktrace": {
+                            "type": "string"
+                          },
+                          "@id": {
                             "type": "string"
                           }
                         },
@@ -213,6 +243,9 @@
                         "items": {
                           "type": "string"
                         }
+                      },
+                      "@id": {
+                        "type": "string"
                       }
                     },
                     "required": ["BaseLog"],
@@ -223,6 +256,9 @@
                   }
                 ]
               }
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "additionalProperties": false
@@ -230,9 +266,6 @@
         "apps": {
           "type": "object",
           "properties": {
-            "@id": {
-              "type": "string"
-            },
             "http": {
               "type": "object",
               "properties": {
@@ -255,12 +288,12 @@
                     },
                     "otlp": {
                       "type": "boolean"
+                    },
+                    "@id": {
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
-                },
-                "@id": {
-                  "type": "string"
                 },
                 "servers": {
                   "type": "object",
@@ -316,10 +349,16 @@
                                 },
                                 "terminal": {
                                   "type": "boolean"
+                                },
+                                "@id": {
+                                  "type": "string"
                                 }
                               },
                               "additionalProperties": false
                             }
+                          },
+                          "@id": {
+                            "type": "string"
                           }
                         },
                         "additionalProperties": false
@@ -351,6 +390,9 @@
                           },
                           "ignore_loaded_certificates": {
                             "type": "boolean"
+                          },
+                          "@id": {
+                            "type": "string"
                           }
                         },
                         "additionalProperties": false
@@ -400,6 +442,9 @@
                           },
                           "trace": {
                             "type": "boolean"
+                          },
+                          "@id": {
+                            "type": "string"
                           }
                         },
                         "additionalProperties": false
@@ -433,12 +478,12 @@
                           },
                           "otlp": {
                             "type": "boolean"
+                          },
+                          "@id": {
+                            "type": "string"
                           }
                         },
                         "additionalProperties": false
-                      },
-                      "@id": {
-                        "type": "string"
                       },
                       "routes": {
                         "type": "array",
@@ -472,6 +517,9 @@
                                         "type": "string"
                                       },
                                       "pattern": {
+                                        "type": "string"
+                                      },
+                                      "@id": {
                                         "type": "string"
                                       }
                                     },
@@ -514,6 +562,9 @@
                                             },
                                             "pattern": {
                                               "type": "string"
+                                            },
+                                            "@id": {
+                                              "type": "string"
                                             }
                                           },
                                           "required": ["pattern"],
@@ -542,6 +593,9 @@
                                         "items": {
                                           "type": "string"
                                         }
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "additionalProperties": false
@@ -554,6 +608,9 @@
                                         "items": {
                                           "type": "string"
                                         }
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "additionalProperties": false
@@ -566,6 +623,9 @@
                                     "properties": {
                                       "handshake_complete": {
                                         "type": "boolean"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "additionalProperties": false
@@ -578,6 +638,9 @@
                                     }
                                   },
                                   "expression": {
+                                    "type": "string"
+                                  },
+                                  "@id": {
                                     "type": "string"
                                   }
                                 },
@@ -607,6 +670,9 @@
                                             "max_requests": {
                                               "type": "integer",
                                               "exclusiveMinimum": 0
+                                            },
+                                            "@id": {
+                                              "type": "string"
                                             }
                                           },
                                           "required": ["dial"],
@@ -669,6 +735,9 @@
                                                 "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
                                               }
                                             ]
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
@@ -751,6 +820,9 @@
                                               },
                                               "expect_body": {
                                                 "type": "string"
+                                              },
+                                              "@id": {
+                                                "type": "string"
                                               }
                                             },
                                             "additionalProperties": false
@@ -803,9 +875,15 @@
                                                     "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
                                                   }
                                                 ]
+                                              },
+                                              "@id": {
+                                                "type": "string"
                                               }
                                             },
                                             "additionalProperties": false
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
@@ -928,6 +1006,9 @@
                                                 "items": {
                                                   "type": "string"
                                                 }
+                                              },
+                                              "@id": {
+                                                "type": "string"
                                               }
                                             },
                                             "additionalProperties": false
@@ -958,9 +1039,15 @@
                                                 "items": {
                                                   "type": "string"
                                                 }
+                                              },
+                                              "@id": {
+                                                "type": "string"
                                               }
                                             },
                                             "additionalProperties": false
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
@@ -1006,6 +1093,9 @@
                                       },
                                       "verbose_logs": {
                                         "type": "boolean"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1047,6 +1137,9 @@
                                             "items": {
                                               "type": "string"
                                             }
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
@@ -1077,9 +1170,15 @@
                                             "items": {
                                               "type": "string"
                                             }
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1121,6 +1220,9 @@
                                       },
                                       "abort": {
                                         "type": "boolean"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1149,6 +1251,9 @@
                                                     },
                                                     "password": {
                                                       "type": "string"
+                                                    },
+                                                    "@id": {
+                                                      "type": "string"
                                                     }
                                                   },
                                                   "required": ["username", "password"],
@@ -1163,15 +1268,27 @@
                                                 "properties": {
                                                   "algorithm": {
                                                     "type": "string"
+                                                  },
+                                                  "@id": {
+                                                    "type": "string"
                                                   }
                                                 },
                                                 "additionalProperties": false
+                                              },
+                                              "@id": {
+                                                "type": "string"
                                               }
                                             },
                                             "additionalProperties": false
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1206,11 +1323,17 @@
                                             },
                                             "limit": {
                                               "type": "integer"
+                                            },
+                                            "@id": {
+                                              "type": "string"
                                             }
                                           },
                                           "required": ["find", "replace"],
                                           "additionalProperties": false
                                         }
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1253,6 +1376,9 @@
                                       "minimum_length": {
                                         "type": "integer",
                                         "exclusiveMinimum": 0
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1296,6 +1422,9 @@
                                           },
                                           "file_limit": {
                                             "type": "number"
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
@@ -1323,6 +1452,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "file_server"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1350,6 +1482,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "templates"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1380,6 +1515,9 @@
                                             },
                                             "outputs": {
                                               "type": "array"
+                                            },
+                                            "@id": {
+                                              "type": "string"
                                             }
                                           },
                                           "additionalProperties": false
@@ -1394,6 +1532,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "map"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1412,6 +1553,9 @@
                                             },
                                             "target": {
                                               "type": "string"
+                                            },
+                                            "@id": {
+                                              "type": "string"
                                             }
                                           },
                                           "additionalProperties": false
@@ -1420,13 +1564,19 @@
                                       "headers": {
                                         "type": "object",
                                         "properties": {
-                                          "HeaderOps": {}
+                                          "HeaderOps": {},
+                                          "@id": {
+                                            "type": "string"
+                                          }
                                         },
                                         "additionalProperties": false
                                       },
                                       "handler": {
                                         "type": "string",
                                         "const": "push"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1450,6 +1600,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "request_body"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1475,6 +1628,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "intercept"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1489,6 +1645,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "invoke"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1509,6 +1668,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "tracing"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["span", "handler"],
@@ -1529,6 +1691,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "log_append"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1546,6 +1711,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "error"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1558,6 +1726,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "copy_response"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1581,6 +1752,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "copy_response_headers"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -1626,6 +1800,9 @@
                                                       },
                                                       "pattern": {
                                                         "type": "string"
+                                                      },
+                                                      "@id": {
+                                                        "type": "string"
                                                       }
                                                     },
                                                     "required": ["pattern"],
@@ -1667,6 +1844,9 @@
                                                             },
                                                             "pattern": {
                                                               "type": "string"
+                                                            },
+                                                            "@id": {
+                                                              "type": "string"
                                                             }
                                                           },
                                                           "required": ["pattern"],
@@ -1695,6 +1875,9 @@
                                                         "items": {
                                                           "type": "string"
                                                         }
+                                                      },
+                                                      "@id": {
+                                                        "type": "string"
                                                       }
                                                     },
                                                     "additionalProperties": false
@@ -1707,6 +1890,9 @@
                                                         "items": {
                                                           "type": "string"
                                                         }
+                                                      },
+                                                      "@id": {
+                                                        "type": "string"
                                                       }
                                                     },
                                                     "additionalProperties": false
@@ -1719,6 +1905,9 @@
                                                     "properties": {
                                                       "handshake_complete": {
                                                         "type": "boolean"
+                                                      },
+                                                      "@id": {
+                                                        "type": "string"
                                                       }
                                                     },
                                                     "additionalProperties": false
@@ -1731,6 +1920,9 @@
                                                     }
                                                   },
                                                   "expression": {
+                                                    "type": "string"
+                                                  },
+                                                  "@id": {
                                                     "type": "string"
                                                   }
                                                 },
@@ -1762,7 +1954,10 @@
                                           "additionalProperties": false
                                         }
                                       },
-                                      "errors": {}
+                                      "errors": {},
+                                      "@id": {
+                                        "type": "string"
+                                      }
                                     },
                                     "required": ["handler"],
                                     "additionalProperties": false
@@ -1778,6 +1973,9 @@
                                         "type": "string"
                                       },
                                       "route_matcher": {
+                                        "type": "string"
+                                      },
+                                      "@id": {
                                         "type": "string"
                                       }
                                     },
@@ -1832,6 +2030,9 @@
                                       },
                                       "pattern": {
                                         "type": "string"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["pattern"],
@@ -1873,6 +2074,9 @@
                                             },
                                             "pattern": {
                                               "type": "string"
+                                            },
+                                            "@id": {
+                                              "type": "string"
                                             }
                                           },
                                           "required": ["pattern"],
@@ -1901,6 +2105,9 @@
                                         "items": {
                                           "type": "string"
                                         }
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "additionalProperties": false
@@ -1913,6 +2120,9 @@
                                         "items": {
                                           "type": "string"
                                         }
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "additionalProperties": false
@@ -1925,6 +2135,9 @@
                                     "properties": {
                                       "handshake_complete": {
                                         "type": "boolean"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "additionalProperties": false
@@ -1937,6 +2150,9 @@
                                     }
                                   },
                                   "expression": {
+                                    "type": "string"
+                                  },
+                                  "@id": {
                                     "type": "string"
                                   }
                                 },
@@ -1966,6 +2182,9 @@
                                             "max_requests": {
                                               "type": "integer",
                                               "exclusiveMinimum": 0
+                                            },
+                                            "@id": {
+                                              "type": "string"
                                             }
                                           },
                                           "required": ["dial"],
@@ -2028,6 +2247,9 @@
                                                 "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
                                               }
                                             ]
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
@@ -2110,6 +2332,9 @@
                                               },
                                               "expect_body": {
                                                 "type": "string"
+                                              },
+                                              "@id": {
+                                                "type": "string"
                                               }
                                             },
                                             "additionalProperties": false
@@ -2162,9 +2387,15 @@
                                                     "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
                                                   }
                                                 ]
+                                              },
+                                              "@id": {
+                                                "type": "string"
                                               }
                                             },
                                             "additionalProperties": false
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
@@ -2287,6 +2518,9 @@
                                                 "items": {
                                                   "type": "string"
                                                 }
+                                              },
+                                              "@id": {
+                                                "type": "string"
                                               }
                                             },
                                             "additionalProperties": false
@@ -2317,9 +2551,15 @@
                                                 "items": {
                                                   "type": "string"
                                                 }
+                                              },
+                                              "@id": {
+                                                "type": "string"
                                               }
                                             },
                                             "additionalProperties": false
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
@@ -2365,6 +2605,9 @@
                                       },
                                       "verbose_logs": {
                                         "type": "boolean"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2406,6 +2649,9 @@
                                             "items": {
                                               "type": "string"
                                             }
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
@@ -2436,9 +2682,15 @@
                                             "items": {
                                               "type": "string"
                                             }
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2480,6 +2732,9 @@
                                       },
                                       "abort": {
                                         "type": "boolean"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2508,6 +2763,9 @@
                                                     },
                                                     "password": {
                                                       "type": "string"
+                                                    },
+                                                    "@id": {
+                                                      "type": "string"
                                                     }
                                                   },
                                                   "required": ["username", "password"],
@@ -2522,15 +2780,27 @@
                                                 "properties": {
                                                   "algorithm": {
                                                     "type": "string"
+                                                  },
+                                                  "@id": {
+                                                    "type": "string"
                                                   }
                                                 },
                                                 "additionalProperties": false
+                                              },
+                                              "@id": {
+                                                "type": "string"
                                               }
                                             },
                                             "additionalProperties": false
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2565,11 +2835,17 @@
                                             },
                                             "limit": {
                                               "type": "integer"
+                                            },
+                                            "@id": {
+                                              "type": "string"
                                             }
                                           },
                                           "required": ["find", "replace"],
                                           "additionalProperties": false
                                         }
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2612,6 +2888,9 @@
                                       "minimum_length": {
                                         "type": "integer",
                                         "exclusiveMinimum": 0
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2655,6 +2934,9 @@
                                           },
                                           "file_limit": {
                                             "type": "number"
+                                          },
+                                          "@id": {
+                                            "type": "string"
                                           }
                                         },
                                         "additionalProperties": false
@@ -2682,6 +2964,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "file_server"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2709,6 +2994,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "templates"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2739,6 +3027,9 @@
                                             },
                                             "outputs": {
                                               "type": "array"
+                                            },
+                                            "@id": {
+                                              "type": "string"
                                             }
                                           },
                                           "additionalProperties": false
@@ -2753,6 +3044,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "map"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2771,6 +3065,9 @@
                                             },
                                             "target": {
                                               "type": "string"
+                                            },
+                                            "@id": {
+                                              "type": "string"
                                             }
                                           },
                                           "additionalProperties": false
@@ -2779,13 +3076,19 @@
                                       "headers": {
                                         "type": "object",
                                         "properties": {
-                                          "HeaderOps": {}
+                                          "HeaderOps": {},
+                                          "@id": {
+                                            "type": "string"
+                                          }
                                         },
                                         "additionalProperties": false
                                       },
                                       "handler": {
                                         "type": "string",
                                         "const": "push"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2809,6 +3112,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "request_body"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2834,6 +3140,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "intercept"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2848,6 +3157,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "invoke"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2868,6 +3180,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "tracing"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["span", "handler"],
@@ -2888,6 +3203,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "log_append"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2905,6 +3223,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "error"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2917,6 +3238,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "copy_response"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2940,6 +3264,9 @@
                                       "handler": {
                                         "type": "string",
                                         "const": "copy_response_headers"
+                                      },
+                                      "@id": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": ["handler"],
@@ -2985,6 +3312,9 @@
                                                       },
                                                       "pattern": {
                                                         "type": "string"
+                                                      },
+                                                      "@id": {
+                                                        "type": "string"
                                                       }
                                                     },
                                                     "required": ["pattern"],
@@ -3026,6 +3356,9 @@
                                                             },
                                                             "pattern": {
                                                               "type": "string"
+                                                            },
+                                                            "@id": {
+                                                              "type": "string"
                                                             }
                                                           },
                                                           "required": ["pattern"],
@@ -3054,6 +3387,9 @@
                                                         "items": {
                                                           "type": "string"
                                                         }
+                                                      },
+                                                      "@id": {
+                                                        "type": "string"
                                                       }
                                                     },
                                                     "additionalProperties": false
@@ -3066,6 +3402,9 @@
                                                         "items": {
                                                           "type": "string"
                                                         }
+                                                      },
+                                                      "@id": {
+                                                        "type": "string"
                                                       }
                                                     },
                                                     "additionalProperties": false
@@ -3078,6 +3417,9 @@
                                                     "properties": {
                                                       "handshake_complete": {
                                                         "type": "boolean"
+                                                      },
+                                                      "@id": {
+                                                        "type": "string"
                                                       }
                                                     },
                                                     "additionalProperties": false
@@ -3090,6 +3432,9 @@
                                                     }
                                                   },
                                                   "expression": {
+                                                    "type": "string"
+                                                  },
+                                                  "@id": {
                                                     "type": "string"
                                                   }
                                                 },
@@ -3121,7 +3466,10 @@
                                           "additionalProperties": false
                                         }
                                       },
-                                      "errors": {}
+                                      "errors": {},
+                                      "@id": {
+                                        "type": "string"
+                                      }
                                     },
                                     "required": ["handler"],
                                     "additionalProperties": false
@@ -3137,6 +3485,9 @@
                                         "type": "string"
                                       },
                                       "route_matcher": {
+                                        "type": "string"
+                                      },
+                                      "@id": {
                                         "type": "string"
                                       }
                                     },
@@ -3157,10 +3508,16 @@
                           "required": ["handle"],
                           "additionalProperties": false
                         }
+                      },
+                      "@id": {
+                        "type": "string"
                       }
                     },
                     "additionalProperties": false
                   }
+                },
+                "@id": {
+                  "type": "string"
                 }
               },
               "additionalProperties": false
@@ -3217,6 +3574,9 @@
                                 "additionalProperties": {
                                   "type": "string"
                                 }
+                              },
+                              "@id": {
+                                "type": "string"
                               }
                             },
                             "additionalProperties": false
@@ -3233,13 +3593,19 @@
                         "ask": {
                           "type": "string"
                         },
-                        "permission": {}
+                        "permission": {},
+                        "@id": {
+                          "type": "string"
+                        }
                       },
                       "additionalProperties": false
                     },
                     "ocsp_interval": {},
                     "renew_interval": {},
-                    "storage_clean_interval": {}
+                    "storage_clean_interval": {},
+                    "@id": {
+                      "type": "string"
+                    }
                   },
                   "additionalProperties": false
                 },
@@ -3256,6 +3622,9 @@
                     },
                     "disabled": {
                       "type": "boolean"
+                    },
+                    "@id": {
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
@@ -3265,6 +3634,9 @@
                   "properties": {
                     "capacity": {
                       "type": "number"
+                    },
+                    "@id": {
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
@@ -3287,6 +3659,9 @@
                         "type": "object",
                         "properties": {
                           "public_name": {
+                            "type": "string"
+                          },
+                          "@id": {
                             "type": "string"
                           }
                         },
@@ -3313,7 +3688,10 @@
                                   "type": "string"
                                 }
                               },
-                              "publishers": {}
+                              "publishers": {},
+                              "@id": {
+                                "type": "string"
+                              }
                             },
                             "additionalProperties": false
                           },
@@ -3322,6 +3700,9 @@
                           }
                         ]
                       }
+                    },
+                    "@id": {
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
@@ -3332,6 +3713,9 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "@id": {
+                  "type": "string"
                 }
               },
               "additionalProperties": false
@@ -3361,6 +3745,9 @@
                               },
                               "custom_css": {
                                 "type": "string"
+                              },
+                              "@id": {
+                                "type": "string"
                               }
                             },
                             "additionalProperties": false
@@ -3381,6 +3768,9 @@
                                     },
                                     "same_site": {
                                       "type": "string"
+                                    },
+                                    "@id": {
+                                      "type": "string"
                                     }
                                   },
                                   "additionalProperties": false
@@ -3396,6 +3786,9 @@
                                 "type": "boolean"
                               },
                               "same_site": {
+                                "type": "string"
+                              },
+                              "@id": {
                                 "type": "string"
                               }
                             },
@@ -3419,6 +3812,9 @@
                               "type": "object",
                               "additionalProperties": {}
                             }
+                          },
+                          "@id": {
+                            "type": "string"
                           }
                         },
                         "required": ["name"],
@@ -3450,6 +3846,9 @@
                                 "action": {
                                   "type": "string",
                                   "enum": ["allow", "deny"]
+                                },
+                                "@id": {
+                                  "type": "string"
                                 }
                               },
                               "additionalProperties": false
@@ -3464,6 +3863,9 @@
                                   "type": "string"
                                 },
                                 "source": {
+                                  "type": "string"
+                                },
+                                "@id": {
                                   "type": "string"
                                 }
                               },
@@ -3480,11 +3882,17 @@
                                 },
                                 "uri": {
                                   "type": "string"
+                                },
+                                "@id": {
+                                  "type": "string"
                                 }
                               },
                               "required": ["match_type"],
                               "additionalProperties": false
                             }
+                          },
+                          "@id": {
+                            "type": "string"
                           }
                         },
                         "required": ["name"],
@@ -3497,6 +3905,9 @@
                         "generic": {
                           "type": "object",
                           "additionalProperties": {}
+                        },
+                        "@id": {
+                          "type": "string"
                         }
                       },
                       "additionalProperties": false
@@ -3523,10 +3934,16 @@
                                   },
                                   "path": {
                                     "type": "string"
+                                  },
+                                  "@id": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": ["path"],
                                 "additionalProperties": false
+                              },
+                              "@id": {
+                                "type": "string"
                               }
                             },
                             "required": ["name", "kind", "params"],
@@ -3560,6 +3977,9 @@
                                           "type": "integer",
                                           "exclusiveMinimum": 0,
                                           "maximum": 65535
+                                        },
+                                        "@id": {
+                                          "type": "string"
                                         }
                                       },
                                       "required": ["address"],
@@ -3591,6 +4011,9 @@
                                           "items": {
                                             "type": "string"
                                           }
+                                        },
+                                        "@id": {
+                                          "type": "string"
                                         }
                                       },
                                       "required": ["dn"],
@@ -3599,6 +4022,9 @@
                                   }
                                 },
                                 "additionalProperties": true
+                              },
+                              "@id": {
+                                "type": "string"
                               }
                             },
                             "required": ["name", "kind", "params"],
@@ -3679,11 +4105,17 @@
                                 "additionalProperties": true
                               }
                             ]
+                          },
+                          "@id": {
+                            "type": "string"
                           }
                         },
                         "required": ["name", "kind", "params"],
                         "additionalProperties": false
                       }
+                    },
+                    "@id": {
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
@@ -3700,12 +4132,21 @@
                     "required": ["driver"],
                     "additionalProperties": true
                   }
+                },
+                "@id": {
+                  "type": "string"
                 }
               },
               "additionalProperties": false
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "additionalProperties": false
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "additionalProperties": false

@@ -41,6 +41,9 @@
         },
         "abort": {
           "type": "boolean"
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "required": ["handler"],

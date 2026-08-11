@@ -28,6 +28,9 @@
                       },
                       "password": {
                         "type": "string"
+                      },
+                      "@id": {
+                        "type": "string"
                       }
                     },
                     "required": ["username", "password"],
@@ -42,15 +45,27 @@
                   "properties": {
                     "algorithm": {
                       "type": "string"
+                    },
+                    "@id": {
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
+                },
+                "@id": {
+                  "type": "string"
                 }
               },
               "additionalProperties": false
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "additionalProperties": false
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "required": ["handler"],

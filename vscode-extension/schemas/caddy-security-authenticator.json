@@ -17,6 +17,9 @@
         },
         "route_matcher": {
           "type": "string"
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "required": ["handler"],

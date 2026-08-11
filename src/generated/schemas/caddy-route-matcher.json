@@ -28,6 +28,9 @@
             },
             "pattern": {
               "type": "string"
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "required": ["pattern"],
@@ -61,6 +64,9 @@
                   },
                   "pattern": {
                     "type": "string"
+                  },
+                  "@id": {
+                    "type": "string"
                   }
                 },
                 "required": ["pattern"],
@@ -89,6 +95,9 @@
               "items": {
                 "type": "string"
               }
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "additionalProperties": false
@@ -101,6 +110,9 @@
               "items": {
                 "type": "string"
               }
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "additionalProperties": false
@@ -113,6 +125,9 @@
           "properties": {
             "handshake_complete": {
               "type": "boolean"
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "additionalProperties": false
@@ -125,6 +140,9 @@
           }
         },
         "expression": {
+          "type": "string"
+        },
+        "@id": {
           "type": "string"
         }
       },
