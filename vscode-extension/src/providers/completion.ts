@@ -12,6 +12,7 @@
  */
 
 import * as vscode from "vscode";
+import { getLocation, parseTree, findNodeAtLocation, type Segment } from "jsonc-parser";
 import {
   HANDLER_METADATA,
   BUILDER_METADATA,
@@ -44,6 +45,14 @@ const MATCH_PROPERTIES: Array<{ name: string; description: string }> = [
   { name: "remote_ip", description: "Match requests by client IP address" },
   { name: "not", description: "Negate the enclosed matchers" },
   { name: "expression", description: "CEL expression for advanced matching" },
+];
+
+/** Properties of an object inside the `handle` array, before its `handler` type is known */
+const HANDLE_OBJECT_PROPERTIES: Array<{ name: string; description: string }> = [
+  {
+    name: "handler",
+    description: "The type of handler to invoke (e.g. reverse_proxy, headers, file_server)",
+  },
 ];
 
 /** HTTP methods for method matcher */
@@ -92,10 +101,44 @@ type CompletionContext =
   | { type: "match-property" }
   | { type: "method-value" }
   | { type: "handler-value" }
+  | { type: "handle-property" }
   | { type: "handler-property"; handler: string }
   | { type: "enum-value"; field: string }
   | { type: "builder" }
   | { type: "unknown" };
+
+/** Sentinel matching any single path segment (an array index or an in-progress property key). */
+const ANY = Symbol("any-segment");
+type PathPattern = (Segment | typeof ANY)[];
+
+/** True if `path`'s trailing segments equal `pattern` (ANY matches any single segment). */
+function pathEndsWith(path: Segment[], pattern: PathPattern): boolean {
+  if (path.length < pattern.length) {
+    return false;
+  }
+  const start = path.length - pattern.length;
+  return pattern.every((seg, i) => seg === ANY || seg === path[start + i]);
+}
+
+/**
+ * The property name a value-position cursor is filling in. For a scalar
+ * property (`"handler": "|`) the path ends with the property name itself.
+ * For an array element (`"method": ["GET", "|`) the path ends with the
+ * array index, so the field name is the segment before it.
+ */
+function fieldNameAtValuePosition(path: Segment[]): string | undefined {
+  const last = path[path.length - 1];
+  if (typeof last === "string") {
+    return last;
+  }
+  if (typeof last === "number") {
+    const prev = path[path.length - 2];
+    if (typeof prev === "string") {
+      return prev;
+    }
+  }
+  return undefined;
+}
 
 export class CaddyCompletionProvider implements vscode.CompletionItemProvider {
   private outputChannel: vscode.OutputChannel | undefined;
@@ -129,6 +172,8 @@ export class CaddyCompletionProvider implements vscode.CompletionItemProvider {
         return this.getMatchPropertyCompletions();
       case "method-value":
         return this.getMethodCompletions();
+      case "handle-property":
+        return this.getHandleObjectCompletions();
       case "handler-property":
         return this.getHandlerPropertyCompletions(context.handler);
       case "enum-value":
@@ -148,9 +193,6 @@ export class CaddyCompletionProvider implements vscode.CompletionItemProvider {
     document: vscode.TextDocument,
     position: vscode.Position
   ): CompletionContext {
-    const lineText = document.lineAt(position).text;
-    const textBeforeCursor = lineText.substring(0, position.character);
-
     // Check for builder context first (TypeScript/JavaScript files)
     if (this.isBuilderContext(document, position)) {
       return { type: "builder" };
@@ -166,156 +208,79 @@ export class CaddyCompletionProvider implements vscode.CompletionItemProvider {
       return { type: "unknown" };
     }
 
-    // Check for handler value context: "handler": "
-    if (this.isHandlerValueContext(textBeforeCursor)) {
-      return { type: "handler-value" };
+    const text = document.getText();
+    const offset = document.offsetAt(position);
+    const location = getLocation(text, offset);
+    const { path, isAtPropertyKey } = location;
+
+    if (!isAtPropertyKey) {
+      const fieldName = fieldNameAtValuePosition(path);
+
+      // "handler": "|  -- only inside an element of the handle array
+      if (fieldName === "handler" && pathEndsWith(path, ["handle", ANY, "handler"])) {
+        return { type: "handler-value" };
+      }
+
+      // "method": ["|  or  "method": ["GET", "| -- only inside a match object
+      if (fieldName === "method" && pathEndsWith(path, ["match", ANY, "method", ANY])) {
+        return { type: "method-value" };
+      }
+
+      // Known enum fields, scalar ("protocol": "|") or array ("encodings": ["|)
+      if (fieldName && fieldName in ENUM_VALUES) {
+        return { type: "enum-value", field: fieldName };
+      }
+
+      return { type: "unknown" };
     }
 
-    // Check for method array value: "method": ["
-    if (this.isMethodValueContext(textBeforeCursor)) {
-      return { type: "method-value" };
-    }
+    // isAtPropertyKey: path's last segment is the '' placeholder for the
+    // key being typed. Its parent object's location is path.slice(0, -1).
 
-    // Check for enum field values
-    const enumField = this.detectEnumContext(textBeforeCursor);
-    if (enumField) {
-      return { type: "enum-value", field: enumField };
-    }
-
-    // Get broader context by scanning backwards
-    const textUpToCursor = document.getText(new vscode.Range(new vscode.Position(0, 0), position));
-
-    // Check for match property context
-    if (this.isMatchPropertyContext(textUpToCursor, textBeforeCursor)) {
+    // Inside one element of the "match" array
+    if (pathEndsWith(path, ["match", ANY, ""])) {
       return { type: "match-property" };
     }
 
-    // Check for handler-specific property context
-    const handler = this.detectHandlerContext(textUpToCursor);
-    if (handler && this.isPropertyContext(textBeforeCursor)) {
-      return { type: "handler-property", handler };
+    // Inside one element of the "handle" array
+    if (pathEndsWith(path, ["handle", ANY, ""])) {
+      const tree = parseTree(text);
+      const handlerObjectPath = path.slice(0, -1);
+      const objectNode = tree && findNodeAtLocation(tree, handlerObjectPath);
+      const handlerName = objectNode
+        ? this.getStringPropertyValue(objectNode, "handler")
+        : undefined;
+
+      if (handlerName && HANDLER_METADATA[handlerName]) {
+        return { type: "handler-property", handler: handlerName };
+      }
+      return { type: "handle-property" };
     }
 
-    // Check for route property context
-    if (this.isRoutePropertyContext(textUpToCursor, textBeforeCursor)) {
+    // Document root, or an element of a "routes" array (e.g. inside a
+    // server config or a subroute handler's own "routes" list)
+    if (path.length === 1 || pathEndsWith(path, ["routes", ANY, ""])) {
       return { type: "route-property" };
     }
 
     return { type: "unknown" };
   }
 
-  private isHandlerValueContext(text: string): boolean {
-    // Match patterns like: "handler": " or "handler": '
-    return /["']?handler["']?\s*:\s*["']$/.test(text);
-  }
-
-  private isMethodValueContext(text: string): boolean {
-    // Match: "method": [" or inside method array
-    return (
-      /["']method["']?\s*:\s*\[\s*["']?$/.test(text) ||
-      /["']method["']?\s*:\s*\[[^\]]*,\s*["']$/.test(text)
-    );
-  }
-
-  private detectEnumContext(text: string): string | null {
-    // Check for known enum fields
-    for (const field of Object.keys(ENUM_VALUES)) {
-      // Match: "selection_policy": " or "encodings": ["
-      const pattern = new RegExp(`["']${field}["']?\\s*:\\s*(?:\\[\\s*)?["']$`);
-      if (pattern.test(text)) {
-        return field;
-      }
-      // Also match inside array: "encodings": ["gzip", "
-      const arrayPattern = new RegExp(`["']${field}["']?\\s*:\\s*\\[[^\\]]*,\\s*["']$`);
-      if (arrayPattern.test(text)) {
-        return field;
+  /** Reads a string-valued sibling property (e.g. `handler`) off an object node, if present. */
+  private getStringPropertyValue(
+    objectNode: import("jsonc-parser").Node,
+    key: string
+  ): string | undefined {
+    if (objectNode.type !== "object" || !objectNode.children) {
+      return undefined;
+    }
+    for (const propNode of objectNode.children) {
+      const [keyNode, valueNode] = propNode.children ?? [];
+      if (keyNode?.value === key && valueNode?.type === "string") {
+        return valueNode.value as string;
       }
     }
-    return null;
-  }
-
-  private isMatchPropertyContext(fullText: string, lineText: string): boolean {
-    // Check if we're inside a "match" array object and about to type a property
-    if (!this.isPropertyContext(lineText)) {
-      return false;
-    }
-
-    // Count brackets to determine if we're inside a match array
-    const matchIndex = fullText.lastIndexOf('"match"');
-    if (matchIndex === -1) {
-      return false;
-    }
-
-    const afterMatch = fullText.substring(matchIndex);
-
-    // Check we're inside match: [{ ... }]
-    const openBrackets = (afterMatch.match(/\[/g) || []).length;
-    const closeBrackets = (afterMatch.match(/\]/g) || []).length;
-    const openBraces = (afterMatch.match(/\{/g) || []).length;
-    const closeBraces = (afterMatch.match(/\}/g) || []).length;
-
-    // We're in a match context if we have unclosed brackets and braces after "match"
-    return openBrackets > closeBrackets && openBraces > closeBraces;
-  }
-
-  private detectHandlerContext(fullText: string): string | null {
-    // Find the most recent handler declaration by scanning backwards
-    // Look for "handler": "xxx" pattern
-    const handlerPattern = /["']handler["']?\s*:\s*["']([^"']+)["']/g;
-    let lastMatch: RegExpExecArray | null = null;
-    let match: RegExpExecArray | null;
-
-    while ((match = handlerPattern.exec(fullText)) !== null) {
-      lastMatch = match;
-    }
-
-    if (!lastMatch) {
-      return null;
-    }
-
-    const handlerName = lastMatch[1];
-    const handlerIndex = lastMatch.index;
-    const afterHandler = fullText.substring(handlerIndex);
-
-    // Check if we're still inside the handler object
-    const openBraces = (afterHandler.match(/\{/g) || []).length;
-    const closeBraces = (afterHandler.match(/\}/g) || []).length;
-
-    if (openBraces > closeBraces && HANDLER_METADATA[handlerName]) {
-      return handlerName;
-    }
-
-    return null;
-  }
-
-  private isRoutePropertyContext(fullText: string, lineText: string): boolean {
-    if (!this.isPropertyContext(lineText)) {
-      return false;
-    }
-
-    // Check if we're inside a route object (has handle/match siblings or is in routes array)
-    // Simple heuristic: look for "routes" in the document and check brace balance
-    const routesIndex = fullText.lastIndexOf('"routes"');
-    if (routesIndex === -1) {
-      // Also check if this looks like a standalone route file
-      const hasHandle = fullText.includes('"handle"') || fullText.includes('"match"');
-      if (hasHandle) {
-        return true;
-      }
-      return false;
-    }
-
-    const afterRoutes = fullText.substring(routesIndex);
-    const openBrackets = (afterRoutes.match(/\[/g) || []).length;
-    const closeBrackets = (afterRoutes.match(/\]/g) || []).length;
-
-    return openBrackets > closeBrackets;
-  }
-
-  private isPropertyContext(lineText: string): boolean {
-    // Check if cursor is in a position to type a property name
-    // After { or , with optional whitespace, possibly starting a quote
-    return /[{,]\s*["']?$/.test(lineText) || /^\s*["']?$/.test(lineText);
+    return undefined;
   }
 
   private isBuilderContext(document: vscode.TextDocument, position: vscode.Position): boolean {
@@ -425,6 +390,17 @@ export class CaddyCompletionProvider implements vscode.CompletionItemProvider {
       item.documentation = new vscode.MarkdownString(`HTTP ${method} request method`);
       item.sortText = String(index).padStart(2, "0");
       item.insertText = method;
+      return item;
+    });
+  }
+
+  private getHandleObjectCompletions(): vscode.CompletionItem[] {
+    return HANDLE_OBJECT_PROPERTIES.map((prop, index) => {
+      const item = new vscode.CompletionItem(prop.name, vscode.CompletionItemKind.Property);
+      item.detail = "Handle object property";
+      item.documentation = new vscode.MarkdownString(prop.description);
+      item.sortText = String(index).padStart(2, "0");
+      item.insertText = new vscode.SnippetString(`"${prop.name}": "$0"`);
       return item;
     });
   }

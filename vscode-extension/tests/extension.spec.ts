@@ -1166,6 +1166,107 @@ test.describe("Schema-Aware IntelliSense", () => {
 
     await page.keyboard.press("Escape");
   });
+
+  test("does not offer match properties inside a handler's nested object", async ({ page }) => {
+    // Regression test: context detection used to count brackets across the
+    // whole document, so once a "match" array appeared earlier, it never
+    // "closed" as far as the heuristic was concerned -- offering matcher
+    // properties (host, path, ...) anywhere later in the file, including
+    // deep inside an unrelated handler's own nested objects.
+    await page.keyboard.press("Control+n");
+    await waitForEditor(page);
+
+    await page.keyboard.press("Control+k");
+    await page.keyboard.press("m");
+    const langInput = page.locator(".quick-input-box input").first();
+    await langInput.waitFor({ state: "visible", timeout: 3000 });
+    await langInput.fill("JSON");
+    await page.keyboard.press("Enter");
+
+    await page.keyboard.type(
+      '{\n  "match": [{ "host": ["example.com"] }],\n  "handle": [{\n    "handler": "headers",\n    "response": {\n      "',
+      { delay: 20 }
+    );
+
+    await page.keyboard.press("Control+Space");
+
+    const suggestWidget = page.locator(".suggest-widget");
+    const isVisible = await suggestWidget.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (isVisible) {
+      const hostOption = page.locator('.suggest-widget [role="option"]:has-text("host")');
+      const hasHost = await hostOption.isVisible({ timeout: 1000 }).catch(() => false);
+      console.log(`'host' wrongly offered inside headers.response: ${hasHost}`);
+      expect(hasHost).toBe(false);
+    }
+
+    await page.keyboard.press("Escape");
+  });
+
+  test("offers match properties when actually inside a match object", async ({ page }) => {
+    await page.keyboard.press("Control+n");
+    await waitForEditor(page);
+
+    await page.keyboard.press("Control+k");
+    await page.keyboard.press("m");
+    const langInput = page.locator(".quick-input-box input").first();
+    await langInput.waitFor({ state: "visible", timeout: 3000 });
+    await langInput.fill("JSON");
+    await page.keyboard.press("Enter");
+
+    await page.keyboard.type('{\n  "match": [{\n    "', { delay: 20 });
+
+    await page.keyboard.press("Control+Space");
+
+    const suggestWidget = page.locator(".suggest-widget");
+    const isVisible = await suggestWidget.isVisible({ timeout: 5000 }).catch(() => false);
+    console.log(`Match-property completion widget visible: ${isVisible}`);
+
+    if (isVisible) {
+      const hostOption = page.locator('.suggest-widget [role="option"]:has-text("host")');
+      const hasHost = await hostOption.isVisible({ timeout: 2000 }).catch(() => false);
+      console.log(`'host' offered inside match object: ${hasHost}`);
+    }
+
+    await page.keyboard.press("Escape");
+  });
+
+  test("offers handler-specific fields, not match properties, inside a handle object", async ({
+    page,
+  }) => {
+    await page.keyboard.press("Control+n");
+    await waitForEditor(page);
+
+    await page.keyboard.press("Control+k");
+    await page.keyboard.press("m");
+    const langInput = page.locator(".quick-input-box input").first();
+    await langInput.waitFor({ state: "visible", timeout: 3000 });
+    await langInput.fill("JSON");
+    await page.keyboard.press("Enter");
+
+    await page.keyboard.type(
+      '{\n  "match": [{ "host": ["example.com"] }],\n  "handle": [{\n    "handler": "reverse_proxy",\n    "',
+      { delay: 20 }
+    );
+
+    await page.keyboard.press("Control+Space");
+
+    const suggestWidget = page.locator(".suggest-widget");
+    const isVisible = await suggestWidget.isVisible({ timeout: 5000 }).catch(() => false);
+    console.log(`Handler-property completion widget visible: ${isVisible}`);
+
+    if (isVisible) {
+      const upstreamsOption = page.locator('.suggest-widget [role="option"]:has-text("upstreams")');
+      const hasUpstreams = await upstreamsOption.isVisible({ timeout: 2000 }).catch(() => false);
+      console.log(`'upstreams' offered inside reverse_proxy handle object: ${hasUpstreams}`);
+
+      const hostOption = page.locator('.suggest-widget [role="option"]:has-text("host")');
+      const hasHost = await hostOption.isVisible({ timeout: 1000 }).catch(() => false);
+      expect(hasHost).toBe(false);
+    }
+
+    await page.keyboard.press("Escape");
+  });
 });
 
 // ============================================================================
