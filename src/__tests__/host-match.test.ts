@@ -37,12 +37,8 @@ describe("hostMatchesPattern", () => {
   // glob. The single-label branch must NOT swallow these; they belong on
   // the generic-glob path.
   test("`*.api-*.example.com` is a generic glob, not single-label", () => {
-    expect(
-      hostMatchesPattern("foo.api-prod.example.com", "*.api-*.example.com"),
-    ).toBe(true);
-    expect(
-      hostMatchesPattern("api-prod.example.com", "*.api-*.example.com"),
-    ).toBe(false);
+    expect(hostMatchesPattern("foo.api-prod.example.com", "*.api-*.example.com")).toBe(true);
+    expect(hostMatchesPattern("api-prod.example.com", "*.api-*.example.com")).toBe(false);
   });
 
   // Generic-glob `*` is intentionally cross-dot — the `*` is converted

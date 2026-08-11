@@ -557,7 +557,7 @@ export function applyLocalCaInstallTrust(
   const cas = ensureObject(
     pki,
     "certificate_authorities",
-    "config.apps.pki.certificate_authorities",
+    "config.apps.pki.certificate_authorities"
   );
   const local = ensureObject(cas, "local", "config.apps.pki.certificate_authorities.local");
   local.install_trust = installTrust;
@@ -571,7 +571,7 @@ export function applyLocalCaInstallTrust(
 function ensureObject(
   parent: Record<string, unknown>,
   key: string,
-  path: string,
+  path: string
 ): Record<string, unknown> {
   const current = parent[key];
   if (current === undefined || current === null) {
@@ -583,7 +583,7 @@ function ensureObject(
     throw new Error(
       `applyLocalCaInstallTrust: ${path} exists but is not an object (got ${
         Array.isArray(current) ? "array" : typeof current
-      })`,
+      })`
     );
   }
   return current as Record<string, unknown>;

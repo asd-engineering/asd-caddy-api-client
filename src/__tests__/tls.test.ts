@@ -579,10 +579,7 @@ describe("filterAcmeManagedFromSkip", () => {
   // the candidate must be dropped.
   test("compound-wildcard candidate is evaluated as a generic glob", () => {
     expect(
-      filterAcmeManagedFromSkip(
-        ["*.api-*.example.com"],
-        new Set(["foo.api-prod.example.com"]),
-      ),
+      filterAcmeManagedFromSkip(["*.api-*.example.com"], new Set(["foo.api-prod.example.com"]))
     ).toEqual([]);
   });
 });
@@ -638,10 +635,10 @@ describe("applyLocalCaInstallTrust", () => {
 
   test("throws on non-object config (likely caller bug, surface it)", () => {
     expect(() =>
-      applyLocalCaInstallTrust(null as unknown as Record<string, unknown>, false),
+      applyLocalCaInstallTrust(null as unknown as Record<string, unknown>, false)
     ).toThrow(/config/);
     expect(() =>
-      applyLocalCaInstallTrust(undefined as unknown as Record<string, unknown>, false),
+      applyLocalCaInstallTrust(undefined as unknown as Record<string, unknown>, false)
     ).toThrow(/config/);
   });
 
@@ -650,13 +647,13 @@ describe("applyLocalCaInstallTrust", () => {
     // helper docblock. These cases catch typos / config corruption rather
     // than mask them.
     expect(() =>
-      applyLocalCaInstallTrust({ apps: "bad" as unknown as Record<string, unknown> }, false),
+      applyLocalCaInstallTrust({ apps: "bad" as unknown as Record<string, unknown> }, false)
     ).toThrow(/config\.apps/);
     expect(() =>
       applyLocalCaInstallTrust(
         { apps: { pki: ["array-instead-of-object"] as unknown as Record<string, unknown> } },
-        false,
-      ),
+        false
+      )
     ).toThrow(/config\.apps\.pki/);
     expect(() =>
       applyLocalCaInstallTrust(
@@ -669,8 +666,8 @@ describe("applyLocalCaInstallTrust", () => {
             },
           },
         },
-        false,
-      ),
+        false
+      )
     ).toThrow(/local/);
   });
 });

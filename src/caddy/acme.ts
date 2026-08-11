@@ -73,12 +73,12 @@ export function buildAcmeDnsPolicy(options: AcmeDnsPolicyOptions): AutomationPol
   if (options.providerConfig) {
     if (Object.prototype.hasOwnProperty.call(options.providerConfig, "name")) {
       throw new Error(
-        "buildAcmeDnsPolicy: `providerConfig.name` is reserved — set the provider via `dnsProvider`",
+        "buildAcmeDnsPolicy: `providerConfig.name` is reserved — set the provider via `dnsProvider`"
       );
     }
     if (Object.prototype.hasOwnProperty.call(options.providerConfig, "module")) {
       throw new Error(
-        "buildAcmeDnsPolicy: `providerConfig.module` is reserved — `module` is the issuer-level discriminator, not a provider field",
+        "buildAcmeDnsPolicy: `providerConfig.module` is reserved — `module` is the issuer-level discriminator, not a provider field"
       );
     }
   }
