@@ -198,10 +198,6 @@ export const certificateSchema: z.ZodSchema<Certificate> = z.lazy(() =>
 
 export const automateLoaderSchema = z.array(z.string());
 
-export const zeroSslIssuerSchema = z.object({
-  api_key: z.string().optional(),
-});
-
 const durationSchema = z.any();
 
 const moduleMapSchema = z.any();
@@ -279,6 +275,14 @@ export const sessionTicketServiceSchema = z.object({
 export const echSchema = z.object({
   configs: z.array(echConfigurationSchema).optional(),
   publication: z.array(z.union([echPublicationSchema, z.undefined()])).optional(),
+});
+
+export const zeroSslIssuerSchema = z.object({
+  api_key: z.string().optional(),
+  validity_days: z.number().optional(),
+  listen_host: z.string().optional(),
+  alternate_http_port: z.number().optional(),
+  cname_validation: dnsChallengeConfigSchema.optional(),
 });
 
 export const challengesConfigSchema = z.object({

@@ -85,11 +85,6 @@ export const headerHashSelectionSchema = z.object({
   fallback: z.unknown().optional(),
 });
 
-export const cookieHashSelectionSchema = z.object({
-  name: z.string().optional(),
-  secret: z.string().optional(),
-});
-
 export const ipVersionsSchema = z.object({
   ipv4: z.boolean().optional(),
   ipv6: z.boolean().optional(),
@@ -175,6 +170,13 @@ export const loadBalancingSchema = z.object({
 export const healthChecksSchema = z.object({
   active: activeHealthChecksSchema.optional(),
   passive: passiveHealthChecksSchema.optional(),
+});
+
+export const cookieHashSelectionSchema = z.object({
+  name: z.string().optional(),
+  secret: z.string().optional(),
+  max_age: durationSchema.optional(),
+  fallback: z.unknown().optional(),
 });
 
 export const srvUpstreamsSchema = z.object({
