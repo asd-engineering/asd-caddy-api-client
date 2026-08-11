@@ -12,19 +12,38 @@ export const regexReplacerSchema = z.object({
   replace: z.string().optional(),
 });
 
+// Hand-corrected: `queryOps` is an unexported Go type in the rewrite
+// package, so tygo can only approximate its shape (see the "approximated
+// from Caddy source" comment above `queryOps` in ../caddy-rewrite.ts) --
+// and that approximation is wrong for this field. It reports `set`/`add`/
+// `replace` as maps, but real Caddy rejects that: `caddy validate` on a
+// map-shaped `query.set`/`add`/`replace` fails with
+// `json: cannot unmarshal object into Go struct field queryOps.query.add
+// of type []rewrite.queryOpsArguments`, confirming the real Go types are
+// `[]rewrite.queryOpsArguments` ({key, val}) for set/add/rename and
+// `[]*rewrite.queryOpsReplacement` ({key, search?, search_regexp?,
+// replace?}) for replace. Verified end-to-end with a full `query` config
+// against real Caddy ("Valid configuration"). Blind regeneration via
+// `generate-zod-schemas.ts` will reintroduce the wrong map-based shape --
+// re-apply this fix (and re-verify with `caddy validate`) if that happens.
+export const queryOpsArgumentsSchema = z.object({
+  key: z.string(),
+  val: z.string(),
+});
+
+export const queryOpsReplacementSchema = z.object({
+  key: z.string().optional(),
+  search: z.string().optional(),
+  search_regexp: z.string().optional(),
+  replace: z.string().optional(),
+});
+
 export const queryOpsSchema = z.object({
   delete: z.array(z.string()).optional(),
-  set: z.record(z.string(), z.string()).optional(),
-  add: z.record(z.string(), z.array(z.string())).optional(),
-  replace: z.record(z.string(), z.array(z.string())).optional(),
-  rename: z
-    .array(
-      z.object({
-        key: z.string(),
-        val: z.string(),
-      })
-    )
-    .optional(),
+  set: z.array(queryOpsArgumentsSchema).optional(),
+  add: z.array(queryOpsArgumentsSchema).optional(),
+  replace: z.array(queryOpsReplacementSchema).optional(),
+  rename: z.array(queryOpsArgumentsSchema).optional(),
 });
 
 export const rewriteSchema = z.object({

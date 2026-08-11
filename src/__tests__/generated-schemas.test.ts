@@ -413,22 +413,41 @@ describe("Generated Rewrite Schemas", () => {
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
     });
 
-    test("accepts set operation", () => {
-      const ops = { set: { version: "2", format: "json" } };
+    test("accepts set operation (array of {key, val})", () => {
+      const ops = {
+        set: [
+          { key: "version", val: "2" },
+          { key: "format", val: "json" },
+        ],
+      };
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
     });
 
-    test("accepts add operation", () => {
-      const ops = { add: { tags: ["a", "b"] } };
+    test("accepts add operation (array of {key, val})", () => {
+      const ops = {
+        add: [
+          { key: "tag", val: "a" },
+          { key: "tag", val: "b" },
+        ],
+      };
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
     });
 
-    test("accepts replace operation", () => {
-      const ops = { replace: { category: ["tech", "news"] } };
+    test("accepts replace operation with search", () => {
+      const ops = {
+        replace: [{ key: "category", search: "tech", replace: "technology" }],
+      };
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
     });
 
-    test("accepts rename operation", () => {
+    test("accepts replace operation with search_regexp", () => {
+      const ops = {
+        replace: [{ key: "id", search_regexp: "^\\d+$", replace: "ID-$0" }],
+      };
+      expect(queryOpsSchema.parse(ops)).toEqual(ops);
+    });
+
+    test("accepts rename operation (array of {key, val})", () => {
       const ops = { rename: [{ key: "oldKey", val: "newKey" }] };
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
     });
@@ -436,10 +455,21 @@ describe("Generated Rewrite Schemas", () => {
     test("accepts combined operations", () => {
       const ops = {
         delete: ["debug"],
-        set: { version: "2" },
-        add: { tags: ["new"] },
+        set: [{ key: "version", val: "2" }],
+        add: [{ key: "tag", val: "new" }],
       };
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
+    });
+
+    // Regression guard: tygo approximates `queryOps` (an unexported Go
+    // type) as map-shaped set/add/replace, but real Caddy rejects that --
+    // see the doc comment on queryOpsSchema. A future blind regeneration
+    // from the tygo-generated interface would silently accept this shape
+    // again, which is exactly the bug this test exists to catch.
+    test("rejects the map-shaped form real Caddy rejects", () => {
+      expect(() => queryOpsSchema.parse({ set: { version: "2" } })).toThrow();
+      expect(() => queryOpsSchema.parse({ add: { tag: ["a", "b"] } })).toThrow();
+      expect(() => queryOpsSchema.parse({ replace: { category: ["tech"] } })).toThrow();
     });
   });
 
@@ -489,7 +519,7 @@ describe("Generated Rewrite Schemas", () => {
       const rewrite = {
         query: {
           delete: ["debug"],
-          set: { format: "json" },
+          set: [{ key: "format", val: "json" }],
         },
       };
       expect(rewriteSchema.parse(rewrite)).toEqual(rewrite);
@@ -500,7 +530,7 @@ describe("Generated Rewrite Schemas", () => {
         method: "GET",
         strip_path_prefix: "/api/v1",
         uri_substring: [{ find: "old", replace: "new" }],
-        query: { set: { version: "2" } },
+        query: { set: [{ key: "version", val: "2" }] },
       };
       expect(rewriteSchema.parse(rewrite)).toEqual(rewrite);
     });

@@ -12,12 +12,29 @@ export interface regexReplacer {
   replace?: string;
 }
 
+// Hand-corrected: tygo's "approximated from Caddy source" guess for this
+// unexported type is wrong for set/add/replace (see the matching comment
+// in caddy-rewrite.zod.ts). Confirmed via `caddy validate` error messages,
+// which reveal the real Go types: set/add/rename are
+// []rewrite.queryOpsArguments, replace is []*rewrite.queryOpsReplacement.
+export interface queryOpsArguments {
+  key: string;
+  val: string;
+}
+
+export interface queryOpsReplacement {
+  key?: string;
+  search?: string;
+  search_regexp?: string;
+  replace?: string;
+}
+
 export interface queryOps {
   delete?: string[];
-  set?: Record<string, string>;
-  add?: Record<string, string[]>;
-  replace?: Record<string, string[]>;
-  rename?: { key: string; val: string }[];
+  set?: queryOpsArguments[];
+  add?: queryOpsArguments[];
+  replace?: queryOpsReplacement[];
+  rename?: queryOpsArguments[];
 }
 
 //////////
