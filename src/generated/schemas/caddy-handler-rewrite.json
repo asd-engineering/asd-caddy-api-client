@@ -34,11 +34,113 @@
               },
               "limit": {
                 "type": "integer"
+              },
+              "@id": {
+                "type": "string"
               }
             },
             "required": ["find", "replace"],
             "additionalProperties": false
           }
+        },
+        "query": {
+          "type": "object",
+          "properties": {
+            "delete": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "set": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "val": {
+                    "type": "string"
+                  },
+                  "@id": {
+                    "type": "string"
+                  }
+                },
+                "required": ["key", "val"],
+                "additionalProperties": false
+              }
+            },
+            "add": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "val": {
+                    "type": "string"
+                  },
+                  "@id": {
+                    "type": "string"
+                  }
+                },
+                "required": ["key", "val"],
+                "additionalProperties": false
+              }
+            },
+            "replace": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "search": {
+                    "type": "string"
+                  },
+                  "search_regexp": {
+                    "type": "string"
+                  },
+                  "replace": {
+                    "type": "string"
+                  },
+                  "@id": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "rename": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "val": {
+                    "type": "string"
+                  },
+                  "@id": {
+                    "type": "string"
+                  }
+                },
+                "required": ["key", "val"],
+                "additionalProperties": false
+              }
+            },
+            "@id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "required": ["handler"],

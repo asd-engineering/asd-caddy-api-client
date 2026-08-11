@@ -30,6 +30,9 @@
                       },
                       "custom_css": {
                         "type": "string"
+                      },
+                      "@id": {
+                        "type": "string"
                       }
                     },
                     "additionalProperties": false
@@ -50,6 +53,9 @@
                             },
                             "same_site": {
                               "type": "string"
+                            },
+                            "@id": {
+                              "type": "string"
                             }
                           },
                           "additionalProperties": false
@@ -65,6 +71,9 @@
                         "type": "boolean"
                       },
                       "same_site": {
+                        "type": "string"
+                      },
+                      "@id": {
                         "type": "string"
                       }
                     },
@@ -88,6 +97,9 @@
                       "type": "object",
                       "additionalProperties": {}
                     }
+                  },
+                  "@id": {
+                    "type": "string"
                   }
                 },
                 "required": ["name"],
@@ -119,6 +131,9 @@
                         "action": {
                           "type": "string",
                           "enum": ["allow", "deny"]
+                        },
+                        "@id": {
+                          "type": "string"
                         }
                       },
                       "additionalProperties": false
@@ -133,6 +148,9 @@
                           "type": "string"
                         },
                         "source": {
+                          "type": "string"
+                        },
+                        "@id": {
                           "type": "string"
                         }
                       },
@@ -149,11 +167,17 @@
                         },
                         "uri": {
                           "type": "string"
+                        },
+                        "@id": {
+                          "type": "string"
                         }
                       },
                       "required": ["match_type"],
                       "additionalProperties": false
                     }
+                  },
+                  "@id": {
+                    "type": "string"
                   }
                 },
                 "required": ["name"],
@@ -166,6 +190,9 @@
                 "generic": {
                   "type": "object",
                   "additionalProperties": {}
+                },
+                "@id": {
+                  "type": "string"
                 }
               },
               "additionalProperties": false
@@ -192,10 +219,16 @@
                           },
                           "path": {
                             "type": "string"
+                          },
+                          "@id": {
+                            "type": "string"
                           }
                         },
                         "required": ["path"],
                         "additionalProperties": false
+                      },
+                      "@id": {
+                        "type": "string"
                       }
                     },
                     "required": ["name", "kind", "params"],
@@ -229,6 +262,9 @@
                                   "type": "integer",
                                   "exclusiveMinimum": 0,
                                   "maximum": 65535
+                                },
+                                "@id": {
+                                  "type": "string"
                                 }
                               },
                               "required": ["address"],
@@ -260,6 +296,9 @@
                                   "items": {
                                     "type": "string"
                                   }
+                                },
+                                "@id": {
+                                  "type": "string"
                                 }
                               },
                               "required": ["dn"],
@@ -268,6 +307,9 @@
                           }
                         },
                         "additionalProperties": true
+                      },
+                      "@id": {
+                        "type": "string"
                       }
                     },
                     "required": ["name", "kind", "params"],
@@ -348,11 +390,17 @@
                         "additionalProperties": true
                       }
                     ]
+                  },
+                  "@id": {
+                    "type": "string"
                   }
                 },
                 "required": ["name", "kind", "params"],
                 "additionalProperties": false
               }
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "additionalProperties": false
@@ -369,6 +417,9 @@
             "required": ["driver"],
             "additionalProperties": true
           }
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "additionalProperties": false

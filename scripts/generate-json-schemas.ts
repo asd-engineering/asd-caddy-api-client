@@ -9,6 +9,7 @@
  * Generated output: src/generated/schemas/
  */
 
+import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join, dirname } from "path";
@@ -51,6 +52,48 @@ import {
   IdentityStoreSchema,
 } from "../src/plugins/caddy-security/schemas.js";
 
+// Generated core/app schemas (tygo -> zod, always in sync with real Go
+// source) — composed below into "caddy-full-config" instead of hand-writing
+// a separate, driftable copy of admin/logging/http/tls shapes.
+import { adminConfigSchema, loggingSchema } from "../src/generated/caddy-core.zod.js";
+import { appSchema as HttpAppSchema, serverSchema } from "../src/generated/caddy-http.zod.js";
+import { tlsSchema as TlsAppSchema } from "../src/generated/caddy-tls.zod.js";
+
+// `@id` is a Caddy-wide JSON convention (admin API object addressing,
+// stripped before Go struct decoding) -- it isn't a real Go struct field,
+// so tygo/zod-to-json-schema generated schemas never allow it, and
+// zod-to-json-schema's default `additionalProperties: false` then rejects
+// it outright. CaddyRouteSchema (src/schemas.ts) already declares it
+// explicitly; the raw generated server/app schemas below don't. Compose a
+// route-aware server/http-app schema for the full-config file so nested
+// routes in a server config get both "@id" support and the same
+// hand-composed matcher fields (tls/protocol/etc, see
+// CaddyRouteMatcherSchema's doc comment) that a standalone
+// route.caddy.json already gets -- instead of falling back to the raw
+// tygo-generated Route type, which has neither.
+// CaddyRouteSchema.handle intentionally keeps CaddyRouteHandlerSchema's
+// `.passthrough()` shape (see its doc comment in src/schemas.ts): the
+// *runtime* npm client must accept legitimate third-party/custom Caddy
+// handler modules it hasn't modeled, so it only requires `handler` to be a
+// string. For the editor-time schema below, that tradeoff is backwards --
+// the whole point of editor validation is catching typos (e.g. reverse_proxy's
+// "upstream" vs "upstreams"), so `handle` items are swapped for the strict
+// per-handler discriminated union (KnownCaddyHandlerSchema) instead. This
+// does mean a genuinely valid but unmodeled handler module gets flagged in
+// the editor -- an acceptable, standard trade-off for typed editor tooling
+// (same as e.g. a Kubernetes CRD schema rejecting fields it doesn't know).
+const StrictRouteSchema = CaddyRouteSchema.extend({
+  handle: z.array(KnownCaddyHandlerSchema).min(1, "Route must have at least one handler"),
+});
+
+const FullConfigServerSchema = serverSchema.omit({ routes: true, named_routes: true }).extend({
+  routes: z.array(StrictRouteSchema).optional(),
+  named_routes: z.record(z.string(), StrictRouteSchema).optional(),
+});
+const FullConfigHttpAppSchema = HttpAppSchema.omit({ servers: true }).extend({
+  servers: z.record(z.string(), FullConfigServerSchema).optional(),
+});
+
 // ============================================================================
 // Schema Definitions
 // ============================================================================
@@ -66,7 +109,7 @@ const schemas: SchemaDefinition[] = [
   // Core Caddy schemas
   {
     name: "caddy-route",
-    schema: CaddyRouteSchema,
+    schema: StrictRouteSchema,
     description: "Caddy HTTP route configuration",
     fileMatch: ["**/caddy-route.json", "**/*.caddy-route.json"],
   },
@@ -153,19 +196,32 @@ const schemas: SchemaDefinition[] = [
     name: "caddy-security-portal",
     schema: AuthenticationPortalSchema,
     description: "caddy-security authentication portal configuration",
-    fileMatch: ["**/.caddy-security-portal.json", "**/caddy-security-portal.json"],
+    fileMatch: [
+      "**/.caddy-security-portal.json",
+      "**/caddy-security-portal.json",
+      "**/*.caddy-security-portal.json",
+    ],
   },
   {
     name: "caddy-security-policy",
     schema: AuthorizationPolicySchema,
     description: "caddy-security authorization policy (gatekeeper) configuration",
-    fileMatch: ["**/.caddy-security-policy.json", "**/caddy-security-policy.json"],
+    fileMatch: [
+      "**/.caddy-security-policy.json",
+      "**/caddy-security-policy.json",
+      "**/*.caddy-security-policy.json",
+    ],
   },
   {
     name: "caddy-security-config",
     schema: SecurityConfigSchema,
     description: "caddy-security configuration (portals, policies, identity stores)",
-    fileMatch: ["**/.caddy-security.json", "**/caddy-security.json"],
+    fileMatch: [
+      "**/.caddy-security.json",
+      "**/caddy-security.json",
+      "**/security-config.json",
+      "**/*.caddy-security.json",
+    ],
   },
   {
     name: "caddy-security-app",
@@ -173,11 +229,96 @@ const schemas: SchemaDefinition[] = [
     description: "Complete caddy-security app configuration for /config/apps/security",
     fileMatch: ["**/security-app.json"],
   },
+  {
+    name: "caddy-full-config",
+    // Composed entirely from already-generated/already-correct schemas —
+    // admin/logging from the tygo-generated Caddy core types, http/tls from
+    // their respective generated app schemas, security from the
+    // caddy-security plugin's own (Go-source-verified) schema. Previously
+    // this file was hand-written once and never regenerated, drifting
+    // stale relative to real Caddy (e.g. admin was missing `config`,
+    // `identity`, `remote`; the security portion used the pre-0.6.0
+    // `access_lists`/flat-identity-store format).
+    schema: z.object({
+      admin: adminConfigSchema.optional(),
+      logging: loggingSchema.optional(),
+      apps: z
+        .object({
+          http: FullConfigHttpAppSchema.optional(),
+          tls: TlsAppSchema.optional(),
+          security: SecurityAppSchema.optional(),
+        })
+        .optional(),
+    }),
+    description: "Complete Caddy server configuration (admin, logging, apps: http/tls/security)",
+    fileMatch: ["**/caddy-server.json", "**/caddy-full.json", "**/*.caddy-server.json"],
+  },
 ];
 
 // ============================================================================
 // Generation Logic
 // ============================================================================
+
+/**
+ * "@id" is a Caddy-wide admin-API object-addressing convention (stripped
+ * before Go struct decoding) that's valid on virtually ANY JSON object in a
+ * Caddy config -- not just module containers, but matcher objects, upstream
+ * entries, anywhere -- verified against real `caddy validate` (an object
+ * with "@id" on a matcher, a handler, and an upstream entry all validated
+ * successfully). It's therefore not a real Go struct field, so no
+ * tygo/zod-to-json-schema-generated schema ever includes it on its own.
+ *
+ * Hand-adding "@id" wherever we happen to notice it's missing is exactly
+ * how it went missing in the first place (see the 0.9.0 changelog entry
+ * for caddy-server.json). Instead, walk every generated schema after the
+ * fact and add it to every strict (additionalProperties:false) object node
+ * -- new schemas get this automatically, with nothing to remember.
+ */
+function injectUniversalId(node: unknown): void {
+  if (node === null || typeof node !== "object") {
+    return;
+  }
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      injectUniversalId(item);
+    }
+    return;
+  }
+
+  const obj = node as Record<string, unknown>;
+
+  if (
+    obj.type === "object" &&
+    obj.additionalProperties === false &&
+    typeof obj.properties === "object" &&
+    obj.properties !== null
+  ) {
+    const properties = obj.properties as Record<string, unknown>;
+    if (!("@id" in properties)) {
+      properties["@id"] = { type: "string" };
+    }
+  }
+
+  // Recurse into every place a subschema can live: object properties,
+  // array items, additionalProperties-as-schema (z.record()'s value type),
+  // and union branches (anyOf/oneOf/allOf, e.g. discriminated unions).
+  for (const key of ["properties", "definitions", "patternProperties"]) {
+    if (typeof obj[key] === "object" && obj[key] !== null) {
+      for (const value of Object.values(obj[key] as Record<string, unknown>)) {
+        injectUniversalId(value);
+      }
+    }
+  }
+  if (typeof obj.additionalProperties === "object") {
+    injectUniversalId(obj.additionalProperties);
+  }
+  injectUniversalId(obj.items);
+  for (const key of ["anyOf", "oneOf", "allOf"]) {
+    if (Array.isArray(obj[key])) {
+      injectUniversalId(obj[key]);
+    }
+  }
+}
 
 function generateJsonSchema(definition: SchemaDefinition): object {
   const jsonSchema = zodToJsonSchema(definition.schema as Parameters<typeof zodToJsonSchema>[0], {
@@ -185,6 +326,8 @@ function generateJsonSchema(definition: SchemaDefinition): object {
     $refStrategy: "none", // Inline all definitions for better VSCode support
     target: "jsonSchema7", // Use JSON Schema draft-07 for broad compatibility
   });
+
+  injectUniversalId(jsonSchema);
 
   // Enrich with metadata
   return {

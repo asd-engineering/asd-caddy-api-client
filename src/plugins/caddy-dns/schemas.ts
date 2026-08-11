@@ -2,7 +2,7 @@
  * Zod schemas for caddy-dns plugin
  *
  * Runtime guardrails for the provider-config shapes built in builders.ts.
- * As of 0.8.1, built from machine-generated base schemas
+ * As of 0.9.0, built from machine-generated base schemas
  * (`src/generated/plugins/caddy-dns-*.zod.ts`, produced via tygo + ts-to-zod
  * from real vendored Go source — see `DEPENDENCIES.md`), mirroring the
  * `caddy-security` plugin's pattern: re-export the generated schema, then

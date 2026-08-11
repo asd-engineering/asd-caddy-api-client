@@ -119,6 +119,7 @@ export {
   matchRemoteIpSchema as httpMatchRemoteIpSchema,
   matchClientIpSchema,
   matchHostSchema,
+  matchTlsSchema as httpMatchTlsSchema,
   serverLogConfigSchema,
   staticErrorSchema,
   staticResponseSchema,

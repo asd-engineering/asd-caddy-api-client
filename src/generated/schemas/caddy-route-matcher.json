@@ -20,11 +20,26 @@
             "type": "string"
           }
         },
+        "path_regexp": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "pattern": {
+              "type": "string"
+            },
+            "@id": {
+              "type": "string"
+            }
+          },
+          "required": ["pattern"],
+          "additionalProperties": false
+        },
         "method": {
           "type": "array",
           "items": {
-            "type": "string",
-            "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+            "type": "string"
           }
         },
         "header": {
@@ -36,6 +51,32 @@
             }
           }
         },
+        "header_regexp": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "pattern": {
+                    "type": "string"
+                  },
+                  "@id": {
+                    "type": "string"
+                  }
+                },
+                "required": ["pattern"],
+                "additionalProperties": false
+              },
+              {
+                "not": {}
+              }
+            ]
+          }
+        },
         "query": {
           "type": "object",
           "additionalProperties": {
@@ -44,6 +85,94 @@
               "type": "string"
             }
           }
+        },
+        "client_ip": {
+          "type": "object",
+          "properties": {
+            "ranges": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "@id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "remote_ip": {
+          "type": "object",
+          "properties": {
+            "ranges": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "@id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "protocol": {
+          "type": "string"
+        },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "handshake_complete": {
+              "type": "boolean"
+            },
+            "@id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "file": {
+          "type": "object",
+          "properties": {
+            "fs": {
+              "type": "string"
+            },
+            "root": {
+              "type": "string"
+            },
+            "try_files": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "try_policy": {
+              "type": "string"
+            },
+            "split_path": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "@id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "not": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "expression": {
+          "type": "string"
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "additionalProperties": false

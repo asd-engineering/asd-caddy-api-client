@@ -42,6 +42,9 @@
         "minimum_length": {
           "type": "integer",
           "exclusiveMinimum": 0
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "required": ["handler"],

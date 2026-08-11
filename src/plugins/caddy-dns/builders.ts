@@ -7,7 +7,7 @@
  * {@link buildAcmeDnsPolicy}`.providerConfig` (see `../../caddy/acme.ts`).
  *
  * `providerConfig` field names are sourced from real vendored Go source (not
- * READMEs) as of 0.8.1, via the same tygo pipeline `caddy-security` uses —
+ * READMEs) as of 0.9.0, via the same tygo pipeline `caddy-security` uses —
  * see `DEPENDENCIES.md`'s "DNS Provider Plugins" section for exact
  * versions/commits:
  * - `caddy-dns/porkbun` → `github.com/libdns/porkbun`
@@ -74,7 +74,7 @@ export function buildCloudflareDnsConfig(): AcmeDnsProviderConfigResult {
  * Called with no `options` (the default), `caddy-dns/route53` reads
  * credentials via the AWS Go SDK v2's own default credential chain (env
  * vars, shared profile, or IAM role) — `providerConfig` is omitted rather
- * than reimplementing that resolution, exactly as before 0.8.1.
+ * than reimplementing that resolution, exactly as before 0.9.0.
  *
  * The plugin also supports an explicit typed `providerConfig` (real,
  * verified Go source — see {@link Route53DnsProviderConfig}) for callers

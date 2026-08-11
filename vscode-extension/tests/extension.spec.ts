@@ -1011,7 +1011,7 @@ test.describe("Validation Error Feedback", () => {
   });
 
   test("security config validation - missing portal name shows error", async ({ page }) => {
-    await openFile(page, "invalid.security.caddy.json");
+    await openFile(page, "invalid.caddy-security.json");
     await waitForEditor(page);
 
     // Wait for diagnostics
@@ -1030,16 +1030,21 @@ test.describe("Validation Error Feedback", () => {
   });
 
   test("valid security config shows no errors", async ({ page }) => {
-    await openFile(page, "valid.security.caddy.json");
+    await openFile(page, "valid.caddy-security.json");
     await waitForEditor(page);
 
     // Wait for diagnostics to settle
     await page.waitForTimeout(1000);
 
-    const errorSquiggles = page.locator(".squiggly-error");
-    const errorCount = await errorSquiggles.count();
-    console.log(`Found ${errorCount} errors in valid security config`);
-    expect(errorCount).toBe(0);
+    // Check both severities: JSON schema `additionalProperties`/`required`
+    // violations render as warnings (yellow squiggle), not errors, in VS
+    // Code's built-in JSON language service — checking .squiggly-error
+    // alone previously let a stale fixture (pre-0.6.0 access_lists/driver
+    // shape) pass this test while actually failing schema validation.
+    const diagnosticSquiggles = page.locator(".squiggly-error, .squiggly-warning");
+    const diagnosticCount = await diagnosticSquiggles.count();
+    console.log(`Found ${diagnosticCount} diagnostics in valid security config`);
+    expect(diagnosticCount).toBe(0);
   });
 });
 
@@ -1157,6 +1162,109 @@ test.describe("Schema-Aware IntelliSense", () => {
       const handleOption = page.locator('.suggest-widget [role="option"]:has-text("handle")');
       const hasHandle = await handleOption.isVisible({ timeout: 2000 }).catch(() => false);
       console.log(`'handle' property in completions: ${hasHandle}`);
+    }
+
+    await page.keyboard.press("Escape");
+  });
+
+  test("does not offer match properties inside a handler's nested object", async ({ page }) => {
+    // Regression test: context detection used to count brackets across the
+    // whole document, so once a "match" array appeared earlier, it never
+    // "closed" as far as the heuristic was concerned -- offering matcher
+    // properties (host, path, ...) anywhere later in the file, including
+    // deep inside an unrelated handler's own nested objects.
+    await page.keyboard.press("Control+n");
+    await waitForEditor(page);
+
+    await page.keyboard.press("Control+k");
+    await page.keyboard.press("m");
+    const langInput = page.locator(".quick-input-box input").first();
+    await langInput.waitFor({ state: "visible", timeout: 3000 });
+    await langInput.fill("JSON");
+    await page.keyboard.press("Enter");
+
+    await page.keyboard.type(
+      '{\n  "match": [{ "host": ["example.com"] }],\n  "handle": [{\n    "handler": "headers",\n    "response": {\n      "',
+      { delay: 20 }
+    );
+
+    await page.keyboard.press("Control+Space");
+
+    const suggestWidget = page.locator(".suggest-widget");
+    const isVisible = await suggestWidget.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (isVisible) {
+      const hostOption = page.locator('.suggest-widget [role="option"]:has-text("host")');
+      const hasHost = await hostOption.isVisible({ timeout: 1000 }).catch(() => false);
+      console.log(`'host' wrongly offered inside headers.response: ${hasHost}`);
+      expect(hasHost).toBe(false);
+    }
+
+    await page.keyboard.press("Escape");
+  });
+
+  test("offers match properties when actually inside a match object", async ({ page }) => {
+    await page.keyboard.press("Control+n");
+    await waitForEditor(page);
+
+    await page.keyboard.press("Control+k");
+    await page.keyboard.press("m");
+    const langInput = page.locator(".quick-input-box input").first();
+    await langInput.waitFor({ state: "visible", timeout: 3000 });
+    await langInput.fill("JSON");
+    await page.keyboard.press("Enter");
+
+    await page.keyboard.type('{\n  "match": [{\n    "', { delay: 20 });
+
+    await page.keyboard.press("Control+Space");
+
+    const suggestWidget = page.locator(".suggest-widget");
+    const isVisible = await suggestWidget.isVisible({ timeout: 5000 }).catch(() => false);
+    console.log(`Match-property completion widget visible: ${isVisible}`);
+
+    if (isVisible) {
+      const hostOption = page.locator('.suggest-widget [role="option"]:has-text("host")');
+      const hasHost = await hostOption.isVisible({ timeout: 2000 }).catch(() => false);
+      console.log(`'host' offered inside match object: ${hasHost}`);
+      expect(hasHost).toBe(true);
+    }
+
+    await page.keyboard.press("Escape");
+  });
+
+  test("offers handler-specific fields, not match properties, inside a handle object", async ({
+    page,
+  }) => {
+    await page.keyboard.press("Control+n");
+    await waitForEditor(page);
+
+    await page.keyboard.press("Control+k");
+    await page.keyboard.press("m");
+    const langInput = page.locator(".quick-input-box input").first();
+    await langInput.waitFor({ state: "visible", timeout: 3000 });
+    await langInput.fill("JSON");
+    await page.keyboard.press("Enter");
+
+    await page.keyboard.type(
+      '{\n  "match": [{ "host": ["example.com"] }],\n  "handle": [{\n    "handler": "reverse_proxy",\n    "',
+      { delay: 20 }
+    );
+
+    await page.keyboard.press("Control+Space");
+
+    const suggestWidget = page.locator(".suggest-widget");
+    const isVisible = await suggestWidget.isVisible({ timeout: 5000 }).catch(() => false);
+    console.log(`Handler-property completion widget visible: ${isVisible}`);
+
+    if (isVisible) {
+      const upstreamsOption = page.locator('.suggest-widget [role="option"]:has-text("upstreams")');
+      const hasUpstreams = await upstreamsOption.isVisible({ timeout: 2000 }).catch(() => false);
+      console.log(`'upstreams' offered inside reverse_proxy handle object: ${hasUpstreams}`);
+      expect(hasUpstreams).toBe(true);
+
+      const hostOption = page.locator('.suggest-widget [role="option"]:has-text("host")');
+      const hasHost = await hostOption.isVisible({ timeout: 1000 }).catch(() => false);
+      expect(hasHost).toBe(false);
     }
 
     await page.keyboard.press("Escape");

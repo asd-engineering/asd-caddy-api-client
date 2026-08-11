@@ -22,6 +22,9 @@
             },
             "custom_css": {
               "type": "string"
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "additionalProperties": false
@@ -42,6 +45,9 @@
                   },
                   "same_site": {
                     "type": "string"
+                  },
+                  "@id": {
+                    "type": "string"
                   }
                 },
                 "additionalProperties": false
@@ -57,6 +63,9 @@
               "type": "boolean"
             },
             "same_site": {
+              "type": "string"
+            },
+            "@id": {
               "type": "string"
             }
           },
@@ -80,6 +89,9 @@
             "type": "object",
             "additionalProperties": {}
           }
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "required": ["name"],

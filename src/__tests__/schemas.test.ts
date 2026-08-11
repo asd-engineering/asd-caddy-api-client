@@ -275,26 +275,67 @@ import {
   UpstreamSchema,
   ExtendedRouteMatcherSchema,
   ReverseProxyHandlerSchema,
+  CaddyRouteMatcherSchema,
+  CaddyRouteSchema,
 } from "../schemas.js";
 
 describe("CaddyDurationSchema", () => {
   test("validates integer nanoseconds", () => {
     expect(() => CaddyDurationSchema.parse(5000000000)).not.toThrow();
     expect(() => CaddyDurationSchema.parse(0)).not.toThrow();
+    expect(() => CaddyDurationSchema.parse(-1000)).not.toThrow(); // negative nanoseconds
   });
 
-  test("validates Go duration strings", () => {
+  test("validates single unit duration strings", () => {
     expect(() => CaddyDurationSchema.parse("10s")).not.toThrow();
     expect(() => CaddyDurationSchema.parse("1m")).not.toThrow();
     expect(() => CaddyDurationSchema.parse("2h")).not.toThrow();
     expect(() => CaddyDurationSchema.parse("500ms")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("100us")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("100µs")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("50ns")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1d")).not.toThrow();
+  });
+
+  test("validates combined unit duration strings", () => {
+    // From Caddy Go source tests
+    expect(() => CaddyDurationSchema.parse("1h30m")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1d30m")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1m2d")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1m2d30s")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1d2d")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("30s500ms")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("2h45m30s")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1h30m45s100ms")).not.toThrow();
+  });
+
+  test("validates decimal duration values", () => {
     expect(() => CaddyDurationSchema.parse("1.5s")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("1.5d")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("4m1.25d")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("2.5h")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("100.25ms")).not.toThrow();
+  });
+
+  test("validates negative duration strings", () => {
+    expect(() => CaddyDurationSchema.parse("-30s")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("-1h30m")).not.toThrow();
+    expect(() => CaddyDurationSchema.parse("-1.25d12h")).not.toThrow();
+  });
+
+  test("validates zero duration (special case)", () => {
+    // "0" is valid in Go's time.ParseDuration without a unit
+    expect(() => CaddyDurationSchema.parse("0")).not.toThrow();
+    expect(CaddyDurationSchema.parse("0")).toBe("0");
   });
 
   test("rejects invalid duration strings", () => {
     expect(() => CaddyDurationSchema.parse("invalid")).toThrow();
-    expect(() => CaddyDurationSchema.parse("10")).toThrow();
-    expect(() => CaddyDurationSchema.parse("10x")).toThrow();
+    expect(() => CaddyDurationSchema.parse("10")).toThrow(); // missing unit
+    expect(() => CaddyDurationSchema.parse("10x")).toThrow(); // invalid unit
+    expect(() => CaddyDurationSchema.parse("")).toThrow(); // empty
+    expect(() => CaddyDurationSchema.parse("h30m")).toThrow(); // missing number
+    expect(() => CaddyDurationSchema.parse("1w")).toThrow(); // weeks not supported
   });
 });
 
@@ -441,6 +482,17 @@ describe("ExtendedRouteMatcherSchema", () => {
     expect(result.remote_ip?.ranges).toEqual(["1.2.3.4/32"]);
   });
 
+  test("accepts non-standard HTTP methods (regression)", () => {
+    // Real Caddy's method matcher is []string, not an enum -- verified via
+    // `caddy validate` accepting CONNECT/TRACE plus a fully custom method
+    // ("PURGE"). HttpMethodSchema used to be a 7-value z.enum() that would
+    // wrongly reject all three.
+    const result = ExtendedRouteMatcherSchema.parse({
+      method: ["CONNECT", "TRACE", "PURGE"],
+    });
+    expect(result.method).toEqual(["CONNECT", "TRACE", "PURGE"]);
+  });
+
   test("validates regex matchers", () => {
     const result = ExtendedRouteMatcherSchema.parse({
       path_regexp: { name: "api_version", pattern: "^/api/v[0-9]+/" },
@@ -475,6 +527,176 @@ describe("ExtendedRouteMatcherSchema", () => {
 
     expect(result.not).toHaveLength(1);
     expect(result.not?.[0].path).toEqual(["/health", "/metrics"]);
+  });
+
+  test("validates TLS matcher", () => {
+    // Match only completed TLS handshakes
+    const result = ExtendedRouteMatcherSchema.parse({
+      tls: { handshake_complete: true },
+    });
+    expect(result.tls?.handshake_complete).toBe(true);
+
+    // Match early data (0-RTT) requests
+    const earlyData = ExtendedRouteMatcherSchema.parse({
+      tls: { handshake_complete: false },
+    });
+    expect(earlyData.tls?.handshake_complete).toBe(false);
+
+    // Empty TLS matcher (matches any TLS request)
+    const anyTls = ExtendedRouteMatcherSchema.parse({
+      tls: {},
+    });
+    expect(anyTls.tls).toEqual({});
+  });
+
+  test("validates file matcher", () => {
+    // Basic try_files configuration
+    const result = ExtendedRouteMatcherSchema.parse({
+      file: {
+        root: "/var/www",
+        try_files: [
+          "{http.request.uri.path}",
+          "{http.request.uri.path}/index.html",
+          "/fallback.html",
+        ],
+      },
+    });
+    expect(result.file?.root).toBe("/var/www");
+    expect(result.file?.try_files).toHaveLength(3);
+
+    // PHP-style split path
+    const phpConfig = ExtendedRouteMatcherSchema.parse({
+      file: {
+        try_files: ["{http.request.uri.path}", "{http.request.uri.path}/index.php"],
+        split_path: [".php"],
+      },
+    });
+    expect(phpConfig.file?.split_path).toEqual([".php"]);
+
+    // All try_policy options
+    const policies = [
+      "first_exist",
+      "first_exist_fallback",
+      "smallest_size",
+      "largest_size",
+      "most_recently_modified",
+    ] as const;
+    for (const policy of policies) {
+      expect(() =>
+        ExtendedRouteMatcherSchema.parse({
+          file: { try_policy: policy },
+        })
+      ).not.toThrow();
+    }
+  });
+
+  test("rejects invalid file matcher try_policy", () => {
+    expect(() =>
+      ExtendedRouteMatcherSchema.parse({
+        file: { try_policy: "invalid_policy" },
+      })
+    ).toThrow();
+  });
+});
+
+// Regression coverage for CaddyRouteMatcherSchema — the schema actually
+// wired into CaddyRouteSchema.match (used by buildServiceRoutes() and
+// every other route builder), unlike ExtendedRouteMatcherSchema above
+// (equivalent coverage, but never imported/used anywhere in this
+// package). Before this fix, CaddyRouteMatcherSchema only recognized
+// host/path/method/header/query — zod's default "strip" mode meant
+// protocol/remote_ip/client_ip/header_regexp/path_regexp/not/expression
+// weren't rejected, they were silently DROPPED from the parsed result.
+// A route meant to be restricted by e.g. remote_ip would parse
+// successfully but end up with no IP restriction at all. Every shape
+// here is verified against real Caddy via `caddy validate`, not just
+// schema-shape-correct — see the doc comment on CaddyRouteMatcherSchema.
+describe("CaddyRouteMatcherSchema", () => {
+  test("preserves protocol instead of silently dropping it", () => {
+    const result = CaddyRouteMatcherSchema.parse({ protocol: "https" });
+    expect(result.protocol).toBe("https");
+  });
+
+  test("preserves remote_ip instead of silently dropping it", () => {
+    const result = CaddyRouteMatcherSchema.parse({
+      remote_ip: { ranges: ["10.0.0.0/8"] },
+    });
+    expect(result.remote_ip?.ranges).toEqual(["10.0.0.0/8"]);
+  });
+
+  test("preserves client_ip instead of silently dropping it", () => {
+    const result = CaddyRouteMatcherSchema.parse({
+      client_ip: { ranges: ["192.168.0.0/16"] },
+    });
+    expect(result.client_ip?.ranges).toEqual(["192.168.0.0/16"]);
+  });
+
+  test("preserves path_regexp (flat shape, not the tygo-embedding-artifact nested shape)", () => {
+    const result = CaddyRouteMatcherSchema.parse({
+      path_regexp: { name: "api_version", pattern: "^/api/v[0-9]+/" },
+    });
+    expect(result.path_regexp?.pattern).toBe("^/api/v[0-9]+/");
+  });
+
+  test("preserves header_regexp instead of silently dropping it", () => {
+    const result = CaddyRouteMatcherSchema.parse({
+      header_regexp: { "Content-Type": { pattern: "^application/json" } },
+    });
+    expect(result.header_regexp?.["Content-Type"]?.pattern).toBe("^application/json");
+  });
+
+  test("preserves not instead of silently dropping it", () => {
+    const result = CaddyRouteMatcherSchema.parse({
+      not: [{ path: ["/health", "/metrics"] }],
+    });
+    expect(result.not).toEqual([{ path: ["/health", "/metrics"] }]);
+  });
+
+  test("preserves expression instead of silently dropping it", () => {
+    const result = CaddyRouteMatcherSchema.parse({
+      expression: "{http.request.uri.path}.startsWith('/api')",
+    });
+    expect(result.expression).toContain("startsWith");
+  });
+
+  test("rejects protocol wrapped in an array — real Caddy's MatchProtocol is a plain string", () => {
+    // https://github.com/caddyserver/caddy: caddyhttp.MatchProtocol unmarshals
+    // a JSON string, not an array — confirmed via `caddy validate`.
+    expect(() => CaddyRouteMatcherSchema.parse({ protocol: ["https"] })).toThrow();
+  });
+});
+
+describe("CaddyRouteSchema — matcher passthrough", () => {
+  test("a full route with every extended matcher round-trips without data loss", () => {
+    const route = CaddyRouteSchema.parse({
+      "@id": "api-route",
+      match: [
+        {
+          host: ["api.example.com"],
+          path: ["/v1/*"],
+          path_regexp: { pattern: "^/v[0-9]+/" },
+          method: ["GET", "POST"],
+          header: { "X-Api-Key": ["*"] },
+          header_regexp: { "X-Request-Id": { pattern: "^[a-f0-9-]+$" } },
+          query: { debug: ["true"] },
+          client_ip: { ranges: ["192.168.0.0/16"] },
+          remote_ip: { ranges: ["10.0.0.0/8"] },
+          protocol: "https",
+          expression: "header({'X-Test': '1'})",
+          not: [{ path: ["/v1/admin/*"] }],
+        },
+      ],
+      handle: [{ handler: "static_response", body: "ok" }],
+    });
+
+    const match = route.match?.[0];
+    expect(match?.protocol).toBe("https");
+    expect(match?.remote_ip?.ranges).toEqual(["10.0.0.0/8"]);
+    expect(match?.client_ip?.ranges).toEqual(["192.168.0.0/16"]);
+    expect(match?.path_regexp?.pattern).toBe("^/v[0-9]+/");
+    expect(match?.header_regexp?.["X-Request-Id"]?.pattern).toBe("^[a-f0-9-]+$");
+    expect(match?.not).toEqual([{ path: ["/v1/admin/*"] }]);
+    expect(match?.expression).toContain("header(");
   });
 });
 

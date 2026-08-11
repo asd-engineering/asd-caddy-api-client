@@ -41,9 +41,15 @@
             },
             "token_url": {
               "type": "string"
+            },
+            "@id": {
+              "type": "string"
             }
           },
           "additionalProperties": false
+        },
+        "@id": {
+          "type": "string"
         }
       },
       "required": ["name", "kind", "params"],

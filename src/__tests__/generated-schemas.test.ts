@@ -413,22 +413,41 @@ describe("Generated Rewrite Schemas", () => {
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
     });
 
-    test("accepts set operation", () => {
-      const ops = { set: { version: "2", format: "json" } };
+    test("accepts set operation (array of {key, val})", () => {
+      const ops = {
+        set: [
+          { key: "version", val: "2" },
+          { key: "format", val: "json" },
+        ],
+      };
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
     });
 
-    test("accepts add operation", () => {
-      const ops = { add: { tags: ["a", "b"] } };
+    test("accepts add operation (array of {key, val})", () => {
+      const ops = {
+        add: [
+          { key: "tag", val: "a" },
+          { key: "tag", val: "b" },
+        ],
+      };
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
     });
 
-    test("accepts replace operation", () => {
-      const ops = { replace: { category: ["tech", "news"] } };
+    test("accepts replace operation with search", () => {
+      const ops = {
+        replace: [{ key: "category", search: "tech", replace: "technology" }],
+      };
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
     });
 
-    test("accepts rename operation", () => {
+    test("accepts replace operation with search_regexp", () => {
+      const ops = {
+        replace: [{ key: "id", search_regexp: "^\\d+$", replace: "ID-$0" }],
+      };
+      expect(queryOpsSchema.parse(ops)).toEqual(ops);
+    });
+
+    test("accepts rename operation (array of {key, val})", () => {
       const ops = { rename: [{ key: "oldKey", val: "newKey" }] };
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
     });
@@ -436,10 +455,21 @@ describe("Generated Rewrite Schemas", () => {
     test("accepts combined operations", () => {
       const ops = {
         delete: ["debug"],
-        set: { version: "2" },
-        add: { tags: ["new"] },
+        set: [{ key: "version", val: "2" }],
+        add: [{ key: "tag", val: "new" }],
       };
       expect(queryOpsSchema.parse(ops)).toEqual(ops);
+    });
+
+    // Regression guard: tygo approximates `queryOps` (an unexported Go
+    // type) as map-shaped set/add/replace, but real Caddy rejects that --
+    // see the doc comment on queryOpsSchema. A future blind regeneration
+    // from the tygo-generated interface would silently accept this shape
+    // again, which is exactly the bug this test exists to catch.
+    test("rejects the map-shaped form real Caddy rejects", () => {
+      expect(() => queryOpsSchema.parse({ set: { version: "2" } })).toThrow();
+      expect(() => queryOpsSchema.parse({ add: { tag: ["a", "b"] } })).toThrow();
+      expect(() => queryOpsSchema.parse({ replace: { category: ["tech"] } })).toThrow();
     });
   });
 
@@ -489,7 +519,7 @@ describe("Generated Rewrite Schemas", () => {
       const rewrite = {
         query: {
           delete: ["debug"],
-          set: { format: "json" },
+          set: [{ key: "format", val: "json" }],
         },
       };
       expect(rewriteSchema.parse(rewrite)).toEqual(rewrite);
@@ -500,7 +530,7 @@ describe("Generated Rewrite Schemas", () => {
         method: "GET",
         strip_path_prefix: "/api/v1",
         uri_substring: [{ find: "old", replace: "new" }],
-        query: { set: { version: "2" } },
+        query: { set: [{ key: "version", val: "2" }] },
       };
       expect(rewriteSchema.parse(rewrite)).toEqual(rewrite);
     });
@@ -545,6 +575,88 @@ describe("JSON Schema Validation", () => {
       };
 
       expect(validate(validRoute)).toBe(true);
+    });
+
+    test("caddy-route.json rejects a typo'd handler field (regression)", () => {
+      // Regression test: caddy-route.json's `handle` items used to reuse
+      // CaddyRouteHandlerSchema, which is deliberately `.passthrough()` for
+      // the *runtime* npm client's extensibility (see its doc comment in
+      // src/schemas.ts) -- but that meant the editor-facing JSON schema
+      // silently accepted ANY extra/misspelled field on a known handler
+      // (e.g. reverse_proxy's "upstream" instead of "upstreams"). Fixed by
+      // generating this schema from KnownCaddyHandlerSchema's strict
+      // per-handler discriminated union instead (see StrictRouteSchema in
+      // scripts/generate-json-schemas.ts).
+      const ajv = new Ajv({ strict: false, allErrors: true });
+      const schema = JSON.parse(
+        readFileSync(join(schemasDir, "caddy-route.json"), "utf-8")
+      ) as object;
+      const validate = ajv.compile(schema);
+
+      const typoRoute = {
+        match: [{ host: ["example.com"] }],
+        handle: [{ handler: "reverse_proxy", upstream: [{ dial: "localhost:3000" }] }],
+      };
+
+      expect(validate(typoRoute)).toBe(false);
+    });
+
+    test("caddy-route.json allows '@id' at the route level", () => {
+      const ajv = new Ajv({ strict: false, allErrors: true });
+      const schema = JSON.parse(
+        readFileSync(join(schemasDir, "caddy-route.json"), "utf-8")
+      ) as object;
+      const validate = ajv.compile(schema);
+
+      const routeWithId = {
+        "@id": "my-route",
+        match: [{ host: ["example.com"] }],
+        handle: [{ handler: "static_response", body: "Hello" }],
+      };
+
+      expect(validate(routeWithId)).toBe(true);
+    });
+
+    test("caddy-full-config.json allows '@id' on the root, apps.http, servers, and nested routes", () => {
+      // Regression test: "@id" is a Caddy-wide admin-API addressing
+      // convention (stripped before Go struct decoding, so it's not a real
+      // field in any tygo-generated schema) -- caddy-full-config.json's
+      // composed root object didn't declare it, so the JSON schema's
+      // default additionalProperties:false rejected it outright, and its
+      // apps.http.servers.*.routes used the raw tygo-generated Route type
+      // (no "@id", no composed matcher fields) instead of our own
+      // CaddyRouteSchema/StrictRouteSchema.
+      const ajv = new Ajv({ strict: false, allErrors: true });
+      const schema = JSON.parse(
+        readFileSync(join(schemasDir, "caddy-full-config.json"), "utf-8")
+      ) as object;
+      const validate = ajv.compile(schema);
+
+      const fullConfig = {
+        "@id": "myconfig",
+        admin: { listen: "localhost:2019" },
+        apps: {
+          "@id": "myapps",
+          http: {
+            "@id": "myhttp",
+            servers: {
+              srv0: {
+                "@id": "myserver",
+                listen: [":443"],
+                routes: [
+                  {
+                    "@id": "myroute",
+                    match: [{ host: ["example.com"] }],
+                    handle: [{ handler: "static_response", body: "hello" }],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      };
+
+      expect(validate(fullConfig)).toBe(true);
     });
 
     test("caddy-handler.json accepts valid handler", () => {
