@@ -1011,7 +1011,7 @@ test.describe("Validation Error Feedback", () => {
   });
 
   test("security config validation - missing portal name shows error", async ({ page }) => {
-    await openFile(page, "invalid.security.caddy.json");
+    await openFile(page, "invalid.caddy-security.json");
     await waitForEditor(page);
 
     // Wait for diagnostics
@@ -1030,16 +1030,21 @@ test.describe("Validation Error Feedback", () => {
   });
 
   test("valid security config shows no errors", async ({ page }) => {
-    await openFile(page, "valid.security.caddy.json");
+    await openFile(page, "valid.caddy-security.json");
     await waitForEditor(page);
 
     // Wait for diagnostics to settle
     await page.waitForTimeout(1000);
 
-    const errorSquiggles = page.locator(".squiggly-error");
-    const errorCount = await errorSquiggles.count();
-    console.log(`Found ${errorCount} errors in valid security config`);
-    expect(errorCount).toBe(0);
+    // Check both severities: JSON schema `additionalProperties`/`required`
+    // violations render as warnings (yellow squiggle), not errors, in VS
+    // Code's built-in JSON language service — checking .squiggly-error
+    // alone previously let a stale fixture (pre-0.6.0 access_lists/driver
+    // shape) pass this test while actually failing schema validation.
+    const diagnosticSquiggles = page.locator(".squiggly-error, .squiggly-warning");
+    const diagnosticCount = await diagnosticSquiggles.count();
+    console.log(`Found ${diagnosticCount} diagnostics in valid security config`);
+    expect(diagnosticCount).toBe(0);
   });
 });
 

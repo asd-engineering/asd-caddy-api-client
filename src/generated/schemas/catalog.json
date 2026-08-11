@@ -85,25 +85,44 @@
       "name": "caddy-security-portal",
       "description": "caddy-security authentication portal configuration",
       "url": "./caddy-security-portal.json",
-      "fileMatch": ["**/.caddy-security-portal.json", "**/caddy-security-portal.json"]
+      "fileMatch": [
+        "**/.caddy-security-portal.json",
+        "**/caddy-security-portal.json",
+        "**/*.caddy-security-portal.json"
+      ]
     },
     {
       "name": "caddy-security-policy",
       "description": "caddy-security authorization policy (gatekeeper) configuration",
       "url": "./caddy-security-policy.json",
-      "fileMatch": ["**/.caddy-security-policy.json", "**/caddy-security-policy.json"]
+      "fileMatch": [
+        "**/.caddy-security-policy.json",
+        "**/caddy-security-policy.json",
+        "**/*.caddy-security-policy.json"
+      ]
     },
     {
       "name": "caddy-security-config",
       "description": "caddy-security configuration (portals, policies, identity stores)",
       "url": "./caddy-security-config.json",
-      "fileMatch": ["**/.caddy-security.json", "**/caddy-security.json"]
+      "fileMatch": [
+        "**/.caddy-security.json",
+        "**/caddy-security.json",
+        "**/security-config.json",
+        "**/*.caddy-security.json"
+      ]
     },
     {
       "name": "caddy-security-app",
       "description": "Complete caddy-security app configuration for /config/apps/security",
       "url": "./caddy-security-app.json",
       "fileMatch": ["**/security-app.json"]
+    },
+    {
+      "name": "caddy-full-config",
+      "description": "Complete Caddy server configuration (admin, logging, apps: http/tls/security)",
+      "url": "./caddy-full-config.json",
+      "fileMatch": ["**/caddy-server.json", "**/caddy-full.json", "**/*.caddy-server.json"]
     }
   ]
 }

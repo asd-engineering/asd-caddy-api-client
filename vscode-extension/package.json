@@ -60,21 +60,24 @@
         "fileMatch": [
           "**/.caddy-security.json",
           "**/caddy-security.json",
-          "**/security-config.json"
+          "**/security-config.json",
+          "**/*.caddy-security.json"
         ],
         "url": "./schemas/caddy-security-config.json"
       },
       {
         "fileMatch": [
           "**/.caddy-security-portal.json",
-          "**/caddy-security-portal.json"
+          "**/caddy-security-portal.json",
+          "**/*.caddy-security-portal.json"
         ],
         "url": "./schemas/caddy-security-portal.json"
       },
       {
         "fileMatch": [
           "**/.caddy-security-policy.json",
-          "**/caddy-security-policy.json"
+          "**/caddy-security-policy.json",
+          "**/*.caddy-security-policy.json"
         ],
         "url": "./schemas/caddy-security-policy.json"
       }

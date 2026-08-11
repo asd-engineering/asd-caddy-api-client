@@ -1,0 +1,29 @@
+{
+  "authentication_portals": [
+    {
+      "name": "myportal",
+      "identity_stores": ["local"]
+    }
+  ],
+  "authorization_policies": [
+    {
+      "name": "admin-policy",
+      "access_list_rules": [
+        {
+          "conditions": ["match roles admin superuser"],
+          "action": "allow"
+        }
+      ]
+    }
+  ],
+  "identity_stores": [
+    {
+      "name": "local",
+      "kind": "local",
+      "params": {
+        "realm": "local",
+        "path": "/etc/caddy/users.json"
+      }
+    }
+  ]
+}

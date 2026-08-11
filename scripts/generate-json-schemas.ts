@@ -9,6 +9,7 @@
  * Generated output: src/generated/schemas/
  */
 
+import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join, dirname } from "path";
@@ -50,6 +51,13 @@ import {
   SecurityAppSchema,
   IdentityStoreSchema,
 } from "../src/plugins/caddy-security/schemas.js";
+
+// Generated core/app schemas (tygo -> zod, always in sync with real Go
+// source) — composed below into "caddy-full-config" instead of hand-writing
+// a separate, driftable copy of admin/logging/http/tls shapes.
+import { adminConfigSchema, loggingSchema } from "../src/generated/caddy-core.zod.js";
+import { appSchema as HttpAppSchema } from "../src/generated/caddy-http.zod.js";
+import { tlsSchema as TlsAppSchema } from "../src/generated/caddy-tls.zod.js";
 
 // ============================================================================
 // Schema Definitions
@@ -153,25 +161,62 @@ const schemas: SchemaDefinition[] = [
     name: "caddy-security-portal",
     schema: AuthenticationPortalSchema,
     description: "caddy-security authentication portal configuration",
-    fileMatch: ["**/.caddy-security-portal.json", "**/caddy-security-portal.json"],
+    fileMatch: [
+      "**/.caddy-security-portal.json",
+      "**/caddy-security-portal.json",
+      "**/*.caddy-security-portal.json",
+    ],
   },
   {
     name: "caddy-security-policy",
     schema: AuthorizationPolicySchema,
     description: "caddy-security authorization policy (gatekeeper) configuration",
-    fileMatch: ["**/.caddy-security-policy.json", "**/caddy-security-policy.json"],
+    fileMatch: [
+      "**/.caddy-security-policy.json",
+      "**/caddy-security-policy.json",
+      "**/*.caddy-security-policy.json",
+    ],
   },
   {
     name: "caddy-security-config",
     schema: SecurityConfigSchema,
     description: "caddy-security configuration (portals, policies, identity stores)",
-    fileMatch: ["**/.caddy-security.json", "**/caddy-security.json"],
+    fileMatch: [
+      "**/.caddy-security.json",
+      "**/caddy-security.json",
+      "**/security-config.json",
+      "**/*.caddy-security.json",
+    ],
   },
   {
     name: "caddy-security-app",
     schema: SecurityAppSchema,
     description: "Complete caddy-security app configuration for /config/apps/security",
     fileMatch: ["**/security-app.json"],
+  },
+  {
+    name: "caddy-full-config",
+    // Composed entirely from already-generated/already-correct schemas —
+    // admin/logging from the tygo-generated Caddy core types, http/tls from
+    // their respective generated app schemas, security from the
+    // caddy-security plugin's own (Go-source-verified) schema. Previously
+    // this file was hand-written once and never regenerated, drifting
+    // stale relative to real Caddy (e.g. admin was missing `config`,
+    // `identity`, `remote`; the security portion used the pre-0.6.0
+    // `access_lists`/flat-identity-store format).
+    schema: z.object({
+      admin: adminConfigSchema.optional(),
+      logging: loggingSchema.optional(),
+      apps: z
+        .object({
+          http: HttpAppSchema.optional(),
+          tls: TlsAppSchema.optional(),
+          security: SecurityAppSchema.optional(),
+        })
+        .optional(),
+    }),
+    description: "Complete Caddy server configuration (admin, logging, apps: http/tls/security)",
+    fileMatch: ["**/caddy-server.json", "**/caddy-full.json", "**/*.caddy-server.json"],
   },
 ];
 
