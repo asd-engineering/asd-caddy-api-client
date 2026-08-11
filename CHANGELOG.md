@@ -2,6 +2,66 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.10.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.9.0...v0.10.0) (2026-08-12)
+
+Closes the test-coverage gaps identified right after 0.9.0 shipped: several real bugs in that
+release were found only because someone happened to manually review `completion.ts`'s
+context-detection logic by hand, since nothing else exercised it — the vscode-extension's
+Playwright suite can't reliably render VS Code's suggest widget in headless CI, so logic bugs
+there had no automated way to surface. This release applies the same fix (extracting pure logic
+into `vscode`-free modules with direct Vitest coverage, the pattern `completion-data.ts` already
+used) to every other vscode-extension file with the same shape of risk, and adds a completeness
+check for the specific class of bug that made 0.9.0's `queryOps` fix invisible in the editor.
+
+### Added
+
+- **Direct unit test coverage for vscode-extension logic that was previously only reachable
+  through (unreliable) Playwright E2E tests, or not tested at all**:
+  - `diagnostics.ts`'s hand-rolled JSON-Schema validator (`SimpleSchemaValidator`) — previously had
+    **zero** test coverage of any kind, not even E2E. Extracted to `schema-validator.ts`.
+  - `diagnostics.ts`'s JSON-path-to-document-range logic (`findPathRange`/`parseJsonPath`/
+    `escapeRegex`) — extracted to `path-range-finder.ts`, returning plain character offsets instead
+    of `vscode.Range` so it no longer needs a real `vscode.TextDocument` to test.
+  - `completion.ts`'s context-detection logic (`detectContext` and its path-matching helpers) —
+    extracted to `completion-context.ts`. Every test case traces back to a real bug 0.9.0's xhigh
+    code review found in this exact logic (nested `not` matchers, the `protocol` enum leaking into
+    an unrelated field, `selection_policy`/`encodings` keyed by the wrong JSON field, root-property
+    completions firing on any JSON file).
+  - The Route/Security Configuration Wizards' pure config-generation functions — extracted to
+    `route-config-generator.ts` and `security-config-generator.ts`.
+  - 133 new tests total.
+- **`src/__tests__/handler-schema-json-completeness.test.ts`** — diffs every `KnownCaddyHandlerSchema`
+  member's real Zod field set against the generated editor JSON schema's `properties` for that same
+  handler. Catches the specific bug class that made 0.9.0's `queryOps` fix invisible in the editor:
+  the runtime shape was corrected, but the field was never actually added to `RewriteHandlerSchema`
+  itself, so the fix had zero effect on what the editor validated against.
+  `schema-strictness-audit.test.ts` only catches a field becoming too _permissive_; this catches the
+  opposite direction, a field going missing entirely.
+
+### Fixed
+
+- **`diagnostics.ts`'s filename-to-schema matching silently misrouted portal/policy files** —
+  `basename.includes("caddy-security")` was checked before the `portal`/`policy` checks, so a
+  filename like `auth.caddy-security-portal.json` (the exact pattern `package.json`'s own
+  `jsonValidation` contribution maps to the portal schema) also contains the substring
+  `"caddy-security"` and was matched by the wrong, earlier branch — silently validating portal/policy
+  files against the generic security-config schema instead of their own. Found while adding unit
+  tests for this method, which had no coverage before. Reordered so the more specific patterns are
+  checked first.
+- **A dead tautological ternary in the Security Wizard's identity-store generator** —
+  `driver: store.type === "oauth2" || store.type === "oidc" ? store.type : store.type` always
+  evaluated to `store.type` regardless of the condition (harmless in outcome, but confusing dead
+  logic). Simplified to `driver: store.type` while extracting this function for testing.
+
+### Notes
+
+- `vscode-extension/schemas/`, `vscode-extension/snippets/`, and `vscode-extension/LICENSE` are no
+  longer committed to git — all three are pure build output (`copy-schemas`, `generate-snippets`,
+  `copy-license`), regenerated identically by every `npm run build`/`test`/`package` run from
+  `src/generated/schemas/` and the root `LICENSE`. Committing the copies meant every schema/template
+  change had to touch two identical trees to stay in sync. `src/generated/schemas/` stays committed
+  since nothing regenerates it automatically in CI.
+
 ## [0.9.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.8.0...v0.9.0) (2026-08-11)
 
 Bumped from a planned `0.8.1` (dependency/security patch) to `0.9.0`: this release also ships the vscode-extension's first public Marketplace/Open VSX release and editor-side schema _strictness_ changes (e.g. `handle` items are now validated against a strict per-handler union, so a previously-silently-accepted typo like `upstream` instead of `upstreams` is now flagged) — both are new, user-facing behavior beyond what a patch version should carry.
