@@ -911,6 +911,19 @@
                             "type": "string"
                           }
                         },
+                        "path_regexp": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "pattern": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["pattern"],
+                          "additionalProperties": false
+                        },
                         "method": {
                           "type": "array",
                           "items": {
@@ -927,6 +940,29 @@
                             }
                           }
                         },
+                        "header_regexp": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "pattern": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["pattern"],
+                                "additionalProperties": false
+                              },
+                              {
+                                "not": {}
+                              }
+                            ]
+                          }
+                        },
                         "query": {
                           "type": "object",
                           "additionalProperties": {
@@ -935,6 +971,43 @@
                               "type": "string"
                             }
                           }
+                        },
+                        "client_ip": {
+                          "type": "object",
+                          "properties": {
+                            "ranges": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "remote_ip": {
+                          "type": "object",
+                          "properties": {
+                            "ranges": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "protocol": {
+                          "type": "string"
+                        },
+                        "not": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          }
+                        },
+                        "expression": {
+                          "type": "string"
                         }
                       },
                       "additionalProperties": false

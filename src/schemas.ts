@@ -47,6 +47,12 @@ export {
   adminConfigSchema,
   loggingSchema,
 } from "./caddy-types.js";
+import {
+  matchProtocolSchema,
+  httpMatchRemoteIpSchema as matchRemoteIpSchema,
+  matchClientIpSchema,
+  matchHeaderReSchema,
+} from "./caddy-types.js";
 
 // ============================================================================
 // Basic Schemas
@@ -170,14 +176,56 @@ export const MatchQuerySchema = z.record(z.string(), z.array(z.string()));
 export const MatchHeaderSchema = z.record(z.string(), z.array(z.string()));
 
 /**
- * Caddy route matcher schema
+ * Caddy route matcher schema — covers every `http.matchers.*` module.
+ *
+ * `protocol`, `remote_ip`, `client_ip`, and `header_regexp` are the real,
+ * correctly tygo-generated `matchProtocolSchema`/`matchRemoteIpSchema`/
+ * `matchClientIpSchema`/`matchHeaderReSchema` from `caddy-http.zod.ts` —
+ * composed here, not duplicated by hand.
+ *
+ * `not`, `expression`, and `path_regexp` are hand-overridden (not composed
+ * from the generated `matchNotSchema`/`matchExpressionSchema`/
+ * `matchPathReSchema`) because all three have custom JSON marshaling or
+ * anonymous Go struct embedding that tygo's naive extraction gets wrong —
+ * verified against real Caddy via `caddy validate`, not just inferred from
+ * the generated struct shape:
+ * - `not` (`http.matchers.not`, Go type `MatchNot`) is an array of matcher
+ *   sets (each an object keyed by matcher name); the generated
+ *   `matchNotSchema` is `z.object({})` (empty), reflecting Go's empty
+ *   interface rather than the true custom-unmarshaled shape.
+ * - `expression` (`http.matchers.expression`, Go type `MatchExpression`)
+ *   is a plain CEL string; the generated `matchExpressionSchema` is
+ *   `z.object({ expr, name })`, reflecting misleading Go struct fields —
+ *   the doc comment explicitly says "this matcher's JSON interface is
+ *   actually a string, not a struct".
+ * - `path_regexp` (`http.matchers.path_regexp`, Go type `MatchPathRE`)
+ *   flattens to `{ name?, pattern }` directly; the generated
+ *   `matchPathReSchema` wraps it as `{ MatchRegexp: { name?, pattern } }`
+ *   — an anonymous-embedding artifact (same class of bug as
+ *   `caddy-dns/route53`'s wrapper, see `DEPENDENCIES.md`) — Caddy rejects
+ *   the nested form with `json: unknown field "MatchRegexp"`.
+ * If any of these three Go types' custom marshaling/embedding ever
+ * changes, tygo/zod-to-json-schema won't catch it — re-verify with
+ * `caddy validate` before trusting a regen here.
  */
 export const CaddyRouteMatcherSchema = z.object({
   host: z.array(z.string()).optional(),
   path: z.array(z.string()).optional(),
+  path_regexp: z
+    .object({
+      name: z.string().optional(),
+      pattern: z.string(),
+    })
+    .optional(),
   method: z.array(HttpMethodSchema).optional(),
   header: MatchHeaderSchema.optional(),
+  header_regexp: matchHeaderReSchema.optional(),
   query: MatchQuerySchema.optional(),
+  client_ip: matchClientIpSchema.optional(),
+  remote_ip: matchRemoteIpSchema.optional(),
+  protocol: matchProtocolSchema.optional(),
+  not: z.array(z.record(z.string(), z.unknown())).optional(),
+  expression: z.string().optional(),
 });
 
 /**
@@ -544,6 +592,24 @@ export const HeaderRegexpSchema = z.object({
 
 /**
  * Base route matcher schema (non-recursive fields)
+ *
+ * KNOWN DUPLICATION (flagged, not yet resolved): this schema and
+ * {@link ExtendedRouteMatcherSchema} below duplicate {@link
+ * CaddyRouteMatcherSchema} above — both now cover the same full matcher
+ * set (host/path/path_regexp/method/header/header_regexp/query/
+ * client_ip/remote_ip/protocol/not/expression), verified independently
+ * against real Caddy. `CaddyRouteMatcherSchema` is the one actually wired
+ * into `CaddyRouteSchema.match` (used by every route builder);
+ * `ExtendedRouteMatcherSchema` has zero internal usages (confirmed via
+ * repo-wide search) — it appears to be an earlier, more-complete attempt
+ * at this same schema that was never wired in, which is exactly how
+ * `CaddyRouteMatcherSchema` was able to silently drop protocol/remote_ip/
+ * etc. for so long: the "more correct" version existed but nothing
+ * pointed at it. Two independently hand-maintained schemas for the same
+ * concept is itself a drift risk — consider aliasing this to
+ * `CaddyRouteMatcherSchema` (non-breaking: `ExtendedRouteMatcherSchema`
+ * is a public export, so keep the name, just stop re-deriving the shape)
+ * in a follow-up.
  */
 const BaseRouteMatcherSchema = z.object({
   /** Match by hostname */

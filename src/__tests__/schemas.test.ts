@@ -275,6 +275,8 @@ import {
   UpstreamSchema,
   ExtendedRouteMatcherSchema,
   ReverseProxyHandlerSchema,
+  CaddyRouteMatcherSchema,
+  CaddyRouteSchema,
 } from "../schemas.js";
 
 describe("CaddyDurationSchema", () => {
@@ -475,6 +477,107 @@ describe("ExtendedRouteMatcherSchema", () => {
 
     expect(result.not).toHaveLength(1);
     expect(result.not?.[0].path).toEqual(["/health", "/metrics"]);
+  });
+});
+
+// Regression coverage for CaddyRouteMatcherSchema — the schema actually
+// wired into CaddyRouteSchema.match (used by buildServiceRoutes() and
+// every other route builder), unlike ExtendedRouteMatcherSchema above
+// (equivalent coverage, but never imported/used anywhere in this
+// package). Before this fix, CaddyRouteMatcherSchema only recognized
+// host/path/method/header/query — zod's default "strip" mode meant
+// protocol/remote_ip/client_ip/header_regexp/path_regexp/not/expression
+// weren't rejected, they were silently DROPPED from the parsed result.
+// A route meant to be restricted by e.g. remote_ip would parse
+// successfully but end up with no IP restriction at all. Every shape
+// here is verified against real Caddy via `caddy validate`, not just
+// schema-shape-correct — see the doc comment on CaddyRouteMatcherSchema.
+describe("CaddyRouteMatcherSchema", () => {
+  test("preserves protocol instead of silently dropping it", () => {
+    const result = CaddyRouteMatcherSchema.parse({ protocol: "https" });
+    expect(result.protocol).toBe("https");
+  });
+
+  test("preserves remote_ip instead of silently dropping it", () => {
+    const result = CaddyRouteMatcherSchema.parse({
+      remote_ip: { ranges: ["10.0.0.0/8"] },
+    });
+    expect(result.remote_ip?.ranges).toEqual(["10.0.0.0/8"]);
+  });
+
+  test("preserves client_ip instead of silently dropping it", () => {
+    const result = CaddyRouteMatcherSchema.parse({
+      client_ip: { ranges: ["192.168.0.0/16"] },
+    });
+    expect(result.client_ip?.ranges).toEqual(["192.168.0.0/16"]);
+  });
+
+  test("preserves path_regexp (flat shape, not the tygo-embedding-artifact nested shape)", () => {
+    const result = CaddyRouteMatcherSchema.parse({
+      path_regexp: { name: "api_version", pattern: "^/api/v[0-9]+/" },
+    });
+    expect(result.path_regexp?.pattern).toBe("^/api/v[0-9]+/");
+  });
+
+  test("preserves header_regexp instead of silently dropping it", () => {
+    const result = CaddyRouteMatcherSchema.parse({
+      header_regexp: { "Content-Type": { pattern: "^application/json" } },
+    });
+    expect(result.header_regexp?.["Content-Type"]?.pattern).toBe("^application/json");
+  });
+
+  test("preserves not instead of silently dropping it", () => {
+    const result = CaddyRouteMatcherSchema.parse({
+      not: [{ path: ["/health", "/metrics"] }],
+    });
+    expect(result.not).toEqual([{ path: ["/health", "/metrics"] }]);
+  });
+
+  test("preserves expression instead of silently dropping it", () => {
+    const result = CaddyRouteMatcherSchema.parse({
+      expression: "{http.request.uri.path}.startsWith('/api')",
+    });
+    expect(result.expression).toContain("startsWith");
+  });
+
+  test("rejects protocol wrapped in an array — real Caddy's MatchProtocol is a plain string", () => {
+    // https://github.com/caddyserver/caddy: caddyhttp.MatchProtocol unmarshals
+    // a JSON string, not an array — confirmed via `caddy validate`.
+    expect(() => CaddyRouteMatcherSchema.parse({ protocol: ["https"] })).toThrow();
+  });
+});
+
+describe("CaddyRouteSchema — matcher passthrough", () => {
+  test("a full route with every extended matcher round-trips without data loss", () => {
+    const route = CaddyRouteSchema.parse({
+      "@id": "api-route",
+      match: [
+        {
+          host: ["api.example.com"],
+          path: ["/v1/*"],
+          path_regexp: { pattern: "^/v[0-9]+/" },
+          method: ["GET", "POST"],
+          header: { "X-Api-Key": ["*"] },
+          header_regexp: { "X-Request-Id": { pattern: "^[a-f0-9-]+$" } },
+          query: { debug: ["true"] },
+          client_ip: { ranges: ["192.168.0.0/16"] },
+          remote_ip: { ranges: ["10.0.0.0/8"] },
+          protocol: "https",
+          expression: "header({'X-Test': '1'})",
+          not: [{ path: ["/v1/admin/*"] }],
+        },
+      ],
+      handle: [{ handler: "static_response", body: "ok" }],
+    });
+
+    const match = route.match?.[0];
+    expect(match?.protocol).toBe("https");
+    expect(match?.remote_ip?.ranges).toEqual(["10.0.0.0/8"]);
+    expect(match?.client_ip?.ranges).toEqual(["192.168.0.0/16"]);
+    expect(match?.path_regexp?.pattern).toBe("^/v[0-9]+/");
+    expect(match?.header_regexp?.["X-Request-Id"]?.pattern).toBe("^[a-f0-9-]+$");
+    expect(match?.not).toEqual([{ path: ["/v1/admin/*"] }]);
+    expect(match?.expression).toContain("header(");
   });
 });
 
