@@ -18,79 +18,15 @@ import {
   BUILDER_METADATA,
   type HandlerMetadata,
 } from "@accelerated-software-development/caddy-api-client/extension-assets";
+import {
+  ROUTE_PROPERTIES,
+  MATCH_PROPERTIES,
+  HANDLE_OBJECT_PROPERTIES,
+  HTTP_METHODS,
+  ENUM_VALUES,
+} from "./completion-data";
 
 const CADDY_DOCS_BASE = "https://caddyserver.com";
-
-// ============================================================================
-// Completion Data
-// ============================================================================
-
-/** Root-level route properties */
-const ROUTE_PROPERTIES: Array<{ name: string; description: string }> = [
-  { name: "@id", description: "Unique identifier for this route (used for API operations)" },
-  { name: "match", description: "Array of matchers that determine when this route applies" },
-  { name: "handle", description: "Array of handlers to execute when route matches" },
-  { name: "terminal", description: "If true, no more routes will be evaluated after this one" },
-  { name: "priority", description: "Route evaluation order (lower values = higher priority)" },
-];
-
-/** Match object properties */
-const MATCH_PROPERTIES: Array<{ name: string; description: string }> = [
-  { name: "host", description: "Match requests by hostname(s)" },
-  { name: "path", description: "Match requests by path pattern(s)" },
-  { name: "method", description: "Match requests by HTTP method(s)" },
-  { name: "header", description: "Match requests by header value(s)" },
-  { name: "query", description: "Match requests by query parameter(s)" },
-  { name: "protocol", description: "Match requests by protocol (http, https, grpc)" },
-  { name: "remote_ip", description: "Match requests by client IP address" },
-  { name: "not", description: "Negate the enclosed matchers" },
-  { name: "expression", description: "CEL expression for advanced matching" },
-];
-
-/** Properties of an object inside the `handle` array, before its `handler` type is known */
-const HANDLE_OBJECT_PROPERTIES: Array<{ name: string; description: string }> = [
-  {
-    name: "handler",
-    description: "The type of handler to invoke (e.g. reverse_proxy, headers, file_server)",
-  },
-];
-
-/** HTTP methods for method matcher */
-const HTTP_METHODS = [
-  "GET",
-  "POST",
-  "PUT",
-  "PATCH",
-  "DELETE",
-  "HEAD",
-  "OPTIONS",
-  "CONNECT",
-  "TRACE",
-];
-
-/** Enum values for known fields */
-const ENUM_VALUES: Record<string, Array<{ value: string; description: string }>> = {
-  selection_policy: [
-    { value: "first", description: "Use first available upstream" },
-    { value: "random", description: "Randomly select an upstream" },
-    { value: "least_conn", description: "Select upstream with fewest connections" },
-    { value: "round_robin", description: "Cycle through upstreams in order" },
-    { value: "ip_hash", description: "Hash client IP for sticky sessions" },
-    { value: "uri_hash", description: "Hash request URI for consistent routing" },
-    { value: "header", description: "Hash a specific header value" },
-    { value: "cookie", description: "Use cookie value for upstream selection" },
-  ],
-  encodings: [
-    { value: "gzip", description: "Gzip compression (widely supported)" },
-    { value: "zstd", description: "Zstandard compression (fast, high ratio)" },
-    { value: "br", description: "Brotli compression (best for text)" },
-  ],
-  protocol: [
-    { value: "http", description: "HTTP/1.x requests" },
-    { value: "https", description: "HTTPS requests" },
-    { value: "grpc", description: "gRPC requests" },
-  ],
-};
 
 // ============================================================================
 // Completion Context Types
@@ -367,12 +303,24 @@ export class CaddyCompletionProvider implements vscode.CompletionItemProvider {
       // Create appropriate snippet based on property type
       if (prop.name === "host" || prop.name === "path") {
         item.insertText = new vscode.SnippetString(`"${prop.name}": ["$1"]`);
+      } else if (prop.name === "path_regexp") {
+        item.insertText = new vscode.SnippetString('"path_regexp": {\n  "pattern": "$1"\n}');
       } else if (prop.name === "method") {
         item.insertText = new vscode.SnippetString(
           '"method": ["${1|GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS|}"]'
         );
       } else if (prop.name === "header" || prop.name === "query") {
         item.insertText = new vscode.SnippetString(`"${prop.name}": {\n  "$1": ["$2"]\n}`);
+      } else if (prop.name === "header_regexp") {
+        item.insertText = new vscode.SnippetString(
+          '"header_regexp": {\n  "$1": { "pattern": "$2" }\n}'
+        );
+      } else if (prop.name === "client_ip" || prop.name === "remote_ip") {
+        item.insertText = new vscode.SnippetString(`"${prop.name}": {\n  "ranges": ["$1"]\n}`);
+      } else if (prop.name === "tls") {
+        item.insertText = new vscode.SnippetString(
+          '"tls": {\n  "handshake_complete": ${1|true,false|}\n}'
+        );
       } else if (prop.name === "not") {
         item.insertText = new vscode.SnippetString('"not": [{\n  $0\n}]');
       } else {
