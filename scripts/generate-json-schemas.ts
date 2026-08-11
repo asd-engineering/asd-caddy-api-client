@@ -56,8 +56,45 @@ import {
 // source) — composed below into "caddy-full-config" instead of hand-writing
 // a separate, driftable copy of admin/logging/http/tls shapes.
 import { adminConfigSchema, loggingSchema } from "../src/generated/caddy-core.zod.js";
-import { appSchema as HttpAppSchema } from "../src/generated/caddy-http.zod.js";
+import { appSchema as HttpAppSchema, serverSchema } from "../src/generated/caddy-http.zod.js";
 import { tlsSchema as TlsAppSchema } from "../src/generated/caddy-tls.zod.js";
+
+// `@id` is a Caddy-wide JSON convention (admin API object addressing,
+// stripped before Go struct decoding) -- it isn't a real Go struct field,
+// so tygo/zod-to-json-schema generated schemas never allow it, and
+// zod-to-json-schema's default `additionalProperties: false` then rejects
+// it outright. CaddyRouteSchema (src/schemas.ts) already declares it
+// explicitly; the raw generated server/app schemas below don't. Compose a
+// route-aware server/http-app schema for the full-config file so nested
+// routes in a server config get both "@id" support and the same
+// hand-composed matcher fields (tls/protocol/etc, see
+// CaddyRouteMatcherSchema's doc comment) that a standalone
+// route.caddy.json already gets -- instead of falling back to the raw
+// tygo-generated Route type, which has neither.
+// CaddyRouteSchema.handle intentionally keeps CaddyRouteHandlerSchema's
+// `.passthrough()` shape (see its doc comment in src/schemas.ts): the
+// *runtime* npm client must accept legitimate third-party/custom Caddy
+// handler modules it hasn't modeled, so it only requires `handler` to be a
+// string. For the editor-time schema below, that tradeoff is backwards --
+// the whole point of editor validation is catching typos (e.g. reverse_proxy's
+// "upstream" vs "upstreams"), so `handle` items are swapped for the strict
+// per-handler discriminated union (KnownCaddyHandlerSchema) instead. This
+// does mean a genuinely valid but unmodeled handler module gets flagged in
+// the editor -- an acceptable, standard trade-off for typed editor tooling
+// (same as e.g. a Kubernetes CRD schema rejecting fields it doesn't know).
+const StrictRouteSchema = CaddyRouteSchema.extend({
+  handle: z.array(KnownCaddyHandlerSchema).min(1, "Route must have at least one handler"),
+});
+
+const FullConfigServerSchema = serverSchema.omit({ routes: true, named_routes: true }).extend({
+  "@id": z.string().optional(),
+  routes: z.array(StrictRouteSchema).optional(),
+  named_routes: z.record(z.string(), StrictRouteSchema).optional(),
+});
+const FullConfigHttpAppSchema = HttpAppSchema.omit({ servers: true }).extend({
+  "@id": z.string().optional(),
+  servers: z.record(z.string(), FullConfigServerSchema).optional(),
+});
 
 // ============================================================================
 // Schema Definitions
@@ -74,7 +111,7 @@ const schemas: SchemaDefinition[] = [
   // Core Caddy schemas
   {
     name: "caddy-route",
-    schema: CaddyRouteSchema,
+    schema: StrictRouteSchema,
     description: "Caddy HTTP route configuration",
     fileMatch: ["**/caddy-route.json", "**/*.caddy-route.json"],
   },
@@ -205,11 +242,13 @@ const schemas: SchemaDefinition[] = [
     // `identity`, `remote`; the security portion used the pre-0.6.0
     // `access_lists`/flat-identity-store format).
     schema: z.object({
+      "@id": z.string().optional(),
       admin: adminConfigSchema.optional(),
       logging: loggingSchema.optional(),
       apps: z
         .object({
-          http: HttpAppSchema.optional(),
+          "@id": z.string().optional(),
+          http: FullConfigHttpAppSchema.optional(),
           tls: TlsAppSchema.optional(),
           security: SecurityAppSchema.optional(),
         })

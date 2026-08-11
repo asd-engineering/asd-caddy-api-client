@@ -577,6 +577,88 @@ describe("JSON Schema Validation", () => {
       expect(validate(validRoute)).toBe(true);
     });
 
+    test("caddy-route.json rejects a typo'd handler field (regression)", () => {
+      // Regression test: caddy-route.json's `handle` items used to reuse
+      // CaddyRouteHandlerSchema, which is deliberately `.passthrough()` for
+      // the *runtime* npm client's extensibility (see its doc comment in
+      // src/schemas.ts) -- but that meant the editor-facing JSON schema
+      // silently accepted ANY extra/misspelled field on a known handler
+      // (e.g. reverse_proxy's "upstream" instead of "upstreams"). Fixed by
+      // generating this schema from KnownCaddyHandlerSchema's strict
+      // per-handler discriminated union instead (see StrictRouteSchema in
+      // scripts/generate-json-schemas.ts).
+      const ajv = new Ajv({ strict: false, allErrors: true });
+      const schema = JSON.parse(
+        readFileSync(join(schemasDir, "caddy-route.json"), "utf-8")
+      ) as object;
+      const validate = ajv.compile(schema);
+
+      const typoRoute = {
+        match: [{ host: ["example.com"] }],
+        handle: [{ handler: "reverse_proxy", upstream: [{ dial: "localhost:3000" }] }],
+      };
+
+      expect(validate(typoRoute)).toBe(false);
+    });
+
+    test("caddy-route.json allows '@id' at the route level", () => {
+      const ajv = new Ajv({ strict: false, allErrors: true });
+      const schema = JSON.parse(
+        readFileSync(join(schemasDir, "caddy-route.json"), "utf-8")
+      ) as object;
+      const validate = ajv.compile(schema);
+
+      const routeWithId = {
+        "@id": "my-route",
+        match: [{ host: ["example.com"] }],
+        handle: [{ handler: "static_response", body: "Hello" }],
+      };
+
+      expect(validate(routeWithId)).toBe(true);
+    });
+
+    test("caddy-full-config.json allows '@id' on the root, apps.http, servers, and nested routes", () => {
+      // Regression test: "@id" is a Caddy-wide admin-API addressing
+      // convention (stripped before Go struct decoding, so it's not a real
+      // field in any tygo-generated schema) -- caddy-full-config.json's
+      // composed root object didn't declare it, so the JSON schema's
+      // default additionalProperties:false rejected it outright, and its
+      // apps.http.servers.*.routes used the raw tygo-generated Route type
+      // (no "@id", no composed matcher fields) instead of our own
+      // CaddyRouteSchema/StrictRouteSchema.
+      const ajv = new Ajv({ strict: false, allErrors: true });
+      const schema = JSON.parse(
+        readFileSync(join(schemasDir, "caddy-full-config.json"), "utf-8")
+      ) as object;
+      const validate = ajv.compile(schema);
+
+      const fullConfig = {
+        "@id": "myconfig",
+        admin: { listen: "localhost:2019" },
+        apps: {
+          "@id": "myapps",
+          http: {
+            "@id": "myhttp",
+            servers: {
+              srv0: {
+                "@id": "myserver",
+                listen: [":443"],
+                routes: [
+                  {
+                    "@id": "myroute",
+                    match: [{ host: ["example.com"] }],
+                    handle: [{ handler: "static_response", body: "hello" }],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      };
+
+      expect(validate(fullConfig)).toBe(true);
+    });
+
     test("caddy-handler.json accepts valid handler", () => {
       const ajv = new Ajv({ strict: false, allErrors: true });
       const schema = JSON.parse(

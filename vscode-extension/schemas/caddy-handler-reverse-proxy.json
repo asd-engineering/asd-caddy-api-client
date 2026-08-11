@@ -64,7 +64,11 @@
                 },
                 {
                   "type": "string",
-                  "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+                  "const": "0"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
                 }
               ]
             },
@@ -75,7 +79,11 @@
                 },
                 {
                   "type": "string",
-                  "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+                  "const": "0"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
                 }
               ]
             }
@@ -118,7 +126,11 @@
                     },
                     {
                       "type": "string",
-                      "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+                      "const": "0"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
                     }
                   ]
                 },
@@ -129,7 +141,11 @@
                     },
                     {
                       "type": "string",
-                      "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+                      "const": "0"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
                     }
                   ]
                 },
@@ -166,7 +182,11 @@
                     },
                     {
                       "type": "string",
-                      "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+                      "const": "0"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
                     }
                   ]
                 },
@@ -193,7 +213,11 @@
                     },
                     {
                       "type": "string",
-                      "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+                      "const": "0"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
                     }
                   ]
                 }
@@ -213,6 +237,26 @@
           "required": ["protocol"],
           "additionalProperties": true
         },
+        "circuit_breaker": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": true
+        },
+        "dynamic_upstreams": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": ["source"],
+          "additionalProperties": true
+        },
         "flush_interval": {
           "anyOf": [
             {
@@ -220,9 +264,49 @@
             },
             {
               "type": "string",
-              "pattern": "^\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d)$"
+              "const": "0"
+            },
+            {
+              "type": "string",
+              "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
             }
           ]
+        },
+        "stream_timeout": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string",
+              "const": "0"
+            },
+            {
+              "type": "string",
+              "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
+            }
+          ]
+        },
+        "stream_close_delay": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string",
+              "const": "0"
+            },
+            {
+              "type": "string",
+              "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
+            }
+          ]
+        },
+        "trusted_proxies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "request_buffers": {
           "type": "integer",
@@ -297,6 +381,48 @@
             }
           },
           "additionalProperties": false
+        },
+        "rewrite": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string"
+            },
+            "strip_path_prefix": {
+              "type": "string"
+            },
+            "strip_path_suffix": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "handle_response": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "match": {
+                "type": "object",
+                "properties": {
+                  "status_code": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "additionalProperties": true
+              },
+              "routes": {
+                "type": "array"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "verbose_logs": {
+          "type": "boolean"
         }
       },
       "required": ["handler"],

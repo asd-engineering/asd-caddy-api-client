@@ -108,6 +108,15 @@
         "protocol": {
           "type": "string"
         },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "handshake_complete": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
         "not": {
           "type": "array",
           "items": {
