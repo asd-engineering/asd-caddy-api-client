@@ -2,6 +2,13 @@
 dist/
 out/
 *.vsix
+# Generated at build time (`npm run build`: copy-schemas/generate-snippets) --
+# mirrored from src/generated/schemas/ and src/plugins/caddy-security/templates.ts
+# respectively, never hand-edited. Committing them meant every schema/template
+# change had to touch two identical copies to stay in sync.
+schemas/
+snippets/
+LICENSE
 
 # Test artifacts
 test-results/

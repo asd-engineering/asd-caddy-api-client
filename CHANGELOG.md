@@ -2,7 +2,9 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [0.8.1](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.8.0...v0.8.1) (2026-08-11)
+## [0.9.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.8.0...v0.9.0) (2026-08-11)
+
+Bumped from a planned `0.8.1` (dependency/security patch) to `0.9.0`: this release also ships the vscode-extension's first public Marketplace/Open VSX release and editor-side schema _strictness_ changes (e.g. `handle` items are now validated against a strict per-handler union, so a previously-silently-accepted typo like `upstream` instead of `upstreams` is now flagged) — both are new, user-facing behavior beyond what a patch version should carry.
 
 ### Security
 

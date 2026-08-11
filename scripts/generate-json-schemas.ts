@@ -269,7 +269,7 @@ const schemas: SchemaDefinition[] = [
  * tygo/zod-to-json-schema-generated schema ever includes it on its own.
  *
  * Hand-adding "@id" wherever we happen to notice it's missing is exactly
- * how it went missing in the first place (see the 0.8.1 changelog entry
+ * how it went missing in the first place (see the 0.9.0 changelog entry
  * for caddy-server.json). Instead, walk every generated schema after the
  * fact and add it to every strict (additionalProperties:false) object node
  * -- new schemas get this automatically, with nothing to remember.

@@ -6,7 +6,7 @@
  * `src/caddy/acme.ts` (which only builds the wrapper shape and treats
  * `providerConfig` as an opaque passthrough).
  *
- * As of 0.8.1, these types are sourced from real vendored Go source (not
+ * As of 0.9.0, these types are sourced from real vendored Go source (not
  * READMEs) via the same tygo pipeline `caddy-security` uses — see
  * `DEPENDENCIES.md`'s "DNS Provider Plugins" section for exact
  * versions/commits, and `src/generated/plugins/caddy-dns-*.ts` for the

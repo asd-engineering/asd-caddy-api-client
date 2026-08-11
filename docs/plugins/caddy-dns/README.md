@@ -118,7 +118,7 @@ buildRoute53DnsConfig({ hosted_zone_id: "Z1D633PJN98FT9", region: "us-east-1" })
 
 ## Version History
 
-### 0.8.1 (Current)
+### 0.9.0 (Current)
 
 - Switched from README-verified hand-written types to a real-Go-source pipeline: 6 new
   `local/` checkouts (`libdns-porkbun`, `libdns-cloudflare`, `libdns-route53`,
@@ -138,7 +138,7 @@ buildRoute53DnsConfig({ hosted_zone_id: "Z1D633PJN98FT9", region: "us-east-1" })
 - Initial typed integration: 5 providers (porkbun, cloudflare, route53, digitalocean,
   godaddy), closing the "Scope tension" noted in v0.7.1's `CHANGELOG.md`. Field names
   verified against each plugin's own GitHub README/source (superseded by the real
-  vendored-Go-source pipeline in 0.8.1).
+  vendored-Go-source pipeline in 0.9.0).
 
 ## Notes
 

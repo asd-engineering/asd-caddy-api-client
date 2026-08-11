@@ -207,6 +207,7 @@ async function generateSnippets() {
   // Write snippet files
   // ============================================================================
   const snippetsDir = path.join(__dirname, "../snippets");
+  fs.mkdirSync(snippetsDir, { recursive: true });
 
   fs.writeFileSync(
     path.join(snippetsDir, "caddy-builders.json"),

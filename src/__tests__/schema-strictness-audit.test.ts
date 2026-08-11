@@ -5,7 +5,7 @@
  * Born from a real bug: caddy-route.json's `handle` items were fully
  * permissive (any extra/misspelled field silently accepted), which meant
  * a typo like "upstream" instead of "upstreams" produced no warning at
- * all in the editor (see the 0.8.1 changelog entry). That was found by a
+ * all in the editor (see the 0.9.0 changelog entry). That was found by a
  * human manually testing the extension, not by any automated check.
  *
  * This test can't tell us whether a *new* permissive spot is a real gap
