@@ -249,7 +249,7 @@ export interface AutomationPolicy {
   disable_ocsp_stapling?: boolean;
   /**
    * Overrides the URLs of OCSP responders embedded in certificates.
-   * Each key is a OCSP server URL to override, and its value is the
+   * Each key is an OCSP server URL to override, and its value is the
    * replacement. An empty value will disable querying of that server.
    * EXPERIMENTAL. Subject to change.
    */
@@ -395,6 +395,11 @@ export type ConfigSetter = any;
  */
 export type CA = any;
 /**
+ * CertificateProvider is an optional interface that CA pool sources
+ * can implement to expose their underlying certificates for combining.
+ */
+export type CertificateProvider = any;
+/**
  * InlineCAPool is a certificate authority pool provider coming from
  * a DER-encoded certificates in the config
  */
@@ -454,7 +459,6 @@ export interface StoragePool {
 /**
  * TLSConfig holds configuration related to the TLS configuration for the
  * transport/client.
- * copied from with minor modifications: modules/caddyhttp/reverseproxy/httptransport.go
  */
 export interface TLSConfig {
   /**
@@ -507,6 +511,24 @@ export interface HTTPCertPool {
    * Customize the TLS connection knobs to used during the HTTP call
    */
   tls?: TLSConfig;
+}
+/**
+ * SystemCAPool obtains the trusted root certificates from the system's
+ * certificate pool using x509.SystemCertPool()
+ */
+export interface SystemCAPool {}
+/**
+ * The `combined` pool type merges multiple pools. The `sources` pools must implement the
+ * `CertificateProvider` interface, which allows them to export their certificate set.
+ * Note: SystemCAPool does not implement CertificateProvider because
+ * x509.SystemCertPool() doesn't expose its certificates, so it cannot
+ * be used as a source in CombinedCAPool.
+ */
+export interface CombinedCAPool {
+  /**
+   * The CA pool sources to combine. Each source is a CA pool provider module.
+   */
+  sources?: unknown[];
 }
 
 //////////

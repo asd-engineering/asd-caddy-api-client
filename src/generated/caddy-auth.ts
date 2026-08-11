@@ -99,6 +99,11 @@ export interface BcryptHash {}
  * `{http.auth.user.id}` will be set to the username, and also
  * `{http.auth.user.*}` placeholders may be set for any authentication
  * modules that provide user metadata.
+ * If authentication is rejected but a provider returns user information,
+ * the placeholder `{http.auth.candidate.id}` will be set to the candidate
+ * username, and also `{http.auth.candidate.*}` placeholders may be set
+ * for candidate user metadata. Candidate placeholders do not represent a
+ * successfully authenticated principal.
  * In case of an error, the placeholder `{http.auth.<provider>.error}`
  * will be set to the error message returned by the authentication
  * provider.

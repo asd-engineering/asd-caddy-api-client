@@ -37,6 +37,8 @@ export const selectorSchema = z.any();
 
 export const upstreamSourceSchema = z.any();
 
+export const cachingUpstreamSourceSchema = upstreamSourceSchema;
+
 export const dialErrorSchema = z.object({});
 
 export const tlsTransportSchema = z.any();
@@ -232,6 +234,7 @@ export const handlerSchema = z.object({
   request_buffers: z.number().optional(),
   response_buffers: z.number().optional(),
   stream_timeout: durationSchema.optional(),
+  stream_buffer_size: z.number().optional(),
   stream_close_delay: durationSchema.optional(),
   rewrite: rewriteSchema.optional(),
   handle_response: z.array(responseHandlerSchema).optional(),

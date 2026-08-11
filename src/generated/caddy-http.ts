@@ -34,6 +34,7 @@ import type { ConnectionPolicies } from "./caddy-tls";
  * `{http.request.orig_uri.path.dir}` | The request's original directory
  * `{http.request.orig_uri.path.file}` | The request's original filename
  * `{http.request.orig_uri.query}` | The request's original query string (without `?`)
+ * `{http.request.orig_uri.prefixed_query}` | The request's original query string with a `?` prefix, if non-empty
  * `{http.request.port}` | The port part of the request's Host header
  * `{http.request.proto}` | The protocol of the request
  * `{http.request.local.host}` | The host (IP) part of the local address the connection arrived on
@@ -63,11 +64,15 @@ import type { ConnectionPolicies } from "./caddy-tls";
  * `{http.request.tls.client.san.ips.*}` | SAN IP addresses (index optional)
  * `{http.request.tls.client.san.uris.*}` | SAN URIs (index optional)
  * `{http.request.uri}` | The full request URI
+ * `{http.request.uri_escaped}` | The full request URI with query-style URL encoding applied (using url.QueryEscape)
  * `{http.request.uri.path}` | The path component of the request URI
+ * `{http.request.uri.path_escaped}` | The path component of the request URI with query-style URL encoding applied (using url.QueryEscape)
  * `{http.request.uri.path.*}` | Parts of the path, split by `/` (0-based from left)
  * `{http.request.uri.path.dir}` | The directory, excluding leaf filename
  * `{http.request.uri.path.file}` | The filename of the path, excluding directory
  * `{http.request.uri.query}` | The query string (without `?`)
+ * `{http.request.uri.query_escaped}` | The query string with query-style URL encoding applied (using url.QueryEscape)
+ * `{http.request.uri.prefixed_query}` | The query string with a `?` prefix, if non-empty
  * `{http.request.uri.query.*}` | Individual query string value
  * `{http.response.header.*}` | Specific response header field
  * `{http.vars.*}` | Custom variables in the HTTP handler chain
@@ -541,17 +546,12 @@ export interface LoggableHTTPRequest {
 }
 /**
  * LoggableHTTPHeader makes an HTTP header loggable with zap.Object().
- * Headers with potentially sensitive information (Cookie, Set-Cookie,
- * Authorization, and Proxy-Authorization) are logged with empty values.
  */
-export interface LoggableHTTPHeader {
-  Header: Record<string, string[]>;
-  ShouldLogCredentials: boolean;
-}
+export type LoggableHTTPHeader = any /* internal.LoggableHTTPHeader */;
 /**
  * LoggableStringArray makes a slice of strings marshalable for logging.
  */
-export type LoggableStringArray = string[];
+export type LoggableStringArray = any /* internal.LoggableStringArray */;
 /**
  * LoggableTLSConnState makes a TLS connection state loggable with zap.Object().
  */
@@ -815,6 +815,16 @@ export interface Metrics {
    * for production environments exposed to the internet).
    */
   observe_catchall_hosts?: boolean;
+  /**
+   * Enable pushing metrics via OTLP in addition to the existing Prometheus
+   * scrape endpoints. When set, a PeriodicReader is attached to the shared
+   * Prometheus registry (via a Prometheus -> OpenTelemetry bridge), and the
+   * exporter is autoconfigured from the standard OTEL_* environment
+   * variables (OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_PROTOCOL,
+   * OTEL_METRICS_EXPORTER, ...). Set OTEL_METRICS_EXPORTER=none or simply
+   * keep this field false to disable OTLP export.
+   */
+  otlp?: boolean;
 }
 
 //////////

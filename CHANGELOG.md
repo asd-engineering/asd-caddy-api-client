@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.8.1](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.8.0...v0.8.1) (2026-08-11)
+
+### Security
+
+- **Caddy upgraded from v2.11.2 to v2.11.4** — includes 2 upstream fixes: `GHSA-vcc4-2c75-vc9v` (templates XSS via `stripHTML`) and `GHSA-j8px-rmrx-76h9` (rewrite handler placeholder re-expansion disclosure). Both are logic-only fixes with no JSON schema impact.
+- **caddy-security upgraded from v1.1.59 to v1.1.64** (pulling in go-authcrunch v1.1.35 → v1.1.41) — caddy-security's own exported struct shape is unchanged (zero `json:"..."` tag diffs), but go-authcrunch's range is security-dense: OAuth JWT issuer/audience validation, signature verification before claim merge, constant-time nonce comparison, OAuth state-manager memory bounding, session-cache race fix, authz bypass/path hardening, cookie-domain fix, trusted-redirect hardening. Adds 3 new optional fields in `pkg/idp/oauth` (`issuer`, `pkce_disabled`, `access_token_audience`).
+
+### Added
+
+- **`src/plugins/caddy-dns/` now sourced from real vendored Go source, not READMEs** — matching `caddy-security`'s own tygo pipeline. Added 6 new `local/` checkouts (`libdns-porkbun`, `libdns-cloudflare`, `libdns-route53`, `libdns-digitalocean`, `libdns-godaddy`, `caddy-dns-route53`) generating `src/generated/plugins/caddy-dns-*.ts`/`.zod.ts` — see `DEPENDENCIES.md`'s "DNS Provider Plugins" section for exact versions/commits and the "Adding a Provider" recipe.
+- This surfaced two real gaps the README-based 0.8.0 types missed:
+  - **`buildCloudflareDnsConfig()`**'s schema now includes an optional `zone_token` field (real, from `libdns/cloudflare`'s `Provider.ZoneToken`) — needed when `api_token` is scoped to a single zone (Zone.DNS:Write only) and a separate account-wide Zone:Read token is required to resolve the zone ID. No signature change; purely additive schema support.
+  - **`buildRoute53DnsConfig(options?)`** — route53 actually supports a full optional `providerConfig` (10 real fields from `libdns/route53`: `region`, `profile`, `access_key_id`, `secret_access_key`, `session_token`, `max_retries`, `route53_max_wait`, `wait_for_route53_sync`, `skip_route53_sync_on_delete`, `hosted_zone_id`; plus `debug_logging` from the `caddy-dns/route53` wrapper itself) that 0.8.0 didn't expose at all. The zero-arg call keeps its exact prior behavior (`{ envVars: [...] }`, no `providerConfig`, AWS SDK default credential chain) — passing any `options` now builds a typed, validated `providerConfig` instead. Not a breaking change: the new parameter is optional and additive.
+
+### Notes
+
+- Tygo's known comment-merging artifact (first documented in `[0.6.0]`) recurred across this bump — turns a struct field's trailing Go doc comment into a malformed `//` line comment that swallows the next field's `/**` opener, producing a real TypeScript syntax error, not just a cosmetic issue. Hit in `caddy-auth.ts`, `caddy-reverseproxy.ts`, `caddy-tls.ts` (from the Caddy bump) and `caddy-dns-route53-libdns.ts` (from the new DNS provider generation) — all fixed by hand. Always run `npm run typecheck` immediately after any `generate:types`/`generate:plugin-types` run, before trusting the output.
+- A Caddy-internal refactor moved `LoggableHTTPHeader`/`LoggableStringArray` into an unexported `internal` package that `resolve-cross-refs.ts` can't follow — `caddy-http.ts` now carries a benign `⚠ Unresolved` warning for those two (logging-only) types, degrading to `any`. Not fixed; not worth chasing for two internal logging types.
+- `caddy-dns-digitalocean.ts` and `caddy-dns-route53-wrapper.ts`'s generated `Provider` interfaces each carry one spurious field (`Client`, and the cross-module `Provider` embed respectively) from tygo's handling of Go's anonymous struct embedding — hand-excluded via `.omit()`/hand-picked fields in `src/plugins/caddy-dns/{types,schemas}.ts` rather than blindly re-exported. See the doc comments there for exactly what's excluded and why.
+
 ## [0.8.0](https://github.com/asd-engineering/asd-caddy-api-client/compare/v0.7.1...v0.8.0) (2026-08-11)
 
 ### Added

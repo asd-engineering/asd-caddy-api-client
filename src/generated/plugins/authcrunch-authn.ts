@@ -126,10 +126,16 @@ export interface PortalConfig {
 // source: handle_api_list_users.go
 
 //////////
+// source: handle_api_profile.go
+
+//////////
 // source: handle_api_realm_info.go
 
 //////////
 // source: handle_api_reload_realm.go
+
+//////////
+// source: handle_api_system.go
 
 //////////
 // source: handle_http_apps_sso.go

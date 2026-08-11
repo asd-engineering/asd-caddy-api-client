@@ -4,6 +4,7 @@ import { z } from "zod";
 export const metricsSchema = z.object({
   per_host: z.boolean().optional(),
   observe_catchall_hosts: z.boolean().optional(),
+  otlp: z.boolean().optional(),
 });
 
 export const autoHttpsConfigSchema = z.object({
@@ -76,12 +77,9 @@ export const loggableHttpRequestSchema = z.object({
   ShouldLogCredentials: z.boolean(),
 });
 
-export const loggableHttpHeaderSchema = z.object({
-  Header: z.record(z.string(), z.array(z.string())),
-  ShouldLogCredentials: z.boolean(),
-});
+export const loggableHttpHeaderSchema = z.any();
 
-export const loggableStringArraySchema = z.array(z.string());
+export const loggableStringArraySchema = z.any();
 
 export const loggableTlsConnStateSchema = z.unknown();
 

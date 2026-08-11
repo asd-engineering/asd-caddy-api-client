@@ -624,6 +624,13 @@ export interface Handler {
    */
   stream_timeout?: Duration;
   /**
+   * The size of the buffer used for each direction of streaming
+   * requests such as WebSockets. If zero, the default size is 32 KiB.
+   * This only affects upgraded bidirectional streams, not normal
+   * request or response buffering.
+   */
+  stream_buffer_size?: number /* int */;
+  /**
    * If nonzero, streaming requests such as WebSockets will not be
    * closed when the proxy config is unloaded, and instead the stream
    * will remain open until the delay is complete. In other words,
@@ -703,13 +710,15 @@ export interface LoadBalancing {
    */
   try_interval?: Duration;
   /**
-   * A list of matcher sets that restricts with which requests retries are
-   * allowed. A request must match any of the given matcher sets in order
-   * to be retried if the connection to the upstream succeeded but the
-   * subsequent round-trip failed. If the connection to the upstream failed,
-   * a retry is always allowed. If unspecified, only GET requests will be
-   * allowed to be retried. Note that a retry is done with the next available
-   * host according to the load balancing policy.
+   * A list of matcher sets that controls retry behavior. Matcher sets
+   * without expression matchers (e.g. method, path) restrict which
+   * requests are retried on transport errors - if unspecified, only
+   * GET requests will be retried. Matcher sets with CEL expression
+   * matchers are evaluated against upstream responses and can
+   * reference {rp.status_code}, {rp.header.*}, and
+   * {rp.is_transport_error}. Dial errors are always retried
+   * regardless of this setting. Retries use the next available
+   * upstream per the load balancing policy
    */
   retry_match?: RawMatcherSets;
 }
@@ -728,8 +737,18 @@ export type Selector = any;
  * may be called during each retry, multiple times per request, and as
  * such, needs to be instantaneous. The returned slice will not be
  * modified.
+ * For upstream sources that cache results, implement the
+ * [CachingUpstreamSource] interface for optimal performance.
  */
 export type UpstreamSource = any;
+/**
+ * CachingUpstreamSource is an upstream source that caches its upstreams.
+ * The relevant cache entry can be cleared/reset for a given request during
+ * retries if a request fails. This can help ensure that failing backends
+ * are not retried.
+ * EXPERIMENTAL: Subject to change.
+ */
+export type CachingUpstreamSource = UpstreamSource;
 /**
  * DialError is an error that specifically occurs
  * in a call to Dial or DialContext.

@@ -3,6 +3,9 @@
 import type { LoginIcon } from "./authcrunch-icons";
 
 //////////
+// source: authenticate_setup.go
+
+//////////
 // source: browser.go
 
 //////////
@@ -23,6 +26,7 @@ export interface Config {
   client_secret?: string;
   server_id?: string;
   server_name?: string;
+  issuer?: string;
   app_secret?: string;
   tenant_id?: string;
   /**
@@ -74,6 +78,7 @@ export interface Config {
   response_type_disabled?: boolean;
   nonce_disabled?: boolean;
   scope_disabled?: boolean;
+  pkce_disabled?: boolean;
   accept_header_enabled?: boolean;
   js_callback_enabled?: boolean;
   /**
@@ -89,6 +94,7 @@ export interface Config {
   authorization_url?: string;
   token_url?: string;
   required_token_fields?: string[];
+  access_token_audience?: string;
   tls_insecure_skip_verify?: boolean;
   /**
    * The predefined public RSA based JWKS keys.

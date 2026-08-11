@@ -6,14 +6,15 @@
  * to be set for it — ready to drop into
  * {@link buildAcmeDnsPolicy}`.providerConfig` (see `../../caddy/acme.ts`).
  *
- * `providerConfig` field names were confirmed against each plugin's own
- * README/source on 2026-08-11 — re-verify before relying on them if a
- * plugin has since changed its config shape:
- * - `caddy-dns/porkbun`: https://github.com/caddy-dns/porkbun
- * - `caddy-dns/cloudflare`: https://github.com/caddy-dns/cloudflare
- * - `caddy-dns/route53`: https://github.com/caddy-dns/route53
- * - `caddy-dns/digitalocean`: https://github.com/caddy-dns/digitalocean
- * - `caddy-dns/godaddy`: https://github.com/caddy-dns/godaddy
+ * `providerConfig` field names are sourced from real vendored Go source (not
+ * READMEs) as of 0.8.1, via the same tygo pipeline `caddy-security` uses —
+ * see `DEPENDENCIES.md`'s "DNS Provider Plugins" section for exact
+ * versions/commits:
+ * - `caddy-dns/porkbun` → `github.com/libdns/porkbun`
+ * - `caddy-dns/cloudflare` → `github.com/libdns/cloudflare`
+ * - `caddy-dns/route53` → `github.com/libdns/route53` + `github.com/caddy-dns/route53`
+ * - `caddy-dns/digitalocean` → `github.com/libdns/digitalocean`
+ * - `caddy-dns/godaddy` → `github.com/libdns/godaddy`
  */
 import { resolveAcmeDnsProviderModule } from "../../caddy/acme.js";
 import { validateOrThrow } from "../../utils/validation.js";
@@ -22,8 +23,9 @@ import {
   CloudflareDnsProviderConfigSchema,
   DigitaloceanDnsProviderConfigSchema,
   GodaddyDnsProviderConfigSchema,
+  Route53DnsProviderConfigSchema,
 } from "./schemas.js";
-import type { AcmeDnsProviderConfigResult } from "./types.js";
+import type { AcmeDnsProviderConfigResult, Route53DnsProviderConfig } from "./types.js";
 
 /**
  * Build the `caddy-dns/porkbun` provider config.
@@ -69,17 +71,39 @@ export function buildCloudflareDnsConfig(): AcmeDnsProviderConfigResult {
 /**
  * Build the `caddy-dns/route53` config.
  *
- * `caddy-dns/route53` reads credentials via the AWS Go SDK v2's own
- * default credential chain (env vars, shared profile, or IAM role) — it
- * does not take a `providerConfig` at all, so `providerConfig` is omitted
- * here rather than reimplementing that resolution.
+ * Called with no `options` (the default), `caddy-dns/route53` reads
+ * credentials via the AWS Go SDK v2's own default credential chain (env
+ * vars, shared profile, or IAM role) — `providerConfig` is omitted rather
+ * than reimplementing that resolution, exactly as before 0.8.1.
+ *
+ * The plugin also supports an explicit typed `providerConfig` (real,
+ * verified Go source — see {@link Route53DnsProviderConfig}) for callers
+ * who want it instead of relying on ambient credentials: pass any subset of
+ * fields via `options` and they're returned as `providerConfig`.
  *
  * @example
  * buildRoute53DnsConfig()
  * // => { envVars: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"] }
+ *
+ * @example
+ * buildRoute53DnsConfig({ hosted_zone_id: "Z1D633PJN98FT9", region: "us-east-1" })
+ * // => { providerConfig: { hosted_zone_id: "Z1D633PJN98FT9", region: "us-east-1" }, envVars: [...] }
  */
-export function buildRoute53DnsConfig(): AcmeDnsProviderConfigResult {
-  return { envVars: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"] };
+export function buildRoute53DnsConfig(
+  options?: Route53DnsProviderConfig
+): AcmeDnsProviderConfigResult {
+  const envVars = ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"];
+  if (!options || Object.keys(options).length === 0) {
+    return { envVars };
+  }
+  return {
+    providerConfig: validateOrThrow(
+      Route53DnsProviderConfigSchema,
+      options,
+      "buildRoute53DnsConfig"
+    ),
+    envVars,
+  };
 }
 
 /**
