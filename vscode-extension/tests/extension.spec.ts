@@ -1226,6 +1226,7 @@ test.describe("Schema-Aware IntelliSense", () => {
       const hostOption = page.locator('.suggest-widget [role="option"]:has-text("host")');
       const hasHost = await hostOption.isVisible({ timeout: 2000 }).catch(() => false);
       console.log(`'host' offered inside match object: ${hasHost}`);
+      expect(hasHost).toBe(true);
     }
 
     await page.keyboard.press("Escape");
@@ -1259,6 +1260,7 @@ test.describe("Schema-Aware IntelliSense", () => {
       const upstreamsOption = page.locator('.suggest-widget [role="option"]:has-text("upstreams")');
       const hasUpstreams = await upstreamsOption.isVisible({ timeout: 2000 }).catch(() => false);
       console.log(`'upstreams' offered inside reverse_proxy handle object: ${hasUpstreams}`);
+      expect(hasUpstreams).toBe(true);
 
       const hostOption = page.locator('.suggest-widget [role="option"]:has-text("host")');
       const hasHost = await hostOption.isVisible({ timeout: 1000 }).catch(() => false);

@@ -104,10 +104,24 @@ export default async function globalSetup() {
   // --install-extension failure is swallowed by the catch below, so the
   // extension never installs and every diagnostics-dependent test times out
   // waiting for squiggles that can never appear.
+  // Compares `name-1.2.3.vsix` filenames by numeric semver, not lexicographically
+  // -- a plain string sort ranks "...-0.1.10.vsix" below "...-0.1.9.vsix" (the
+  // character '1' < '9'), which would pick a stale build over a newer one
+  // whenever a version segment's digit count changes.
+  const compareVsixVersions = (a: string, b: string): number => {
+    const parse = (f: string): number[] =>
+      (f.match(/(\d+)\.(\d+)\.(\d+)/)?.slice(1) ?? ["0", "0", "0"]).map(Number);
+    const [aParts, bParts] = [parse(a), parse(b)];
+    for (let i = 0; i < 3; i++) {
+      if (aParts[i] !== bParts[i]) return aParts[i] - bParts[i];
+    }
+    return 0;
+  };
+
   const findLatestVsix = (): string | null => {
     const dir = path.join(__dirname, "..");
     const vsixFiles = fs.readdirSync(dir).filter((f) => f.endsWith(".vsix"));
-    return vsixFiles.length > 0 ? path.join(dir, vsixFiles.sort().pop()!) : null;
+    return vsixFiles.length > 0 ? path.join(dir, vsixFiles.sort(compareVsixVersions).pop()!) : null;
   };
 
   let extensionVsix = findLatestVsix();

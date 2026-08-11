@@ -32,6 +32,7 @@ export const MATCH_PROPERTIES: Array<{ name: string; description: string }> = [
   { name: "client_ip", description: "Match requests by client IP address" },
   { name: "remote_ip", description: "Match requests by remote IP address" },
   { name: "tls", description: "Match requests by TLS connection state" },
+  { name: "file", description: "Match requests by file existence on disk" },
   { name: "not", description: "Negate the enclosed matchers" },
   { name: "expression", description: "CEL expression for advanced matching" },
 ];

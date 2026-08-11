@@ -10,8 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **First published release** — this and all prior versions (`0.1.0`–`0.1.5`) were built and packaged locally only (`.vsix` files checked into this directory) and never actually published to the Visual Studio Marketplace or Open VSX. This release adds the publish pipeline (`.github/workflows/release-vscode.yml`) and is the first version publicly installable from either registry.
+- Autocomplete for `path_regexp`, `header_regexp`, `client_ip`, `remote_ip`, `tls`, `not`, and `expression` matcher fields, and for the `CONNECT`/`TRACE` HTTP methods — previously offered no completions at all.
 
-No functional changes to the extension itself since `0.1.5` — see that entry below for the last feature set.
+### Fixed
+
+- **Completion provider rewritten** to use `jsonc-parser` (the same library VS Code's own JSON language service uses) for exact JSON-path tracking, replacing whole-document bracket/brace counting. That counting approach stayed "inside match"/"inside handler" for the rest of the document once any array anywhere was still open — nearly always true past the first few lines — so it regularly offered wrong-context suggestions (e.g. matcher fields inside an unrelated handler's nested object) and produced malformed double-quoted inserts.
+- `caddy-server.json` no longer rejects `@id` — it's a Caddy-wide admin-API addressing convention stripped before Go struct decoding, so it never appeared in any generated schema; now declared explicitly at every level (root, `apps.http`, each server, nested routes).
+- Typo'd handler fields (e.g. `upstream` instead of `upstreams`) are now flagged instead of silently accepted, since `handle` items validate against the strict per-handler schema rather than a permissive passthrough one.
+- The `method` matcher no longer rejects non-standard HTTP methods (e.g. `CONNECT`, `TRACE`, or a custom verb) — real Caddy accepts any string there.
 
 ## [0.1.5] - 2025-01-21
 

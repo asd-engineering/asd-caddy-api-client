@@ -1,6 +1,6 @@
 # Caddy Configuration Tools
 
-[![Version](https://img.shields.io/badge/version-0.1.5-blue.svg)](https://github.com/asd-engineering/asd-caddy-api-client)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/asd-engineering/asd-caddy-api-client)
 [![VS Code](https://img.shields.io/badge/VS%20Code-1.85+-blue.svg)](https://code.visualstudio.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -16,14 +16,14 @@ Full-featured IntelliSense, validation, and snippets for [Caddy](https://caddyse
 
 Context-aware completions that understand where you are in your configuration:
 
-| Context                          | Completions                                                     |
-| -------------------------------- | --------------------------------------------------------------- |
-| Route object `{ \| }`            | `@id`, `match`, `handle`, `terminal`, `priority`                |
-| Match object `"match": [{ \| }]` | `host`, `path`, `method`, `header`, `query`, `protocol`         |
-| Method array `"method": ["\|"]`  | `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`      |
-| Handler type `"handler": "\|"`   | All 21 Caddy handlers with documentation                        |
-| Inside handler                   | Handler-specific fields (e.g., `upstreams` for `reverse_proxy`) |
-| Enum fields                      | `selection_policy`, `encodings`, `protocol` values              |
+| Context                          | Completions                                                                                                                                   |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Route object `{ \| }`            | `@id`, `match`, `handle`, `terminal`, `priority`                                                                                              |
+| Match object `"match": [{ \| }]` | `host`, `path`, `path_regexp`, `method`, `header`, `header_regexp`, `query`, `protocol`, `client_ip`, `remote_ip`, `tls`, `not`, `expression` |
+| Method array `"method": ["\|"]`  | `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `CONNECT`, `TRACE`                                                                |
+| Handler type `"handler": "\|"`   | All 21 Caddy handlers with documentation                                                                                                      |
+| Inside handler                   | Handler-specific fields (e.g., `upstreams` for `reverse_proxy`)                                                                               |
+| Enum fields                      | `selection_policy`, `encodings`/`prefer`, `protocol` values                                                                                   |
 
 ### JSON Schema Validation
 

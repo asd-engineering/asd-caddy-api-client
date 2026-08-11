@@ -177,10 +177,11 @@ export const MatchHeaderSchema = z.record(z.string(), z.array(z.string()));
 
 /**
  * Caddy route matcher schema — covers every `http.matchers.*` module
- * except `vars_regexp` (internal Caddy variable matching) and `file`
- * (`http.matchers.file`, generated in `caddy-fileserver.ts` rather than
+ * except `vars_regexp` (internal Caddy variable matching). `file`
+ * (`http.matchers.file`) is generated in `caddy-fileserver.ts` rather than
  * `caddy-http.ts` — see `matcher-schema-consistency.test.ts`'s
- * `NON_MATCHER_HELPER_TYPES`/scope note; not yet tracked by that test).
+ * `NON_MATCHER_HELPER_TYPES`/scope note — but is composed here from the
+ * real generated `matchFileSchema`, same as the other matchers below.
  *
  * `protocol`, `remote_ip`, `client_ip`, `header_regexp`, and `tls` are the
  * real, correctly tygo-generated `matchProtocolSchema`/
@@ -230,6 +231,7 @@ export const CaddyRouteMatcherSchema = z.object({
   remote_ip: matchRemoteIpSchema.optional(),
   protocol: matchProtocolSchema.optional(),
   tls: matchTlsSchema.optional(),
+  file: matchFileSchema.optional(),
   not: z.array(z.record(z.string(), z.unknown())).optional(),
   expression: z.string().optional(),
 });
@@ -671,8 +673,13 @@ const BaseRouteMatcherSchema = z.object({
       ranges: z.array(z.string()),
     })
     .optional(),
-  /** Match by protocol (http, https, grpc) */
-  protocol: z.enum(["http", "https", "grpc"]).optional(),
+  /**
+   * Match by protocol. Real Caddy's `MatchProtocol` is a string, not an
+   * enum -- it also accepts "http/1.1", "http/2", "http/3", "http/2+", etc
+   * (see `matchProtocolSchema` / `HttpMethodSchema`'s doc comment for the
+   * same over-restriction bug class).
+   */
+  protocol: matchProtocolSchema.optional(),
   /** CEL expression matcher */
   expression: z.string().optional(),
   /** Match by TLS connection state */
@@ -947,6 +954,7 @@ export const RewriteHandlerSchema = z.object({
       })
     )
     .optional(),
+  query: queryOpsSchema.optional(),
 });
 
 /**
@@ -978,7 +986,8 @@ export const EncodeHandlerSchema = z.object({
 // Generated Handler Schemas (from Caddy Go source via tygo + ts-to-zod)
 // ============================================================================
 
-import { fileServerSchema } from "./generated/caddy-fileserver.zod.js";
+import { fileServerSchema, matchFileSchema } from "./generated/caddy-fileserver.zod.js";
+import { queryOpsSchema } from "./generated/caddy-rewrite.zod.js";
 import { templatesSchema } from "./generated/caddy-templates.zod.js";
 import { handlerSchema as mapHandlerBaseSchema } from "./generated/caddy-map.zod.js";
 import { handlerSchema as pushHandlerBaseSchema } from "./generated/caddy-push.zod.js";

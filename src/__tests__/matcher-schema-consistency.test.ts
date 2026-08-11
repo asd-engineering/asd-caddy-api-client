@@ -26,6 +26,10 @@ import { CaddyRouteMatcherSchema } from "../schemas.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const GENERATED_HTTP_TYPES_PATH = join(__dirname, "../generated/caddy-http.ts");
+// `http.matchers.file` is generated here rather than caddy-http.ts (see
+// CaddyRouteMatcherSchema's doc comment in ../schemas.ts) -- scanned
+// separately so this test's drift-detection covers it too.
+const GENERATED_FILESERVER_TYPES_PATH = join(__dirname, "../generated/caddy-fileserver.ts");
 
 /**
  * Go type names that are declared `export interface Match*`/`export type
@@ -53,6 +57,7 @@ const GO_TYPE_TO_JSON_KEY: Record<string, string> = {
   MatchNot: "not",
   MatchExpression: "expression",
   MatchTLS: "tls",
+  MatchFile: "file",
   // Acknowledged gap: real Caddy matcher not yet supported by
   // CaddyRouteMatcherSchema (internal Caddy variable matching, lower
   // priority, not offered by the vscode extension's completion provider
@@ -62,10 +67,17 @@ const GO_TYPE_TO_JSON_KEY: Record<string, string> = {
   MatchVarsRE: "vars_regexp",
 };
 
-function extractRealMatcherTypeNames(): string[] {
-  const source = readFileSync(GENERATED_HTTP_TYPES_PATH, "utf8");
+function extractMatcherTypeNamesFrom(path: string): string[] {
+  const source = readFileSync(path, "utf8");
   const matches = source.matchAll(/^export (?:interface|type) (Match[A-Z][a-zA-Z]*)\b/gm);
   return [...matches].map((m) => m[1]).filter((name) => !NON_MATCHER_HELPER_TYPES.has(name));
+}
+
+function extractRealMatcherTypeNames(): string[] {
+  return [
+    ...extractMatcherTypeNamesFrom(GENERATED_HTTP_TYPES_PATH),
+    ...extractMatcherTypeNamesFrom(GENERATED_FILESERVER_TYPES_PATH),
+  ];
 }
 
 describe("CaddyRouteMatcherSchema stays in sync with real Caddy matchers", () => {
