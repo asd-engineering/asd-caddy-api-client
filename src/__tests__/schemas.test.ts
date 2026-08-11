@@ -482,6 +482,17 @@ describe("ExtendedRouteMatcherSchema", () => {
     expect(result.remote_ip?.ranges).toEqual(["1.2.3.4/32"]);
   });
 
+  test("accepts non-standard HTTP methods (regression)", () => {
+    // Real Caddy's method matcher is []string, not an enum -- verified via
+    // `caddy validate` accepting CONNECT/TRACE plus a fully custom method
+    // ("PURGE"). HttpMethodSchema used to be a 7-value z.enum() that would
+    // wrongly reject all three.
+    const result = ExtendedRouteMatcherSchema.parse({
+      method: ["CONNECT", "TRACE", "PURGE"],
+    });
+    expect(result.method).toEqual(["CONNECT", "TRACE", "PURGE"]);
+  });
+
   test("validates regex matchers", () => {
     const result = ExtendedRouteMatcherSchema.parse({
       path_regexp: { name: "api_version", pattern: "^/api/v[0-9]+/" },

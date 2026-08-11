@@ -105,17 +105,16 @@ export const DialAddressSchema = z
   .regex(/^.+:\d+$/, "Dial address must be in host:port format");
 
 /**
- * HTTP method schema
+ * HTTP method schema, for Caddy's method matcher (`match.method`).
+ *
+ * Real Caddy's `MatchMethod` is `[]string` -- genuinely unrestricted, not
+ * an enum of standard methods. Verified via `caddy validate`: a matcher
+ * with `"method": ["CONNECT", "TRACE", "PURGE"]` (two methods this schema
+ * used to reject, plus a fully custom/nonstandard one) validates
+ * successfully. A stricter enum here would wrongly reject legitimate
+ * configs matching on CONNECT/TRACE or a custom verb.
  */
-export const HttpMethodSchema = z.enum([
-  "GET",
-  "POST",
-  "PUT",
-  "PATCH",
-  "DELETE",
-  "HEAD",
-  "OPTIONS",
-]);
+export const HttpMethodSchema = z.string();
 
 /**
  * Frame options schema

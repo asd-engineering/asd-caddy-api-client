@@ -47,8 +47,7 @@
               "method": {
                 "type": "array",
                 "items": {
-                  "type": "string",
-                  "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+                  "type": "string"
                 }
               },
               "header": {
@@ -1321,16 +1320,7 @@
                               "method": {
                                 "type": "array",
                                 "items": {
-                                  "type": "string",
-                                  "enum": [
-                                    "GET",
-                                    "POST",
-                                    "PUT",
-                                    "PATCH",
-                                    "DELETE",
-                                    "HEAD",
-                                    "OPTIONS"
-                                  ]
+                                  "type": "string"
                                 }
                               },
                               "header": {

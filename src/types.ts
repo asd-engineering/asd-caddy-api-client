@@ -34,9 +34,22 @@ export type Domain = string;
 export type DialAddress = string;
 
 /**
- * HTTP method
+ * HTTP method for Caddy's method matcher. Not a closed set -- real Caddy's
+ * MatchMethod accepts any string (see HttpMethodSchema in schemas.ts for
+ * the caddy-validate verification) -- so this keeps IDE autocomplete for
+ * the common methods via `(string & {})` while still accepting any string.
  */
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
+export type HttpMethod =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE"
+  | "HEAD"
+  | "OPTIONS"
+  | "CONNECT"
+  | "TRACE"
+  | (string & {});
 
 /**
  * Frame options for X-Frame-Options header
