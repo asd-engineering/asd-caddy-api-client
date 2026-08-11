@@ -29,13 +29,44 @@ describe("buildCloudflareDnsConfig", () => {
       envVars: ["CLOUDFLARE_API_TOKEN"],
     });
   });
+
+  test("does not set the optional zone_token by default", () => {
+    const { providerConfig } = buildCloudflareDnsConfig();
+    expect(providerConfig).not.toHaveProperty("zone_token");
+  });
 });
 
 describe("buildRoute53DnsConfig", () => {
-  test("omits providerConfig — route53 uses the AWS SDK's own credential chain", () => {
+  test("omits providerConfig when called with no options — route53 uses the AWS SDK's own credential chain", () => {
     const result = buildRoute53DnsConfig();
     expect(result.providerConfig).toBeUndefined();
     expect(result.envVars).toEqual(["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"]);
+  });
+
+  test("omits providerConfig when called with an empty options object", () => {
+    const result = buildRoute53DnsConfig({});
+    expect(result.providerConfig).toBeUndefined();
+  });
+
+  test("builds a typed providerConfig when options are supplied", () => {
+    const result = buildRoute53DnsConfig({
+      hosted_zone_id: "Z1D633PJN98FT9",
+      region: "us-east-1",
+    });
+    expect(result.providerConfig).toEqual({
+      hosted_zone_id: "Z1D633PJN98FT9",
+      region: "us-east-1",
+    });
+    expect(result.envVars).toEqual(["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"]);
+  });
+
+  test("supports the caddy-dns/route53 wrapper's own debug_logging field alongside libdns/route53 fields", () => {
+    const result = buildRoute53DnsConfig({ debug_logging: true, region: "eu-west-1" });
+    expect(result.providerConfig).toEqual({ debug_logging: true, region: "eu-west-1" });
+  });
+
+  test("rejects options that don't match the real Go struct's field types", () => {
+    expect(() => buildRoute53DnsConfig({ region: 123 as unknown as string })).toThrow(/region/);
   });
 });
 

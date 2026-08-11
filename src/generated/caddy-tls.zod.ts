@@ -41,6 +41,8 @@ export const configSetterSchema = z.any();
 
 export const caSchema = z.any();
 
+export const certificateProviderSchema = z.any();
+
 export const inlineCaPoolSchema = z.object({
   trusted_ca_certs: z.array(z.string()).optional(),
 });
@@ -60,6 +62,12 @@ export const pkiIntermediateCaPoolSchema = z.object({
 export const storagePoolSchema = z.object({
   storage: z.unknown().optional(),
   pem_keys: z.array(z.string()).optional(),
+});
+
+export const systemCaPoolSchema = z.object({});
+
+export const combinedCaPoolSchema = z.object({
+  sources: z.array(z.unknown()).optional(),
 });
 
 export const tailscaleSchema = z.object({});

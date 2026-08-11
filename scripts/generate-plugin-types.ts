@@ -38,6 +38,42 @@ const plugins: PluginConfig[] = [
     outputFile: "authcrunch-core", // Main file, but generates many
     multiFile: true, // Generates multiple authcrunch-*.ts files
   },
+  // caddy-dns/* providers: the real JSON-tagged struct lives in the
+  // libdns/* package each wrapper embeds (`*libdns.Provider`), not in the
+  // thin caddy-dns/* wrapper repo itself — so these point at libdns/*.
+  {
+    name: "caddy-dns-porkbun",
+    localPath: "libdns-porkbun",
+    outputFile: "caddy-dns-porkbun",
+  },
+  {
+    name: "caddy-dns-cloudflare",
+    localPath: "libdns-cloudflare",
+    outputFile: "caddy-dns-cloudflare",
+  },
+  {
+    name: "caddy-dns-route53-libdns",
+    localPath: "libdns-route53",
+    outputFile: "caddy-dns-route53-libdns",
+  },
+  // route53's wrapper adds one field of its own (debug_logging) on top of
+  // the embedded libdns/route53 fields — generated separately since it's a
+  // different Go module tygo can't cross-resolve into automatically.
+  {
+    name: "caddy-dns-route53-wrapper",
+    localPath: "caddy-dns-route53",
+    outputFile: "caddy-dns-route53-wrapper",
+  },
+  {
+    name: "caddy-dns-digitalocean",
+    localPath: "libdns-digitalocean",
+    outputFile: "caddy-dns-digitalocean",
+  },
+  {
+    name: "caddy-dns-godaddy",
+    localPath: "libdns-godaddy",
+    outputFile: "caddy-dns-godaddy",
+  },
 ];
 
 function findTygo(): string {

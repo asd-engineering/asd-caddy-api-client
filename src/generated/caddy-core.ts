@@ -164,8 +164,8 @@ export interface AdminAccess {
  */
 export interface AdminPermissions {
   /**
-   * The API paths allowed. Paths are simple prefix matches.
-   * Any subpath of the specified paths will be allowed.
+   * The API paths allowed. A request path must either equal an
+   * allowed path or be a subpath with a path-segment boundary.
    */
   paths?: string[];
   /**
