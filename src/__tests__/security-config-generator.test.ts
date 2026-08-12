@@ -1,14 +1,9 @@
 /**
- * Direct unit tests for
- * vscode-extension/src/wizards/security-config-generator.ts, extracted from
- * security-wizard.ts (0.10) -- pure config-object generation, previously
- * untested (only exercised indirectly via the Security Wizard's Playwright
- * test). Also fixes a real bug found during extraction: `driver` was
- * computed via a tautological ternary
- * (`store.type === "oauth2" || store.type === "oidc" ? store.type : store.type`)
- * that always evaluated to `store.type` regardless of the condition --
- * harmless in outcome (equivalent to `store.type`), but confusing dead
- * logic, simplified while extracting.
+ * Unit tests for security-config-generator.ts, extracted from
+ * security-wizard.ts. Also drops a no-op ternary in
+ * generateIdentityStoreConfig's `driver` field
+ * (`store.type === "oauth2" || ... ? store.type : store.type`), simplified
+ * to `store.type` during extraction.
  */
 import { describe, test, expect } from "vitest";
 import {

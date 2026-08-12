@@ -1,14 +1,8 @@
 /**
- * Lightweight JSON Schema validator, extracted from diagnostics.ts so it can
- * be unit-tested directly (see src/__tests__/schema-validator.test.ts in the
- * main package) without needing a `vscode` runtime -- this is the exact
- * pattern completion-data.ts already uses, applied to the one piece of
- * diagnostics.ts logic that had zero test coverage of any kind before this.
- *
- * Deliberately reimplements a subset of JSON Schema rather than using `ajv`
- * (see CaddyDiagnosticsProvider's doc comment) -- kept here rather than
- * dropped in favor of `ajv` because this module trades spec completeness for
- * near-zero bundle size in the extension's `dist/extension.js`.
+ * Lightweight JSON Schema validator extracted from diagnostics.ts for direct
+ * unit testing (see src/__tests__/schema-validator.test.ts), same pattern as
+ * completion-data.ts. Reimplements a JSON Schema subset instead of using
+ * `ajv` to keep the extension's bundle size small.
  */
 import * as path from "path";
 import * as fs from "fs";
@@ -56,14 +50,9 @@ export class SimpleSchemaValidator {
   getSchemaForFile(fileName: string): object | undefined {
     const basename = path.basename(fileName).toLowerCase();
 
-    // Map file patterns to schemas. Portal/policy checked BEFORE the
-    // generic caddy-security check: a filename like
-    // "auth.caddy-security-portal.json" (the exact pattern package.json's
-    // own jsonValidation contribution maps to caddy-security-portal.json)
-    // also contains the substring "caddy-security", so it would otherwise
-    // resolve to the generic security-config schema and never reach the
-    // portal/policy branches at all -- found while adding unit tests for
-    // this method (previously had zero test coverage).
+    // Portal/policy checked before the generic caddy-security check: a
+    // filename like "auth.caddy-security-portal.json" also contains the
+    // substring "caddy-security" and would otherwise match that branch first.
     if (basename.includes("portal")) {
       return this.schemas.get("caddy-security-portal.json");
     }

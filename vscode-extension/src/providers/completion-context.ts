@@ -1,14 +1,7 @@
 /**
- * Pure JSON-path-based completion context detection for CaddyCompletionProvider
- * -- deliberately has no `vscode` import (all inputs are plain strings/
- * numbers/booleans the caller reads off a vscode.TextDocument) so it can be
- * unit-tested directly, same pattern as completion-data.ts. See
- * src/__tests__/completion-context.test.ts in the main package: every case
- * this module covers is a case the 0.9.0 xhigh code review found broken in
- * the first version of this logic (nested "not" matchers, root-property
- * completions leaking into non-Caddy JSON files, the `protocol` enum
- * leaking into reverse_proxy's transport.protocol, selection_policy/
- * encodings keyed by the wrong JSON field).
+ * Pure JSON-path completion-context detection, no vscode import so it's
+ * directly unit-testable (see src/__tests__/completion-context.test.ts),
+ * same pattern as completion-data.ts.
  */
 import { getLocation, parseTree, findNodeAtLocation, type Segment, type Node } from "jsonc-parser";
 import { HANDLER_METADATA } from "@accelerated-software-development/caddy-api-client/extension-assets";

@@ -97,20 +97,9 @@ import { tlsSchema as TlsAppSchema } from "../src/generated/caddy-tls.zod.js";
 // doesn't know).
 //
 // StrictKnownCaddyHandlerSchema/StrictSubrouteHandlerSchema/StrictRouteSchema
-// are mutually self-referential (subroute.routes contains more routes,
-// which contain more handlers, ...) so a typo inside a nested subroute
-// handler gets the exact same strictness the top level does, at any
-// nesting depth. This only works because $refStrategy is "root" below: with
-// "none" (the previous setting, chosen 2026-01-12 as an unverified cautious
-// default -- see 0.9.0's CHANGELOG "Known limitations" entry, now removed),
-// zod-to-json-schema hit "Recursive reference detected... Defaulting to
-// any" the moment this self-reference was introduced, silently discarding
-// all strictness one level below the top. Switching to "root" instead
-// emits real `$ref`s into the shared `definitions` block, which both `ajv`
-// (see src/__tests__/generated-schemas.test.ts) and VS Code's built-in JSON
-// language service (verified live via Playwright/code-server) resolve
-// correctly -- confirming the original "none" choice was never actually
-// necessary.
+// are mutually self-referential (subroute -> routes -> handlers -> subroute
+// -> ...) so a typo at any nesting depth is still caught. Requires
+// $refStrategy: "root" below -- "none" collapses recursive refs to `{}`.
 const StrictSubrouteHandlerSchema = z.object({
   handler: z.literal("subroute"),
   routes: z.array(z.lazy((): z.ZodTypeAny => StrictRouteSchema)).optional(),
@@ -382,14 +371,8 @@ function injectUniversalId(node: unknown): void {
 function generateJsonSchema(definition: SchemaDefinition): object {
   const jsonSchema = zodToJsonSchema(definition.schema as Parameters<typeof zodToJsonSchema>[0], {
     name: definition.name,
-    // "root" (not the previous "none"): emits real `$ref`s into a shared
-    // `definitions` block instead of inlining everything, which is what
-    // makes the self-referential Strict*Schema definitions above express
-    // true recursion (subroute -> routes -> handlers -> subroute -> ...)
-    // instead of bottoming out at a permissive `{}` -- verified against
-    // both `ajv` and VS Code's built-in JSON language service (see this
-    // file's comment above StrictSubrouteHandlerSchema). Also shrinks the
-    // generated files substantially (caddy-full-config.json: 223KB -> 121KB).
+    // "root" (not "none"): emits real $refs so Strict*Schema's recursion is
+    // expressed, not inlined to `{}` -- also shrinks output (223KB -> 121KB).
     $refStrategy: "root",
     target: "jsonSchema7", // Use JSON Schema draft-07 for broad compatibility
   });

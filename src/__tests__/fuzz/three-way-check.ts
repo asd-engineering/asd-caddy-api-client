@@ -1,22 +1,10 @@
 /**
- * Runs a mutated config fragment through up to three independent
- * validators and reports whether they agree (0.10 priority 6):
- *
- * 1. Zod's `.safeParse()` -- what the npm client actually enforces at
- *    runtime.
- * 2. `ajv` against the generated editor JSON schema -- what VS Code's
- *    built-in JSON language service enforces (see this session's
- *    established rigor pattern: a Zod-only check can miss permissiveness
- *    bugs `ajv` catches, since Zod silently strips unknown keys by default).
- * 3. The real `caddy` binary (`caddy validate`) -- ground truth.
- *
- * Leg 3 is only available for handlers/matchers: real `caddy validate`
- * genuinely panics when provisioning a `caddy-security` app (a nil-pointer
- * dereference in `ResolveRuntimeAppConfig`, confirmed by hand this
- * session against the `androw/caddy-security:2.11.2_1.1.59` image -- the
- * project's own integration tests avoid this entirely by using
- * `docker-compose up` + the Admin API instead of the CLI). Security-schema
- * checks are Zod-vs-ajv only; `caddyVerdict` is `undefined` for them.
+ * Runs a mutated config through up to three validators: Zod (runtime),
+ * ajv against the generated editor schema (catches permissiveness bugs Zod
+ * misses, since Zod silently strips unknown keys), and real `caddy validate`
+ * (ground truth, handlers/matchers only -- caddy-security validation panics
+ * with a nil-pointer deref in `ResolveRuntimeAppConfig`, so `caddyVerdict`
+ * is `undefined` for security-schema checks).
  */
 import { execFile } from "child_process";
 import { promisify } from "util";

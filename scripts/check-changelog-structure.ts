@@ -1,32 +1,11 @@
 /**
- * Structural sanity check for CHANGELOG.md files (0.10 priority 7).
- *
- * Born from a real incident this session: a corrupted concurrent-session
- * edit inserted a description of a fix that actually shipped in 0.10.0 into
- * the historical `[0.3.0]` section, and altered that section's date in the
- * process (2026-01-09 -> 2026-01-11, coincidentally colliding with the next
- * entry's date). Nothing caught it -- it was found by hand while writing a
- * changelog entry for something else.
- *
- * This is deliberately NOT a "is this changelog semantically true" checker
- * (that's not mechanically verifiable) -- just structural consistency:
- *  - every version header parses as valid semver and a valid date
- *  - versions strictly decrease top-to-bottom (also catches duplicates)
- *  - dates are non-increasing top-to-bottom (same-day releases are fine and
- *    genuinely happen in this project's history -- e.g. 0.8.0 and 0.9.0 were
- *    both dated 2026-08-11 -- so ties are allowed; an entry just can't be
- *    dated *after* something listed above it)
- *  - a header's own compare-link (when present) points at its own version
- *
- * Honest limitation, found while verifying this script against the real
- * incident: the exact date corruption above (2026-01-09 -> 2026-01-11) is
- * NOT caught by date-ordering alone, since the corrupted date happened to
- * tie with the entry above it rather than exceed it, and ties are allowed
- * for the legitimate same-day-release reason. What this script reliably
- * catches is the broader, more common category of the same underlying
- * problem: a version header that's duplicated, out of order, or whose
- * compare-link disagrees with its own version -- verified by hand against
- * four synthetic corruptions of this exact file before trusting it.
+ * Structural sanity check for CHANGELOG.md files: version headers parse as
+ * valid semver/dates, versions strictly decrease top-to-bottom (also
+ * catches duplicates), dates are non-increasing top-to-bottom (ties allowed
+ * for same-day releases), and a header's compare-link matches its own
+ * version. Not a "is this changelog semantically true" checker -- just
+ * structural consistency. Known gap: a corrupted date that happens to tie
+ * with a neighboring entry, rather than exceed it, isn't caught.
  *
  * Run standalone: `npx tsx scripts/check-changelog-structure.ts [files...]`
  * (defaults to CHANGELOG.md and vscode-extension/CHANGELOG.md). Wired into
@@ -170,11 +149,6 @@ async function main() {
     for (const error of allErrors) {
       console.error(`  - ${error}`);
     }
-    console.error(
-      "\nThis usually means a changelog entry landed under the wrong version, or a " +
-        "historical entry got edited by mistake (see scripts/check-changelog-structure.ts's " +
-        "own doc comment for the incident that prompted this check)."
-    );
     process.exit(1);
   }
 

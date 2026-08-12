@@ -1,16 +1,12 @@
 /**
- * Differential fuzz-testing harness (0.10 priority 6): mutates known-valid
- * Caddy matcher/handler/caddy-security configs and asserts the Zod schema,
- * the generated editor JSON schema (via `ajv`), and (for matchers/handlers)
- * the real `caddy validate` binary all agree on whether the mutation is
- * valid. A disagreement means one of our schemas is wrong relative to real
- * Caddy, or relative to each other -- exactly the class of bug this session
- * found repeatedly by hand (the `upstream`/`upstreams` typo, the missing
- * `query` field, ...).
+ * Differential fuzz harness: mutates known-valid matcher/handler/
+ * caddy-security configs and asserts Zod, the generated editor JSON schema
+ * (via `ajv`), and (for matchers/handlers) real `caddy validate` all agree
+ * on whether the mutation is valid. A disagreement means one of our schemas
+ * is wrong relative to real Caddy or to each other.
  *
- * Gated behind FUZZ_TEST=true (like src/__tests__/integration/): it shells
- * out to the real `caddy` binary per mutation, which is slow (~100-300ms
- * each) and requires `caddy` to be installed. Not part of the default
+ * Gated behind FUZZ_TEST=true (like src/__tests__/integration/): shells out
+ * to `caddy` per mutation (~100-300ms each), not part of the default
  * `bun run test` loop. Run with: `FUZZ_TEST=true npx vitest run src/__tests__/fuzz`.
  */
 import { describe, test, expect, beforeAll } from "vitest";
@@ -111,8 +107,7 @@ describeFuzz("differential fuzz: mutations", () => {
   }
 
   test("coverage summary", () => {
-    // Not a real assertion -- just makes silent coverage gaps visible,
-    // matching this session's "no silent caps" convention.
+    // Not a real assertion -- surfaces coverage gaps in the log.
     console.log(
       `\nFuzz coverage: ${totalChecked} mutations checked (${JSON.stringify(checkedByCategory)}). ` +
         `${ALL_SEEDS.length} seeds (${MATCHER_COUNT} matchers, ${HANDLER_COUNT} handlers, ${SECURITY_COUNT} security schemas).`

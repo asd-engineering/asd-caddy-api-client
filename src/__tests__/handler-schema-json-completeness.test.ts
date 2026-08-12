@@ -1,20 +1,9 @@
 /**
- * Verifies every field on every KnownCaddyHandlerSchema member actually
- * reaches the generated editor JSON schema (src/generated/schemas/
- * caddy-handler.json) -- the direction schema-strictness-audit.test.ts
- * doesn't cover (it only catches a field becoming too PERMISSIVE, not a
- * field going MISSING).
- *
- * Born from a real bug (0.9.0's xhigh review): `queryOpsSchema`'s shape was
- * corrected from map-based to array-based, and a regression test confirmed
- * the *runtime* schema rejected the old shape -- but `RewriteHandlerSchema`
- * never actually declared a `query` field at all, so the fix had zero
- * effect on the generated editor schema (`additionalProperties: false`
- * rejected `query` outright, on a real, `caddy validate`-verified config).
- * The bug wasn't "wrong shape", it was "field never wired into the
- * discriminated union member the editor schema is built from" -- this test
- * catches that class directly by diffing Zod shape keys against the
- * generated JSON schema's properties for every handler.
+ * Diffs every KnownCaddyHandlerSchema member's Zod field set against the
+ * generated caddy-handler.json's properties for that handler -- catches a
+ * field that exists at runtime but was never wired into the discriminated
+ * union member the editor schema is generated from (the inverse of
+ * schema-strictness-audit.test.ts, which only catches over-permissive fields).
  */
 import { describe, test, expect } from "vitest";
 import { readFileSync } from "fs";
@@ -60,11 +49,8 @@ describe("every KnownCaddyHandlerSchema field reaches the generated editor JSON 
       expect(
         missing,
         `handler:${discriminator} has field(s) in its Zod schema that never reached the ` +
-          `generated editor JSON schema: ${missing.join(", ")}. This is the exact bug class ` +
-          `that made the queryOps fix invisible in the editor -- the runtime shape was ` +
-          `correct but the field was never declared at all, so additionalProperties:false ` +
-          `rejected it outright. Re-run \`npm run generate:json-schemas\` after adding the ` +
-          `field, or check whether it needs to be added to the handler schema itself.`
+          `generated editor JSON schema: ${missing.join(", ")}. Re-run ` +
+          `\`npm run generate:json-schemas\`, or add the field to the handler schema itself.`
       ).toEqual([]);
     });
   }

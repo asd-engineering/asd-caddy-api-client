@@ -6,16 +6,10 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
-      // vscode-extension/src/providers/*.ts (imported directly by
-      // src/__tests__/*.test.ts for unit coverage, e.g.
-      // completion-context.test.ts) import HANDLER_METADATA via this
-      // package's own published subpath -- correct for the built
-      // extension, which links back to this package via
-      // vscode-extension/package.json's "file:.." dependency, resolved
-      // through vscode-extension/node_modules. That node_modules doesn't
-      // exist in this repo's root-level test run (only `bun install` runs
-      // here, never `npm ci` inside vscode-extension/), so alias it
-      // straight to the real source file instead.
+      // vscode-extension imports this via its own published subpath,
+      // resolved through vscode-extension/node_modules (npm) -- which
+      // doesn't exist in this repo's bun-only root test run. Alias straight
+      // to source instead.
       "@accelerated-software-development/caddy-api-client/extension-assets": `${__dirname}src/generated/extension-assets.ts`,
     },
   },

@@ -1,11 +1,8 @@
 /**
- * Pure caddy-security config JSON generation for the Security Configuration
- * Wizard -- extracted from security-wizard.ts (0.10) so it can be
- * unit-tested directly (see src/__tests__/security-config-generator.test.ts
- * in the main package), same pattern as completion-data.ts. No `vscode`
- * import: the wizard's QuickPick/InputBox prompting stays in
- * security-wizard.ts and only calls this module once it has fully-populated
- * config objects.
+ * Pure security-config JSON generation, extracted from security-wizard.ts
+ * for direct unit testing (see
+ * src/__tests__/security-config-generator.test.ts), same pattern as
+ * completion-data.ts. No vscode import.
  */
 
 export interface IdentityStoreConfig {

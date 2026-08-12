@@ -1,13 +1,8 @@
 /**
- * Direct unit tests for vscode-extension/src/providers/completion-context.ts
- * -- the JSON-path-based completion context detector extracted from
- * completion.ts (0.10). Every case here traces back to a real bug the 0.9.0
- * xhigh code review found in the first version of this logic: nested "not"
- * matchers losing completions, the "protocol" enum leaking into an
- * unrelated field, selection_policy/encodings keyed by the wrong JSON
- * field, and route-property completions firing on any JSON file's root.
- * Uses jsonc-parser's real getLocation() against literal text fixtures --
- * no vscode/Playwright needed, unlike before this extraction.
+ * Unit tests for completion-context.ts's detectContext() and path-matching
+ * helpers, covering nested "not" matchers, protocol/selection_policy/
+ * encodings field-keying, and root-property file gating. Uses jsonc-parser's
+ * real getLocation() against literal text fixtures -- no vscode needed.
  */
 import { describe, test, expect } from "vitest";
 import {

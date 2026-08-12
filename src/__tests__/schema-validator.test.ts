@@ -1,10 +1,6 @@
 /**
- * Direct unit tests for vscode-extension/src/providers/schema-validator.ts's
- * SimpleSchemaValidator -- extracted from diagnostics.ts (0.10) because it
- * had zero test coverage of any kind, not even E2E (no diagnostics.spec.ts
- * exists). This is the exact same untested-logic risk completion.ts's
- * context-detection had before 0.9.0's xhigh review found 4 real bugs in
- * it -- treating this the same way rather than waiting for a bug report.
+ * Unit tests for SimpleSchemaValidator, extracted from diagnostics.ts,
+ * which previously had zero test coverage of any kind.
  */
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
@@ -271,15 +267,9 @@ describe("SimpleSchemaValidator.getSchemaForFile", () => {
   });
 
   test("caddy-server.json and caddy-full.json are NOT recognized, unlike VS Code's own jsonValidation contribution", () => {
-    // package.json's jsonValidation maps **/caddy-server.json and
-    // **/caddy-full.json to caddy-full-config.json for VS Code's built-in
-    // JSON validation, but getSchemaForFile has no matching branch for
-    // either pattern. This means CaddyDiagnosticsProvider silently produces
-    // NO diagnostics for full-config files at all -- VS Code's own built-in
-    // validation is the only thing covering them. Documented here as
-    // current (likely unintended) behavior, not asserted as correct --
-    // flagged separately for a product decision on whether to add coverage
-    // or whether SimpleSchemaValidator is redundant here and elsewhere.
+    // getSchemaForFile has no branch for these two patterns, unlike
+    // package.json's jsonValidation contribution -- documented current
+    // behavior, not asserted correct.
     expect(v.getSchemaForFile("caddy-server.json")).toBeUndefined();
     expect(v.getSchemaForFile("caddy-full.json")).toBeUndefined();
   });

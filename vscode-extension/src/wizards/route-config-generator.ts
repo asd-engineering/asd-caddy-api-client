@@ -1,10 +1,7 @@
 /**
- * Pure route-config JSON generation for the Route Configuration Wizard --
- * extracted from route-wizard.ts (0.10) so it can be unit-tested directly
- * (see src/__tests__/route-config-generator.test.ts in the main package),
- * same pattern as completion-data.ts. No `vscode` import: the wizard's
- * QuickPick/InputBox prompting stays in route-wizard.ts and only calls this
- * module once it has a fully-populated RouteConfig.
+ * Pure route-config JSON generation, extracted from route-wizard.ts for
+ * direct unit testing (see src/__tests__/route-config-generator.test.ts),
+ * same pattern as completion-data.ts. No vscode import.
  */
 
 export interface RouteConfig {

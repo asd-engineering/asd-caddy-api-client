@@ -23,7 +23,7 @@ export class CaddyDiagnosticsProvider {
     this.outputChannel = outputChannel;
     this.diagnosticCollection = vscode.languages.createDiagnosticCollection("caddy");
     this.validator = new SimpleSchemaValidator(context.extensionPath, (message) =>
-      this.outputChannel?.appendLine(`[Validator] ${message}`)
+      outputChannel?.appendLine(`[Validator] ${message}`)
     );
     this.log("CaddyDiagnosticsProvider initialized");
 

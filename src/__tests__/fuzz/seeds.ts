@@ -1,10 +1,7 @@
 /**
- * Known-valid seed configs for the differential fuzz-testing harness (0.10
- * priority 6) -- one per matcher, one per representative handler, one per
- * caddy-security schema. Each is mutated by mutate.ts and checked by
- * three-way-check.ts. Shapes are drawn from already-verified examples
- * elsewhere in this repo rather than invented fresh (see each seed's
- * comment for its source).
+ * Known-valid seed configs for the differential fuzz-testing harness: one
+ * per matcher, handler, and caddy-security schema. Mutated by mutate.ts and
+ * checked by three-way-check.ts.
  */
 import {
   ReverseProxyHandlerSchema,
@@ -44,22 +41,17 @@ import { wrapAsFullConfig } from "./three-way-check.js";
 import { z } from "zod";
 
 /**
- * The individual handler/matcher/security schemas (ReverseProxyHandlerSchema,
- * CaddyRouteMatcherSchema, LocalIdentityStoreSchema, ...) are deliberately
- * NOT `.strict()` at the Zod level -- that's an intentional, documented
- * tradeoff (see e.g. CaddyRouteHandlerSchema's doc comment in schemas.ts):
- * the *runtime* npm client accepts unmodeled extra fields, and strictness is
- * enforced only at the generated-JSON-schema/editor layer instead. Zod's
- * default (non-strict) `.safeParse()` therefore silently strips unknown
- * keys and reports success -- the well-known Zod-vs-ajv gap this whole
- * project has run into repeatedly. For this harness to compare like-for-like
- * against `ajv` (which always has `additionalProperties: false` from the
- * generator), every seed's Zod schema is strictified here so an
- * "add-unknown-key"/"typo-field" mutation is judged by the same standard
- * both validators actually apply at the editor layer.
+ * Individual schemas are non-strict at the Zod level (runtime accepts extra
+ * fields; strictness is enforced by the generated JSON schema/ajv instead).
+ * Strictify here so seeds compare like-for-like against ajv. Schemas that
+ * are deliberately `.passthrough()` (e.g. VarsHandlerSchema) are left alone,
+ * since `.strict()` would silently override that intent.
  */
 function strictify(schema: z.ZodTypeAny): z.ZodTypeAny {
-  return schema instanceof z.ZodObject ? schema.strict() : schema;
+  if (schema instanceof z.ZodObject && schema._def.unknownKeys !== "passthrough") {
+    return schema.strict();
+  }
+  return schema;
 }
 
 export interface Seed {
@@ -75,9 +67,8 @@ export interface Seed {
   jsonSchemaFile: string;
   /**
    * Wraps `value` into a full Caddy config for the real-`caddy validate`
-   * leg. Omit for caddy-security schemas -- `caddy validate` itself panics
-   * provisioning the security app (confirmed by hand this session against
-   * androw/caddy-security:2.11.2_1.1.59), so those seeds are Zod-vs-ajv only.
+   * leg. Omit for caddy-security schemas -- `caddy validate` panics
+   * provisioning the security app, so those seeds are Zod-vs-ajv only.
    */
   toCaddyConfig?: (value: unknown) => object;
 }
@@ -134,24 +125,14 @@ function handlerSeed(
   name: string,
   value: Record<string, unknown>,
   zodSchema: z.ZodTypeAny,
-  mutableFields: string[],
-  /**
-   * Set false for handlers that are deliberately `.passthrough()` at the
-   * Zod level (e.g. `vars`, whose entire purpose is accepting arbitrary
-   * caller-defined key/value pairs -- see the existing, documented
-   * "handler:vars" entry in schema-strictness-audit.test.ts's
-   * PERMISSIVE_FIELDS allowlist). Strictifying those isn't testing a real
-   * gap, it's fighting an intentional design choice -- found by the harness
-   * itself the first time this ran with all handlers strictified unconditionally.
-   */
-  strict = true
+  mutableFields: string[]
 ): Seed {
   return {
     name: `handler:${name}`,
     value,
     mutableFields,
     requiredFields: ["handler"],
-    zodSchema: strict ? strictify(zodSchema) : zodSchema,
+    zodSchema: strictify(zodSchema),
     jsonSchemaFile: "caddy-handler.json",
     toCaddyConfig: (v) => wrapAsFullConfig({ handle: [v as Record<string, unknown>] }),
   };
@@ -228,13 +209,9 @@ export const HANDLER_SEEDS: Seed[] = [
     RequestBodyHandlerSchema,
     ["max_size"]
   ),
-  handlerSeed(
-    "vars",
-    { handler: "vars", environment: "production" },
-    VarsHandlerSchema,
-    ["environment"],
-    false // VarsHandlerSchema is deliberately .passthrough() -- arbitrary keys are the point
-  ),
+  handlerSeed("vars", { handler: "vars", environment: "production" }, VarsHandlerSchema, [
+    "environment",
+  ]),
   handlerSeed("intercept", { handler: "intercept" }, InterceptHandlerSchema, []),
   handlerSeed("invoke", { handler: "invoke", name: "my-named-route" }, InvokeHandlerSchema, [
     "name",

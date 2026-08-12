@@ -1217,14 +1217,7 @@
                     "type": "string"
                   },
                   "status_code": {
-                    "anyOf": [
-                      {
-                        "type": "integer"
-                      },
-                      {
-                        "type": "string"
-                      }
-                    ]
+                    "$ref": "#/definitions/caddy-route/properties/handle/items/anyOf/2/properties/status_code"
                   },
                   "handler": {
                     "type": "string",
