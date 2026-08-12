@@ -824,6 +824,49 @@ test.describe("Wizard and Command Interactions", () => {
 // EXTENSION FEATURE TESTS - CodeLens, Hover, Completion
 // ============================================================================
 
+test.describe("Extension Listing", () => {
+  test.beforeEach(async ({ page, codeServerUrl }) => {
+    await setupPage(page, codeServerUrl);
+  });
+
+  // Functional tests below prove the extension's providers work once VS
+  // Code has silently loaded it -- none of them prove a user would actually
+  // see a correctly-installed, trustworthy-looking entry in the Extensions
+  // panel (icon, description, rendered README), which is a real, separate
+  // failure mode (a stale/broken vsix can install "successfully" while
+  // still rendering as a blank/generic entry).
+  test("shows a proper icon, description, and rendered README in the Extensions panel", async ({
+    page,
+  }) => {
+    await page.keyboard.press("Control+Shift+X");
+    await page.waitForTimeout(1500);
+
+    const entry = page.locator('.extension-list-item:has-text("Caddy Configuration Tools")');
+    await expect(entry).toBeVisible({ timeout: 10000 });
+    await expect(entry.locator("img")).toHaveAttribute("src", /icon\.png|\.png$/);
+    await expect(entry).toContainText("asd-host");
+
+    await entry.click();
+    const detailsPane = page.locator(".extension-editor");
+    await expect(
+      detailsPane.getByRole("heading", { name: "Caddy Configuration Tools" })
+    ).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(detailsPane).toContainText("asd-host");
+
+    // README.md renders two webview iframes deep (outer sandbox shell ->
+    // inner content frame) -- proves it actually rendered, not a blank pane.
+    const readmeFrame = page
+      .frameLocator('iframe[src*="webview/browser/pre"]')
+      .frameLocator("iframe")
+      .first();
+    await expect(readmeFrame.getByText("IntelliSense & Autocompletion")).toBeVisible({
+      timeout: 10000,
+    });
+  });
+});
+
 test.describe("Extension Features", () => {
   test.beforeEach(async ({ page, codeServerUrl }) => {
     await setupPage(page, codeServerUrl);
