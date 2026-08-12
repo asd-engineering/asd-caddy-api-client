@@ -28,13 +28,25 @@ const SCHEMAS_DIR = join(ROOT_DIR, "src/generated/schemas");
 import {
   CaddyRouteMatcherSchema,
   CaddyRouteSchema,
-  KnownCaddyHandlerSchema,
   ReverseProxyHandlerSchema,
   HeadersHandlerSchema,
   StaticResponseHandlerSchema,
   EncodeHandlerSchema,
   RewriteHandlerSchema,
   AuthenticationHandlerSchema,
+  FileServerHandlerSchema,
+  TemplatesHandlerSchema,
+  MapHandlerSchema,
+  PushHandlerSchema,
+  RequestBodyHandlerSchema,
+  VarsHandlerSchema,
+  InterceptHandlerSchema,
+  InvokeHandlerSchema,
+  TracingHandlerSchema,
+  LogAppendHandlerSchema,
+  ErrorHandlerSchema,
+  CopyResponseHandlerSchema,
+  CopyResponseHeadersHandlerSchema,
 } from "../src/schemas.js";
 
 // Security plugin schemas
@@ -78,12 +90,48 @@ import { tlsSchema as TlsAppSchema } from "../src/generated/caddy-tls.zod.js";
 // string. For the editor-time schema below, that tradeoff is backwards --
 // the whole point of editor validation is catching typos (e.g. reverse_proxy's
 // "upstream" vs "upstreams"), so `handle` items are swapped for the strict
-// per-handler discriminated union (KnownCaddyHandlerSchema) instead. This
-// does mean a genuinely valid but unmodeled handler module gets flagged in
-// the editor -- an acceptable, standard trade-off for typed editor tooling
-// (same as e.g. a Kubernetes CRD schema rejecting fields it doesn't know).
-const StrictRouteSchema = CaddyRouteSchema.extend({
-  handle: z.array(KnownCaddyHandlerSchema).min(1, "Route must have at least one handler"),
+// per-handler discriminated union (StrictKnownCaddyHandlerSchema) instead.
+// This does mean a genuinely valid but unmodeled handler module gets
+// flagged in the editor -- an acceptable, standard trade-off for typed
+// editor tooling (same as e.g. a Kubernetes CRD schema rejecting fields it
+// doesn't know).
+//
+// StrictKnownCaddyHandlerSchema/StrictSubrouteHandlerSchema/StrictRouteSchema
+// are mutually self-referential (subroute -> routes -> handlers -> subroute
+// -> ...) so a typo at any nesting depth is still caught. Requires
+// $refStrategy: "root" below -- "none" collapses recursive refs to `{}`.
+const StrictSubrouteHandlerSchema = z.object({
+  handler: z.literal("subroute"),
+  routes: z.array(z.lazy((): z.ZodTypeAny => StrictRouteSchema)).optional(),
+  errors: z.any().optional(),
+});
+
+const StrictKnownCaddyHandlerSchema: z.ZodTypeAny = z.discriminatedUnion("handler", [
+  ReverseProxyHandlerSchema,
+  HeadersHandlerSchema,
+  StaticResponseHandlerSchema,
+  AuthenticationHandlerSchema,
+  RewriteHandlerSchema,
+  EncodeHandlerSchema,
+  FileServerHandlerSchema,
+  TemplatesHandlerSchema,
+  MapHandlerSchema,
+  PushHandlerSchema,
+  RequestBodyHandlerSchema,
+  VarsHandlerSchema,
+  InterceptHandlerSchema,
+  InvokeHandlerSchema,
+  TracingHandlerSchema,
+  LogAppendHandlerSchema,
+  ErrorHandlerSchema,
+  CopyResponseHandlerSchema,
+  CopyResponseHeadersHandlerSchema,
+  StrictSubrouteHandlerSchema,
+  SecurityAuthenticatorHandlerSchema,
+]);
+
+const StrictRouteSchema: z.ZodTypeAny = CaddyRouteSchema.extend({
+  handle: z.array(StrictKnownCaddyHandlerSchema).min(1, "Route must have at least one handler"),
 });
 
 const FullConfigServerSchema = serverSchema.omit({ routes: true, named_routes: true }).extend({
@@ -120,7 +168,7 @@ const schemas: SchemaDefinition[] = [
   },
   {
     name: "caddy-handler",
-    schema: KnownCaddyHandlerSchema,
+    schema: StrictKnownCaddyHandlerSchema,
     description: "Caddy HTTP handler (reverse_proxy, headers, etc.)",
   },
 
@@ -323,7 +371,9 @@ function injectUniversalId(node: unknown): void {
 function generateJsonSchema(definition: SchemaDefinition): object {
   const jsonSchema = zodToJsonSchema(definition.schema as Parameters<typeof zodToJsonSchema>[0], {
     name: definition.name,
-    $refStrategy: "none", // Inline all definitions for better VSCode support
+    // "root" (not "none"): emits real $refs so Strict*Schema's recursion is
+    // expressed, not inlined to `{}` -- also shrinks output (223KB -> 121KB).
+    $refStrategy: "root",
     target: "jsonSchema7", // Use JSON Schema draft-07 for broad compatibility
   });
 

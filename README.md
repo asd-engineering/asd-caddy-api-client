@@ -19,13 +19,13 @@ Package pages:
 
 ## Caddy Version Compatibility
 
-| npm Package | Caddy   | caddy-security | Notes                                                                                                                    |
-| ----------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| 0.9.0       | v2.11.4 | v1.1.64        | Current — security-dense dependency bump, `caddy-dns` DNS provider plugin sources, first public vscode-extension release |
-| 0.6.x–0.8.0 | v2.11.2 | v1.1.59        | First `caddy-dns` plugin (0.8.0)                                                                                         |
-| 0.4.x–0.5.x | v2.10.2 | v1.1.31        | First plugin framework release                                                                                           |
-| 0.3.x       | v2.10.2 | —              | Self-contained type generation                                                                                           |
-| 0.1.x–0.2.x | —       | —              | Used external caddy-json-types                                                                                           |
+| npm Package  | Caddy   | caddy-security | Notes                                                                                                                                                                              |
+| ------------ | ------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.9.x–0.10.x | v2.11.4 | v1.1.64        | Current — 0.9.0: security-dense dependency bump, `caddy-dns` DNS provider plugin sources, first public vscode-extension release. 0.10.0: test-coverage-only, no dependency changes |
+| 0.6.x–0.8.0  | v2.11.2 | v1.1.59        | First `caddy-dns` plugin (0.8.0)                                                                                                                                                   |
+| 0.4.x–0.5.x  | v2.10.2 | v1.1.31        | First plugin framework release                                                                                                                                                     |
+| 0.3.x        | v2.10.2 | —              | Self-contained type generation                                                                                                                                                     |
+| 0.1.x–0.2.x  | —       | —              | Used external caddy-json-types                                                                                                                                                     |
 
 See [DEPENDENCIES.md](./DEPENDENCIES.md) for full version details including commit hashes.
 

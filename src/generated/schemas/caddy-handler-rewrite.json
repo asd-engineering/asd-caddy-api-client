@@ -74,20 +74,7 @@
             "add": {
               "type": "array",
               "items": {
-                "type": "object",
-                "properties": {
-                  "key": {
-                    "type": "string"
-                  },
-                  "val": {
-                    "type": "string"
-                  },
-                  "@id": {
-                    "type": "string"
-                  }
-                },
-                "required": ["key", "val"],
-                "additionalProperties": false
+                "$ref": "#/definitions/caddy-handler-rewrite/properties/query/properties/set/items"
               }
             },
             "replace": {
@@ -117,20 +104,7 @@
             "rename": {
               "type": "array",
               "items": {
-                "type": "object",
-                "properties": {
-                  "key": {
-                    "type": "string"
-                  },
-                  "val": {
-                    "type": "string"
-                  },
-                  "@id": {
-                    "type": "string"
-                  }
-                },
-                "required": ["key", "val"],
-                "additionalProperties": false
+                "$ref": "#/definitions/caddy-handler-rewrite/properties/query/properties/set/items"
               }
             },
             "@id": {

@@ -6,13 +6,13 @@ This file tracks the upstream versions used to generate types and schemas.
 
 Which npm package version supports which Caddy and plugin versions:
 
-| npm Package | Caddy    | caddy-security | go-authcrunch | Notes                                                                                                                                                                    |
-| ----------- | -------- | -------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.9.0       | v2.11.4  | v1.1.64        | v1.1.41       | Current — security-dense dependency bump, `caddy-dns` DNS provider plugin sources (see below), first public vscode-extension release, and editor schema strictness fixes |
-| 0.6.0–0.8.0 | v2.11.2  | v1.1.59        | v1.1.35       | —                                                                                                                                                                        |
-| 0.4.0–0.5.2 | v2.10.2  | v1.1.31        | v1.1.7        | First plugin framework release                                                                                                                                           |
-| 0.3.0       | v2.10.2  | —              | —             | Self-contained type generation                                                                                                                                           |
-| 0.1.0–0.2.2 | external | —              | —             | Used caddy-json-types package                                                                                                                                            |
+| npm Package  | Caddy    | caddy-security | go-authcrunch | Notes                                                                                                                                                                                                                                  |
+| ------------ | -------- | -------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.9.0–0.10.0 | v2.11.4  | v1.1.64        | v1.1.41       | Current — 0.9.0: security-dense dependency bump, `caddy-dns` DNS provider plugin sources (see below), first public vscode-extension release, editor schema strictness fixes. 0.10.0: no dependency changes, test-coverage-only release |
+| 0.6.0–0.8.0  | v2.11.2  | v1.1.59        | v1.1.35       | —                                                                                                                                                                                                                                      |
+| 0.4.0–0.5.2  | v2.10.2  | v1.1.31        | v1.1.7        | First plugin framework release                                                                                                                                                                                                         |
+| 0.3.0        | v2.10.2  | —              | —             | Self-contained type generation                                                                                                                                                                                                         |
+| 0.1.0–0.2.2  | external | —              | —             | Used caddy-json-types package                                                                                                                                                                                                          |
 
 ## Core Caddy
 

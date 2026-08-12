@@ -1,6 +1,6 @@
 {
   "name": "@accelerated-software-development/caddy-api-client",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "TypeScript client for Caddy Admin API with MITMproxy integration",
   "type": "module",
   "main": "./dist/index.js",
@@ -54,6 +54,7 @@
     "test:coverage:unit": "echo '================================================\nRunning Unit Test Coverage\n================================================\n' && vitest run --coverage",
     "test:coverage:integration": "echo '\n================================================\nRunning Integration Tests (bun)\n================================================\n' && INTEGRATION_TEST=true bun test src/__tests__/integration/",
     "test:integration": "INTEGRATION_TEST=true bun test src/__tests__/integration/ --no-coverage",
+    "test:fuzz": "FUZZ_TEST=true vitest run src/__tests__/fuzz --no-coverage",
     "test:playwright": "playwright test",
     "test:auth-types": "playwright test src/__tests__/playwright/",
     "test:oauth": "playwright test src/__tests__/playwright/oauth-flow.spec.ts",
@@ -148,6 +149,7 @@
     "eslint": "^9.32.0",
     "globals": "^15.12.0",
     "husky": "^9.1.6",
+    "jsonc-parser": "^3.3.1",
     "prettier": "^3.6.2",
     "standard-version": "^9.5.0",
     "ts-to-zod": "^5.1.0",

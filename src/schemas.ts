@@ -878,9 +878,13 @@ export const HeadersHandlerSchema = z.object({
  * });
  * ```
  */
+// caddy.WeakString accepts any JSON string or number; it's not range-checked
+// as an HTTP status code by `caddy validate`, so no min/max here.
+const WeakStringStatusCodeSchema = z.union([z.number().int(), z.string()]).optional();
+
 export const StaticResponseHandlerSchema = z.object({
   handler: z.literal("static_response"),
-  status_code: z.union([z.number().int().min(100).max(599), z.string()]).optional(),
+  status_code: WeakStringStatusCodeSchema,
   body: z.string().optional(),
   headers: z.record(z.string(), z.array(z.string())).optional(),
   close: z.boolean().optional(),
@@ -1213,6 +1217,7 @@ export const LogAppendHandlerSchema = logAppendSchema.extend({
  */
 export const ErrorHandlerSchema = staticErrorSchema.extend({
   handler: z.literal("error"),
+  status_code: WeakStringStatusCodeSchema,
 });
 
 /**

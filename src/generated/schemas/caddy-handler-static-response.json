@@ -15,9 +15,7 @@
         "status_code": {
           "anyOf": [
             {
-              "type": "integer",
-              "minimum": 100,
-              "maximum": 599
+              "type": "integer"
             },
             {
               "type": "string"

@@ -868,18 +868,27 @@ describe("StaticResponseHandlerSchema", () => {
     expect(abortResult.abort).toBe(true);
   });
 
-  test("rejects invalid status code", () => {
-    expect(() =>
+  test("accepts any numeric status code (WeakString, not range-validated -- confirmed against real `caddy validate`)", () => {
+    expect(
       StaticResponseHandlerSchema.parse({
         handler: "static_response",
         status_code: 999,
-      })
-    ).toThrow();
+      }).status_code
+    ).toBe(999);
 
-    expect(() =>
+    expect(
       StaticResponseHandlerSchema.parse({
         handler: "static_response",
         status_code: 50,
+      }).status_code
+    ).toBe(50);
+  });
+
+  test("rejects non-string/non-number status code", () => {
+    expect(() =>
+      StaticResponseHandlerSchema.parse({
+        handler: "static_response",
+        status_code: [200],
       })
     ).toThrow();
   });
