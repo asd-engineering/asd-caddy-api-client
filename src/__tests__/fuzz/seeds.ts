@@ -12,6 +12,22 @@ import {
   StaticResponseHandlerSchema,
   SubrouteHandlerSchema,
   CaddyRouteMatcherSchema,
+  HeadersHandlerSchema,
+  EncodeHandlerSchema,
+  FileServerHandlerSchema,
+  TemplatesHandlerSchema,
+  MapHandlerSchema,
+  PushHandlerSchema,
+  RequestBodyHandlerSchema,
+  VarsHandlerSchema,
+  InterceptHandlerSchema,
+  InvokeHandlerSchema,
+  TracingHandlerSchema,
+  LogAppendHandlerSchema,
+  ErrorHandlerSchema,
+  CopyResponseHandlerSchema,
+  CopyResponseHeadersHandlerSchema,
+  AuthenticationHandlerSchema,
 } from "../../schemas.js";
 import {
   LocalIdentityStoreSchema,
@@ -105,24 +121,37 @@ export const MATCHER_SEEDS: Seed[] = [
 ];
 
 // ============================================================================
-// Handlers -- representative slice (0.10 priority 6 rollout step 1):
-// reverse_proxy, rewrite, static_response, subroute. Wired into the full
-// caddy-handler.json (all 21 handlers, anyOf) for the ajv leg, since that's
-// the actual editor schema VS Code validates against.
+// Handlers -- all 20 core Caddy handlers (KnownCaddyHandlerSchema's
+// discriminated union minus the caddy-security "authenticator" plugin
+// handler, covered separately under Security below). Minimal-valid shapes
+// drawn from src/__tests__/handler-validation.test.ts's own "validates
+// minimal config" cases and each schema's own @example JSDoc. Wired into
+// the full caddy-handler.json (anyOf of all handlers) for the ajv leg,
+// since that's the actual editor schema VS Code validates against.
 // ============================================================================
 
 function handlerSeed(
   name: string,
   value: Record<string, unknown>,
   zodSchema: z.ZodTypeAny,
-  mutableFields: string[]
+  mutableFields: string[],
+  /**
+   * Set false for handlers that are deliberately `.passthrough()` at the
+   * Zod level (e.g. `vars`, whose entire purpose is accepting arbitrary
+   * caller-defined key/value pairs -- see the existing, documented
+   * "handler:vars" entry in schema-strictness-audit.test.ts's
+   * PERMISSIVE_FIELDS allowlist). Strictifying those isn't testing a real
+   * gap, it's fighting an intentional design choice -- found by the harness
+   * itself the first time this ran with all handlers strictified unconditionally.
+   */
+  strict = true
 ): Seed {
   return {
     name: `handler:${name}`,
     value,
     mutableFields,
     requiredFields: ["handler"],
-    zodSchema: strictify(zodSchema),
+    zodSchema: strict ? strictify(zodSchema) : zodSchema,
     jsonSchemaFile: "caddy-handler.json",
     toCaddyConfig: (v) => wrapAsFullConfig({ handle: [v as Record<string, unknown>] }),
   };
@@ -152,6 +181,101 @@ export const HANDLER_SEEDS: Seed[] = [
     },
     SubrouteHandlerSchema,
     ["routes"]
+  ),
+  handlerSeed(
+    "headers",
+    { handler: "headers", response: { set: { "X-Content-Type-Options": ["nosniff"] } } },
+    HeadersHandlerSchema,
+    ["response"]
+  ),
+  handlerSeed(
+    "encode",
+    { handler: "encode", encodings: { gzip: {}, zstd: {} }, prefer: ["zstd", "gzip"] },
+    EncodeHandlerSchema,
+    ["encodings", "prefer", "minimum_length"]
+  ),
+  handlerSeed(
+    "file_server",
+    { handler: "file_server", root: "/var/www/html", index_names: ["index.html"] },
+    FileServerHandlerSchema,
+    ["root", "index_names"]
+  ),
+  handlerSeed(
+    "templates",
+    { handler: "templates", file_root: "/var/www/templates", mime_types: ["text/html"] },
+    TemplatesHandlerSchema,
+    ["file_root", "mime_types"]
+  ),
+  handlerSeed(
+    "map",
+    {
+      handler: "map",
+      source: "{http.request.uri.path}",
+      destinations: ["{my_var}"],
+    },
+    MapHandlerSchema,
+    ["source", "destinations"]
+  ),
+  handlerSeed(
+    "push",
+    { handler: "push", resources: [{ target: "/css/style.css" }] },
+    PushHandlerSchema,
+    ["resources"]
+  ),
+  handlerSeed(
+    "request_body",
+    { handler: "request_body", max_size: 10485760 },
+    RequestBodyHandlerSchema,
+    ["max_size"]
+  ),
+  handlerSeed(
+    "vars",
+    { handler: "vars", environment: "production" },
+    VarsHandlerSchema,
+    ["environment"],
+    false // VarsHandlerSchema is deliberately .passthrough() -- arbitrary keys are the point
+  ),
+  handlerSeed("intercept", { handler: "intercept" }, InterceptHandlerSchema, []),
+  handlerSeed("invoke", { handler: "invoke", name: "my-named-route" }, InvokeHandlerSchema, [
+    "name",
+  ]),
+  handlerSeed("tracing", { handler: "tracing", span: "http.request" }, TracingHandlerSchema, [
+    "span",
+  ]),
+  handlerSeed(
+    "log_append",
+    { handler: "log_append", key: "request_id", value: "{http.request.header.X-Request-ID}" },
+    LogAppendHandlerSchema,
+    ["key", "value"]
+  ),
+  handlerSeed(
+    "error",
+    { handler: "error", error: "Resource not found", status_code: "404" },
+    ErrorHandlerSchema,
+    ["error", "status_code"]
+  ),
+  handlerSeed(
+    "copy_response",
+    { handler: "copy_response", status_code: 200 },
+    CopyResponseHandlerSchema,
+    ["status_code"]
+  ),
+  handlerSeed(
+    "copy_response_headers",
+    { handler: "copy_response_headers", include: ["Content-Type", "X-Custom-*"] },
+    CopyResponseHeadersHandlerSchema,
+    ["include"]
+  ),
+  handlerSeed(
+    "authentication",
+    {
+      handler: "authentication",
+      providers: {
+        http_basic: { accounts: [{ username: "admin", password: "$2a$14$hash" }], realm: "Admin" },
+      },
+    },
+    AuthenticationHandlerSchema,
+    ["providers"]
   ),
 ];
 

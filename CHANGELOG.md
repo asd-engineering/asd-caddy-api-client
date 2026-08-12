@@ -60,11 +60,20 @@ check for the specific class of bug that made 0.9.0's `queryOps` fix invisible i
   `ResolveRuntimeAppConfig`) when provisioning a `caddy-security` app — confirmed against the
   `androw/caddy-security:2.11.2_1.1.59` image used by this project's own integration tests, which is
   exactly why those tests use `docker-compose up` + the Admin API instead of the CLI. Caddy-security
-  schema checks are Zod-vs-`ajv` only as a result; matchers and the four handlers covered so far
-  (`reverse_proxy`, `rewrite`, `static_response`, `subroute`) get the full three-way check. Currently
-  covers all matchers, a representative slice of 4 handlers, and 8 caddy-security schemas (140
-  mutations, 167 tests) — the remaining ~17 handlers are a mechanical follow-up using the same seed
-  pattern, not a new architecture.
+  schema checks are Zod-vs-`ajv` only as a result; matchers and all 20 core handlers get the full
+  three-way check. Comprehensive scope: all 14 matchers, all 20 `KnownCaddyHandlerSchema` handlers,
+  and 8 caddy-security schemas (214 mutations, 257 tests). Two more real bugs found expanding from
+  the initial 4-handler slice to all 20:
+  - `StaticResponseHandlerSchema`/`ErrorHandlerSchema`'s `status_code` had an invented
+    `.min(100).max(599)` bound that real Caddy doesn't enforce — `status_code` is a `WeakString`,
+    not validated as an actual HTTP status code at config-parsing time (`caddy validate` accepts
+    e.g. `12345`, confirmed by hand). Bound removed from both.
+  - The harness's own generic `strictify()` helper (added to make Zod's default extra-key-stripping
+    comparable against `ajv`'s always-strict generated schemas) was blanket-applying `.strict()` to
+    every handler seed, including `vars` — whose entire purpose is accepting arbitrary caller-defined
+    key/value pairs (`VarsHandlerSchema` is deliberately `.passthrough()`'d, already a documented
+    exception in `schema-strictness-audit.test.ts`). Fixed in the harness itself (`seeds.ts`'s
+    `handlerSeed()` now takes an opt-out flag), not in the schema — the passthrough is correct.
 
 ### Fixed
 

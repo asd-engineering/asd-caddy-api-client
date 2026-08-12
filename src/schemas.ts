@@ -880,7 +880,13 @@ export const HeadersHandlerSchema = z.object({
  */
 export const StaticResponseHandlerSchema = z.object({
   handler: z.literal("static_response"),
-  status_code: z.union([z.number().int().min(100).max(599), z.string()]).optional(),
+  // Real Caddy's WeakString (caddy.WeakString) accepts any JSON string or
+  // number here -- it's not validated as a real HTTP status code at the
+  // config-parsing level (`caddy validate` accepts e.g. 12345, confirmed by
+  // hand). No min/max: a bound here would just be us inventing a stricter
+  // rule than Caddy itself enforces. Found via the differential fuzz harness
+  // (src/__tests__/fuzz/): see ErrorHandlerSchema.status_code for the sibling gap.
+  status_code: z.union([z.number().int(), z.string()]).optional(),
   body: z.string().optional(),
   headers: z.record(z.string(), z.array(z.string())).optional(),
   close: z.boolean().optional(),
@@ -1213,6 +1219,14 @@ export const LogAppendHandlerSchema = logAppendSchema.extend({
  */
 export const ErrorHandlerSchema = staticErrorSchema.extend({
   handler: z.literal("error"),
+  // Real Caddy's WeakString (caddy.WeakString) unmarshals from either a
+  // JSON string or a JSON number -- the generated `weakStringSchema`
+  // (src/generated/caddy-http.zod.ts) only models the string case (`z.string()`).
+  // No min/max: it's not validated as a real HTTP status code at the
+  // config-parsing level (`caddy validate` accepts e.g. 12345, confirmed by
+  // hand). Found via the differential fuzz harness (src/__tests__/fuzz/).
+  // Same override StaticResponseHandlerSchema applies for the same underlying type.
+  status_code: z.union([z.number().int(), z.string()]).optional(),
 });
 
 /**
