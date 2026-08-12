@@ -3,6 +3,7 @@
   "displayName": "Caddy Configuration Tools",
   "description": "IntelliSense, snippets, and validation for Caddy and caddy-security configurations",
   "version": "0.2.0",
+  "icon": "icon.png",
   "publisher": "asd-host",
   "author": {
     "name": "Accelerated Software Development B.V.",
@@ -146,8 +147,8 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
-    "build": "npm run copy-schemas && npm run copy-license && npm run generate-snippets && esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
-    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --watch",
+    "build": "npm run copy-schemas && npm run copy-license && npm run generate-snippets && esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --main-fields=module,main --minify",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --main-fields=module,main --watch",
     "copy-schemas": "shx mkdir -p schemas && shx cp ../src/generated/schemas/*.json ./schemas/",
     "copy-license": "shx cp ../LICENSE ./LICENSE",
     "generate-snippets": "node scripts/generate-snippets.js",

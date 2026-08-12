@@ -34,6 +34,50 @@ async function setupPage(page: Page, codeServerUrl: string) {
 }
 
 // ============================================================================
+// EXTENSION ACTIVATION
+// ============================================================================
+
+test.describe("Extension Activation", () => {
+  // Every other test in this file only proves a *feature* works once the
+  // extension has activated -- none of them would catch the extension
+  // failing to activate at all (e.g. a bundling bug leaving a dangling
+  // `require()` in dist/extension.js that only breaks at runtime). VS
+  // Code's own built-in JSON schema validation (declarative, via
+  // package.json's jsonValidation) keeps working even when our extension's
+  // activate() throws, which is exactly what let this go unnoticed: the
+  // diagnostics tests below still passed while hover/completions/CodeLens
+  // were silently dead.
+  test("activates without error", async ({ page, codeServerUrl }) => {
+    const activationErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (/Activating extension 'asd-host\.vscode-caddy-tools' failed/.test(msg.text())) {
+        activationErrors.push(msg.text());
+      }
+    });
+
+    let activated = false;
+    page.on("console", (msg) => {
+      if (/Caddy Configuration Tools: Activated/.test(msg.text())) {
+        activated = true;
+      }
+    });
+
+    await page.goto(codeServerUrl);
+    await page.waitForSelector(".monaco-workbench", { timeout: 30000 });
+    await handleTrustDialog(page);
+    await closeNotifications(page);
+
+    // Opening a file is what triggers activation (onLanguage:json).
+    await openFile(page, "valid.caddy.json");
+    await waitForEditor(page);
+    await page.waitForTimeout(2000);
+
+    expect(activationErrors, activationErrors.join("\n")).toEqual([]);
+    expect(activated).toBe(true);
+  });
+});
+
+// ============================================================================
 // BASIC FUNCTIONALITY TESTS
 // ============================================================================
 
