@@ -54,6 +54,7 @@ export default defineConfig({
         "src/generated/caddy-http.ts", // Type definitions only (no executable code)
         "src/__tests__/helpers/", // Test utilities
         "src/__tests__/integration/", // Integration test code
+        "src/__tests__/fuzz/", // Differential fuzz-testing harness (run separately via test:fuzz)
       ],
     },
     testTimeout: 10000, // 10s for integration tests

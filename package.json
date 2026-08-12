@@ -54,6 +54,7 @@
     "test:coverage:unit": "echo '================================================\nRunning Unit Test Coverage\n================================================\n' && vitest run --coverage",
     "test:coverage:integration": "echo '\n================================================\nRunning Integration Tests (bun)\n================================================\n' && INTEGRATION_TEST=true bun test src/__tests__/integration/",
     "test:integration": "INTEGRATION_TEST=true bun test src/__tests__/integration/ --no-coverage",
+    "test:fuzz": "FUZZ_TEST=true vitest run src/__tests__/fuzz --no-coverage",
     "test:playwright": "playwright test",
     "test:auth-types": "playwright test src/__tests__/playwright/",
     "test:oauth": "playwright test src/__tests__/playwright/oauth-flow.spec.ts",

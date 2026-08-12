@@ -37,6 +37,22 @@ check for the specific class of bug that made 0.9.0's `queryOps` fix invisible i
   itself, so the fix had zero effect on what the editor validated against.
   `schema-strictness-audit.test.ts` only catches a field becoming too _permissive_; this catches the
   opposite direction, a field going missing entirely.
+- **`src/__tests__/fuzz/` — a differential fuzz-testing harness** (`bun run test:fuzz`, new CI job
+  "Differential Fuzz Tests"). Mutates known-valid matcher/handler/caddy-security configs (typo a
+  field, add an unknown key, wrong type on an existing field, remove a required field) and asserts
+  the Zod schema, the generated editor JSON schema (via `ajv`), and — for matchers/handlers — the
+  real `caddy validate` binary all agree on whether the mutation is valid. Verified the harness
+  actually catches bugs, not just passes trivially: temporarily reintroduced the `upstream`/
+  `upstreams` typo bug and confirmed it flagged the resulting disagreement before reverting. A real
+  finding while building it: `caddy validate` itself panics (a nil-pointer dereference in
+  `ResolveRuntimeAppConfig`) when provisioning a `caddy-security` app — confirmed against the
+  `androw/caddy-security:2.11.2_1.1.59` image used by this project's own integration tests, which is
+  exactly why those tests use `docker-compose up` + the Admin API instead of the CLI. Caddy-security
+  schema checks are Zod-vs-`ajv` only as a result; matchers and the four handlers covered so far
+  (`reverse_proxy`, `rewrite`, `static_response`, `subroute`) get the full three-way check. Currently
+  covers all matchers, a representative slice of 4 handlers, and 8 caddy-security schemas (140
+  mutations, 167 tests) — the remaining ~17 handlers are a mechanical follow-up using the same seed
+  pattern, not a new architecture.
 
 ### Fixed
 
