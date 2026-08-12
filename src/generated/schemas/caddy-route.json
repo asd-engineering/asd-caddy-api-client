@@ -261,19 +261,7 @@
                         ]
                       },
                       "try_interval": {
-                        "anyOf": [
-                          {
-                            "type": "integer"
-                          },
-                          {
-                            "type": "string",
-                            "const": "0"
-                          },
-                          {
-                            "type": "string",
-                            "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
-                          }
-                        ]
+                        "$ref": "#/definitions/caddy-route/properties/handle/items/anyOf/0/properties/load_balancing/properties/try_duration"
                       },
                       "@id": {
                         "type": "string"
@@ -311,34 +299,10 @@
                             "type": "boolean"
                           },
                           "interval": {
-                            "anyOf": [
-                              {
-                                "type": "integer"
-                              },
-                              {
-                                "type": "string",
-                                "const": "0"
-                              },
-                              {
-                                "type": "string",
-                                "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
-                              }
-                            ]
+                            "$ref": "#/definitions/caddy-route/properties/handle/items/anyOf/0/properties/load_balancing/properties/try_duration"
                           },
                           "timeout": {
-                            "anyOf": [
-                              {
-                                "type": "integer"
-                              },
-                              {
-                                "type": "string",
-                                "const": "0"
-                              },
-                              {
-                                "type": "string",
-                                "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
-                              }
-                            ]
+                            "$ref": "#/definitions/caddy-route/properties/handle/items/anyOf/0/properties/load_balancing/properties/try_duration"
                           },
                           "passes": {
                             "type": "integer",
@@ -370,19 +334,7 @@
                         "type": "object",
                         "properties": {
                           "fail_duration": {
-                            "anyOf": [
-                              {
-                                "type": "integer"
-                              },
-                              {
-                                "type": "string",
-                                "const": "0"
-                              },
-                              {
-                                "type": "string",
-                                "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
-                              }
-                            ]
+                            "$ref": "#/definitions/caddy-route/properties/handle/items/anyOf/0/properties/load_balancing/properties/try_duration"
                           },
                           "max_fails": {
                             "type": "integer",
@@ -401,19 +353,7 @@
                             }
                           },
                           "unhealthy_latency": {
-                            "anyOf": [
-                              {
-                                "type": "integer"
-                              },
-                              {
-                                "type": "string",
-                                "const": "0"
-                              },
-                              {
-                                "type": "string",
-                                "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
-                              }
-                            ]
+                            "$ref": "#/definitions/caddy-route/properties/handle/items/anyOf/0/properties/load_balancing/properties/try_duration"
                           },
                           "@id": {
                             "type": "string"
@@ -458,49 +398,13 @@
                     "additionalProperties": true
                   },
                   "flush_interval": {
-                    "anyOf": [
-                      {
-                        "type": "integer"
-                      },
-                      {
-                        "type": "string",
-                        "const": "0"
-                      },
-                      {
-                        "type": "string",
-                        "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
-                      }
-                    ]
+                    "$ref": "#/definitions/caddy-route/properties/handle/items/anyOf/0/properties/load_balancing/properties/try_duration"
                   },
                   "stream_timeout": {
-                    "anyOf": [
-                      {
-                        "type": "integer"
-                      },
-                      {
-                        "type": "string",
-                        "const": "0"
-                      },
-                      {
-                        "type": "string",
-                        "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
-                      }
-                    ]
+                    "$ref": "#/definitions/caddy-route/properties/handle/items/anyOf/0/properties/load_balancing/properties/try_duration"
                   },
                   "stream_close_delay": {
-                    "anyOf": [
-                      {
-                        "type": "integer"
-                      },
-                      {
-                        "type": "string",
-                        "const": "0"
-                      },
-                      {
-                        "type": "string",
-                        "pattern": "^-?(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h|d))+$"
-                      }
-                    ]
+                    "$ref": "#/definitions/caddy-route/properties/handle/items/anyOf/0/properties/load_balancing/properties/try_duration"
                   },
                   "trusted_proxies": {
                     "type": "array",
@@ -902,20 +806,7 @@
                       "add": {
                         "type": "array",
                         "items": {
-                          "type": "object",
-                          "properties": {
-                            "key": {
-                              "type": "string"
-                            },
-                            "val": {
-                              "type": "string"
-                            },
-                            "@id": {
-                              "type": "string"
-                            }
-                          },
-                          "required": ["key", "val"],
-                          "additionalProperties": false
+                          "$ref": "#/definitions/caddy-route/properties/handle/items/anyOf/4/properties/query/properties/set/items"
                         }
                       },
                       "replace": {
@@ -945,20 +836,7 @@
                       "rename": {
                         "type": "array",
                         "items": {
-                          "type": "object",
-                          "properties": {
-                            "key": {
-                              "type": "string"
-                            },
-                            "val": {
-                              "type": "string"
-                            },
-                            "@id": {
-                              "type": "string"
-                            }
-                          },
-                          "required": ["key", "val"],
-                          "additionalProperties": false
+                          "$ref": "#/definitions/caddy-route/properties/handle/items/anyOf/4/properties/query/properties/set/items"
                         }
                       },
                       "@id": {
@@ -1405,209 +1283,7 @@
                   "routes": {
                     "type": "array",
                     "items": {
-                      "type": "object",
-                      "properties": {
-                        "@id": {
-                          "type": "string"
-                        },
-                        "match": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "host": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string"
-                                }
-                              },
-                              "path": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string"
-                                }
-                              },
-                              "path_regexp": {
-                                "type": "object",
-                                "properties": {
-                                  "name": {
-                                    "type": "string"
-                                  },
-                                  "pattern": {
-                                    "type": "string"
-                                  },
-                                  "@id": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": ["pattern"],
-                                "additionalProperties": false
-                              },
-                              "method": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string"
-                                }
-                              },
-                              "header": {
-                                "type": "object",
-                                "additionalProperties": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string"
-                                  }
-                                }
-                              },
-                              "header_regexp": {
-                                "type": "object",
-                                "additionalProperties": {
-                                  "anyOf": [
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "name": {
-                                          "type": "string"
-                                        },
-                                        "pattern": {
-                                          "type": "string"
-                                        },
-                                        "@id": {
-                                          "type": "string"
-                                        }
-                                      },
-                                      "required": ["pattern"],
-                                      "additionalProperties": false
-                                    },
-                                    {
-                                      "not": {}
-                                    }
-                                  ]
-                                }
-                              },
-                              "query": {
-                                "type": "object",
-                                "additionalProperties": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string"
-                                  }
-                                }
-                              },
-                              "client_ip": {
-                                "type": "object",
-                                "properties": {
-                                  "ranges": {
-                                    "type": "array",
-                                    "items": {
-                                      "type": "string"
-                                    }
-                                  },
-                                  "@id": {
-                                    "type": "string"
-                                  }
-                                },
-                                "additionalProperties": false
-                              },
-                              "remote_ip": {
-                                "type": "object",
-                                "properties": {
-                                  "ranges": {
-                                    "type": "array",
-                                    "items": {
-                                      "type": "string"
-                                    }
-                                  },
-                                  "@id": {
-                                    "type": "string"
-                                  }
-                                },
-                                "additionalProperties": false
-                              },
-                              "protocol": {
-                                "type": "string"
-                              },
-                              "tls": {
-                                "type": "object",
-                                "properties": {
-                                  "handshake_complete": {
-                                    "type": "boolean"
-                                  },
-                                  "@id": {
-                                    "type": "string"
-                                  }
-                                },
-                                "additionalProperties": false
-                              },
-                              "file": {
-                                "type": "object",
-                                "properties": {
-                                  "fs": {
-                                    "type": "string"
-                                  },
-                                  "root": {
-                                    "type": "string"
-                                  },
-                                  "try_files": {
-                                    "type": "array",
-                                    "items": {
-                                      "type": "string"
-                                    }
-                                  },
-                                  "try_policy": {
-                                    "type": "string"
-                                  },
-                                  "split_path": {
-                                    "type": "array",
-                                    "items": {
-                                      "type": "string"
-                                    }
-                                  },
-                                  "@id": {
-                                    "type": "string"
-                                  }
-                                },
-                                "additionalProperties": false
-                              },
-                              "not": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "additionalProperties": {}
-                                }
-                              },
-                              "expression": {
-                                "type": "string"
-                              },
-                              "@id": {
-                                "type": "string"
-                              }
-                            },
-                            "additionalProperties": false
-                          }
-                        },
-                        "handle": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "handler": {
-                                "type": "string"
-                              }
-                            },
-                            "required": ["handler"],
-                            "additionalProperties": true
-                          },
-                          "minItems": 1
-                        },
-                        "terminal": {
-                          "type": "boolean"
-                        },
-                        "priority": {
-                          "type": "integer"
-                        }
-                      },
-                      "required": ["handle"],
-                      "additionalProperties": false
+                      "$ref": "#/definitions/caddy-route"
                     }
                   },
                   "errors": {},

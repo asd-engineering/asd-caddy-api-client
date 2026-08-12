@@ -198,11 +198,6 @@ const PERMISSIVE_FIELDS: Record<string, { reason: string; verified: boolean }> =
       "The vars handler's entire purpose is setting arbitrary caller-defined key/value pairs -- there is no fixed field set to validate against.",
     verified: true,
   },
-  "handler:subroute.routes.[].handle.[]": {
-    reason:
-      "subroute.routes uses z.lazy(() => CaddyRouteSchema) in the Zod schema, so it's fully recursive and correctly validated at runtime (parse-time) at any depth -- but zod-to-json-schema (run with $refStrategy: 'none' to fully inline schemas for VS Code) can't express true recursion in static JSON Schema, and falls back to a permissive node once it hits the cycle. Editor-time strictness is lost below this depth; runtime (npm client) strictness is not. Fixing this would mean switching $refStrategy, which affects every generated schema's shape -- out of scope for this audit.",
-    verified: true,
-  },
   "kind:ldap.params": {
     reason:
       "LdapIdentityStoreParamsSchema is a real typed schema; passthrough only preserves extra fields like nested `groups` config beyond what's explicitly modeled.",

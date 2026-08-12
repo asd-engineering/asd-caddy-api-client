@@ -52,6 +52,23 @@ check for the specific class of bug that made 0.9.0's `queryOps` fix invisible i
   `driver: store.type === "oauth2" || store.type === "oidc" ? store.type : store.type` always
   evaluated to `store.type` regardless of the condition (harmless in outcome, but confusing dead
   logic). Simplified to `driver: store.type` while extracting this function for testing.
+- **The subroute strictness gap documented in 0.9.0's "Known limitations" is resolved.** A typo'd or
+  unmodeled handler field nested inside a `subroute` handler's `routes` (e.g. `reverse_proxy`'s
+  `upstream`/`upstreams` typo, one level below the top of a route) is now flagged in the editor,
+  same as at the top level, at any nesting depth. Root cause turned out to be two separate issues
+  stacked together: (1) `scripts/generate-json-schemas.ts`'s `StrictRouteSchema` never propagated
+  its strictness into `SubrouteHandlerSchema.routes`, which still pointed at the loose,
+  passthrough `CaddyRouteSchema` from `src/schemas.ts` — fixed by making the strict schemas
+  properly self-referential (`StrictKnownCaddyHandlerSchema`/`StrictSubrouteHandlerSchema`/
+  `StrictRouteSchema`, mutually recursive); (2) even with that fix, `zod-to-json-schema`'s
+  `$refStrategy: "none"` (chosen 2026-01-12, "for better VSCode support", never actually verified)
+  hit "Recursive reference detected... Defaulting to any" the moment a self-reference was
+  introduced, silently discarding all strictness anyway. Switched to `$refStrategy: "root"`, which
+  emits real `$ref`s into the schema's own `definitions` block — confirmed both `ajv`
+  (`src/__tests__/generated-schemas.test.ts`) and VS Code's built-in JSON language service (live
+  Playwright/code-server verification) resolve these correctly, meaning the original "none" choice
+  was never actually necessary. Bonus: generated schema files also shrank substantially from no
+  longer inlining every definition (`caddy-full-config.json`: 223KB → 121KB).
 
 ### Notes
 

@@ -28,13 +28,25 @@ const SCHEMAS_DIR = join(ROOT_DIR, "src/generated/schemas");
 import {
   CaddyRouteMatcherSchema,
   CaddyRouteSchema,
-  KnownCaddyHandlerSchema,
   ReverseProxyHandlerSchema,
   HeadersHandlerSchema,
   StaticResponseHandlerSchema,
   EncodeHandlerSchema,
   RewriteHandlerSchema,
   AuthenticationHandlerSchema,
+  FileServerHandlerSchema,
+  TemplatesHandlerSchema,
+  MapHandlerSchema,
+  PushHandlerSchema,
+  RequestBodyHandlerSchema,
+  VarsHandlerSchema,
+  InterceptHandlerSchema,
+  InvokeHandlerSchema,
+  TracingHandlerSchema,
+  LogAppendHandlerSchema,
+  ErrorHandlerSchema,
+  CopyResponseHandlerSchema,
+  CopyResponseHeadersHandlerSchema,
 } from "../src/schemas.js";
 
 // Security plugin schemas
@@ -78,12 +90,59 @@ import { tlsSchema as TlsAppSchema } from "../src/generated/caddy-tls.zod.js";
 // string. For the editor-time schema below, that tradeoff is backwards --
 // the whole point of editor validation is catching typos (e.g. reverse_proxy's
 // "upstream" vs "upstreams"), so `handle` items are swapped for the strict
-// per-handler discriminated union (KnownCaddyHandlerSchema) instead. This
-// does mean a genuinely valid but unmodeled handler module gets flagged in
-// the editor -- an acceptable, standard trade-off for typed editor tooling
-// (same as e.g. a Kubernetes CRD schema rejecting fields it doesn't know).
-const StrictRouteSchema = CaddyRouteSchema.extend({
-  handle: z.array(KnownCaddyHandlerSchema).min(1, "Route must have at least one handler"),
+// per-handler discriminated union (StrictKnownCaddyHandlerSchema) instead.
+// This does mean a genuinely valid but unmodeled handler module gets
+// flagged in the editor -- an acceptable, standard trade-off for typed
+// editor tooling (same as e.g. a Kubernetes CRD schema rejecting fields it
+// doesn't know).
+//
+// StrictKnownCaddyHandlerSchema/StrictSubrouteHandlerSchema/StrictRouteSchema
+// are mutually self-referential (subroute.routes contains more routes,
+// which contain more handlers, ...) so a typo inside a nested subroute
+// handler gets the exact same strictness the top level does, at any
+// nesting depth. This only works because $refStrategy is "root" below: with
+// "none" (the previous setting, chosen 2026-01-12 as an unverified cautious
+// default -- see 0.9.0's CHANGELOG "Known limitations" entry, now removed),
+// zod-to-json-schema hit "Recursive reference detected... Defaulting to
+// any" the moment this self-reference was introduced, silently discarding
+// all strictness one level below the top. Switching to "root" instead
+// emits real `$ref`s into the shared `definitions` block, which both `ajv`
+// (see src/__tests__/generated-schemas.test.ts) and VS Code's built-in JSON
+// language service (verified live via Playwright/code-server) resolve
+// correctly -- confirming the original "none" choice was never actually
+// necessary.
+const StrictSubrouteHandlerSchema = z.object({
+  handler: z.literal("subroute"),
+  routes: z.array(z.lazy((): z.ZodTypeAny => StrictRouteSchema)).optional(),
+  errors: z.any().optional(),
+});
+
+const StrictKnownCaddyHandlerSchema: z.ZodTypeAny = z.discriminatedUnion("handler", [
+  ReverseProxyHandlerSchema,
+  HeadersHandlerSchema,
+  StaticResponseHandlerSchema,
+  AuthenticationHandlerSchema,
+  RewriteHandlerSchema,
+  EncodeHandlerSchema,
+  FileServerHandlerSchema,
+  TemplatesHandlerSchema,
+  MapHandlerSchema,
+  PushHandlerSchema,
+  RequestBodyHandlerSchema,
+  VarsHandlerSchema,
+  InterceptHandlerSchema,
+  InvokeHandlerSchema,
+  TracingHandlerSchema,
+  LogAppendHandlerSchema,
+  ErrorHandlerSchema,
+  CopyResponseHandlerSchema,
+  CopyResponseHeadersHandlerSchema,
+  StrictSubrouteHandlerSchema,
+  SecurityAuthenticatorHandlerSchema,
+]);
+
+const StrictRouteSchema: z.ZodTypeAny = CaddyRouteSchema.extend({
+  handle: z.array(StrictKnownCaddyHandlerSchema).min(1, "Route must have at least one handler"),
 });
 
 const FullConfigServerSchema = serverSchema.omit({ routes: true, named_routes: true }).extend({
@@ -120,7 +179,7 @@ const schemas: SchemaDefinition[] = [
   },
   {
     name: "caddy-handler",
-    schema: KnownCaddyHandlerSchema,
+    schema: StrictKnownCaddyHandlerSchema,
     description: "Caddy HTTP handler (reverse_proxy, headers, etc.)",
   },
 
@@ -323,7 +382,15 @@ function injectUniversalId(node: unknown): void {
 function generateJsonSchema(definition: SchemaDefinition): object {
   const jsonSchema = zodToJsonSchema(definition.schema as Parameters<typeof zodToJsonSchema>[0], {
     name: definition.name,
-    $refStrategy: "none", // Inline all definitions for better VSCode support
+    // "root" (not the previous "none"): emits real `$ref`s into a shared
+    // `definitions` block instead of inlining everything, which is what
+    // makes the self-referential Strict*Schema definitions above express
+    // true recursion (subroute -> routes -> handlers -> subroute -> ...)
+    // instead of bottoming out at a permissive `{}` -- verified against
+    // both `ajv` and VS Code's built-in JSON language service (see this
+    // file's comment above StrictSubrouteHandlerSchema). Also shrinks the
+    // generated files substantially (caddy-full-config.json: 223KB -> 121KB).
+    $refStrategy: "root",
     target: "jsonSchema7", // Use JSON Schema draft-07 for broad compatibility
   });
 
