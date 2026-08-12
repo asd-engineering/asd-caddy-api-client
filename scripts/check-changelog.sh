@@ -70,3 +70,8 @@ if [ $failed -eq 1 ]; then
 fi
 
 echo -e "${GREEN}✓ Changelog check passed${NC}"
+
+# Structural sanity check (versions/dates ordered correctly, compare-links
+# match their own version) -- catches misfiled/corrupted entries regardless
+# of whether package.json's version changed this commit.
+npx tsx scripts/check-changelog-structure.ts || exit 1

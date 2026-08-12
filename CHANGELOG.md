@@ -15,6 +15,18 @@ check for the specific class of bug that made 0.9.0's `queryOps` fix invisible i
 
 ### Added
 
+- **`scripts/check-changelog-structure.ts`** — a structural sanity check for `CHANGELOG.md`/
+  `vscode-extension/CHANGELOG.md`, wired into the existing pre-commit changelog check. Verifies
+  version headers parse as valid semver/dates, versions strictly decrease top-to-bottom (catching
+  duplicates for free), dates are non-increasing top-to-bottom (same-day releases allowed), and a
+  header's own compare-link (when present) actually points at its own version. Born from a real
+  incident this session — a corrupted concurrent-session edit inserted this release's `queryOps`
+  description into the historical `[0.3.0]` section and altered its date, undetected until found by
+  hand. Verified against four synthetic corruptions of the real file (duplicate version, out-of-order
+  version, mismatched compare-link, invalid date) — all caught. Honestly documented limitation: the
+  exact historical incident's date change isn't caught by date-ordering alone, since it happened to
+  tie with a neighboring date rather than exceed it (ties are allowed — same-day multi-releases are
+  real in this project's history).
 - **Direct unit test coverage for vscode-extension logic that was previously only reachable
   through (unreliable) Playwright E2E tests, or not tested at all**:
   - `diagnostics.ts`'s hand-rolled JSON-Schema validator (`SimpleSchemaValidator`) — previously had
