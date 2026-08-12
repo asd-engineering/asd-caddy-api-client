@@ -3,7 +3,6 @@
   "displayName": "Caddy Configuration Tools",
   "description": "IntelliSense, snippets, and validation for Caddy and caddy-security configurations",
   "version": "0.2.0",
-  "icon": "icon.png",
   "publisher": "asd-host",
   "author": {
     "name": "Accelerated Software Development B.V.",
