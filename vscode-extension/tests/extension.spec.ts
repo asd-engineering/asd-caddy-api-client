@@ -34,6 +34,50 @@ async function setupPage(page: Page, codeServerUrl: string) {
 }
 
 // ============================================================================
+// EXTENSION ACTIVATION
+// ============================================================================
+
+test.describe("Extension Activation", () => {
+  // Every other test in this file only proves a *feature* works once the
+  // extension has activated -- none of them would catch the extension
+  // failing to activate at all (e.g. a bundling bug leaving a dangling
+  // `require()` in dist/extension.js that only breaks at runtime). VS
+  // Code's own built-in JSON schema validation (declarative, via
+  // package.json's jsonValidation) keeps working even when our extension's
+  // activate() throws, which is exactly what let this go unnoticed: the
+  // diagnostics tests below still passed while hover/completions/CodeLens
+  // were silently dead.
+  test("activates without error", async ({ page, codeServerUrl }) => {
+    const activationErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (/Activating extension 'asd-host\.vscode-caddy-tools' failed/.test(msg.text())) {
+        activationErrors.push(msg.text());
+      }
+    });
+
+    let activated = false;
+    page.on("console", (msg) => {
+      if (/Caddy Configuration Tools: Activated/.test(msg.text())) {
+        activated = true;
+      }
+    });
+
+    await page.goto(codeServerUrl);
+    await page.waitForSelector(".monaco-workbench", { timeout: 30000 });
+    await handleTrustDialog(page);
+    await closeNotifications(page);
+
+    // Opening a file is what triggers activation (onLanguage:json).
+    await openFile(page, "valid.caddy.json");
+    await waitForEditor(page);
+    await page.waitForTimeout(2000);
+
+    expect(activationErrors, activationErrors.join("\n")).toEqual([]);
+    expect(activated).toBe(true);
+  });
+});
+
+// ============================================================================
 // BASIC FUNCTIONALITY TESTS
 // ============================================================================
 
@@ -823,6 +867,51 @@ test.describe("Wizard and Command Interactions", () => {
 // ============================================================================
 // EXTENSION FEATURE TESTS - CodeLens, Hover, Completion
 // ============================================================================
+
+test.describe("Extension Listing", () => {
+  test.beforeEach(async ({ page, codeServerUrl }) => {
+    await setupPage(page, codeServerUrl);
+  });
+
+  // Functional tests below prove the extension's providers work once VS
+  // Code has silently loaded it -- none of them prove a user would actually
+  // see a correctly-installed, trustworthy-looking entry in the Extensions
+  // panel (icon, description, rendered README), which is a real, separate
+  // failure mode (a stale/broken vsix can install "successfully" while
+  // still rendering as a blank/generic entry).
+  test("shows a proper icon, description, and rendered README in the Extensions panel", async ({
+    page,
+  }) => {
+    await page.keyboard.press("Control+Shift+X");
+    await page.waitForTimeout(1500);
+
+    const entry = page.locator('.extension-list-item:has-text("Caddy Configuration Tools")');
+    await expect(entry).toBeVisible({ timeout: 10000 });
+    await expect(entry).toContainText("asd-host");
+    // Not asserting on a custom icon src here: package.json has no "icon"
+    // field committed yet, so VS Code falls back to a generic icon -- that's
+    // current, correct behavior, not a bug this test should flag.
+
+    await entry.click();
+    const detailsPane = page.locator(".extension-editor");
+    await expect(
+      detailsPane.getByRole("heading", { name: "Caddy Configuration Tools" })
+    ).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(detailsPane).toContainText("asd-host");
+
+    // README.md renders two webview iframes deep (outer sandbox shell ->
+    // inner content frame) -- proves it actually rendered, not a blank pane.
+    const readmeFrame = page
+      .frameLocator('iframe[src*="webview/browser/pre"]')
+      .frameLocator("iframe")
+      .first();
+    await expect(readmeFrame.getByText("IntelliSense & Autocompletion")).toBeVisible({
+      timeout: 10000,
+    });
+  });
+});
 
 test.describe("Extension Features", () => {
   test.beforeEach(async ({ page, codeServerUrl }) => {
