@@ -1,12 +1,37 @@
 name: Install Caddy CLI
-description: Install the caddy binary from Cloudsmith's apt repo
+description: >
+  Use the caddy already on PATH (our own runners bake it into the image), or
+  install the official release binary. No apt source: the Cloudsmith repo
+  answers 402 Payment Required since 10-10-2026, and on a long-lived runner a
+  sources.list entry left behind breaks every later job's apt-get update.
+inputs:
+  version:
+    description: Caddy version to install when none is on PATH
+    default: '2.11.4'
 runs:
   using: composite
   steps:
-    - run: |
-        sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
-        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --batch --yes --no-tty --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-        sudo apt-get update
-        sudo apt-get install -y caddy
-      shell: bash
+    - shell: bash
+      env:
+        CADDY_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        if command -v caddy >/dev/null; then
+          echo "caddy on PATH: $(caddy version)"
+          exit 0
+        fi
+        case "$(uname -m)" in
+          x86_64) arch=amd64 ;;
+          aarch64 | arm64) arch=arm64 ;;
+          *) echo "unsupported arch $(uname -m)" >&2; exit 1 ;;
+        esac
+        base="https://github.com/caddyserver/caddy/releases/download/v${CADDY_VERSION}"
+        tarball="caddy_${CADDY_VERSION}_linux_${arch}.tar.gz"
+        tmp="$(mktemp -d)"
+        curl -fsSL -o "$tmp/$tarball" "$base/$tarball"
+        curl -fsSL "$base/caddy_${CADDY_VERSION}_checksums.txt" \
+          | grep " ${tarball}\$" | (cd "$tmp" && sha512sum -c -)
+        tar -xzf "$tmp/$tarball" -C "$tmp" caddy
+        sudo install -m 0755 "$tmp/caddy" /usr/local/bin/caddy
+        rm -rf "$tmp"
+        caddy version
